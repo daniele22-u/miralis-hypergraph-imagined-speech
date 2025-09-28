@@ -1,0 +1,13 @@
+.git
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.conda/
+.venv/
+.DS_Store
+.idea/
+.vscode/
+data/raw/
+data/processed/
+models/
+results/large_outputs/
