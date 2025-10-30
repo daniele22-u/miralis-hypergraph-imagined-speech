@@ -17,6 +17,7 @@ __pycache__/
 data/raw_data/
 data/processed/
 models/
-src/eeglab2025.1.0/
+src/
+#scripts/data_processing/
 results/large_outputs/
 utilities/
