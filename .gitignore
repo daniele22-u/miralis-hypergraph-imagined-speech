@@ -14,8 +14,9 @@ __pycache__/
 .vscode/
 
 # Dati e modelli (se NON li versioni)
-data/raw/
+data/raw_data/
 data/processed/
 models/
+src/eeglab2025.1.0/
 results/large_outputs/
 utilities/
