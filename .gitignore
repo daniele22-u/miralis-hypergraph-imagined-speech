@@ -4,19 +4,15 @@ __pycache__/
 .env
 .venv/
 .conda/
-
 # macOS / IDE
 .DS_Store
-
 .idea/
 .vscode/
-
-data/raw_data/
-data/interim/
-data/processed/
+data/
 models/
 src/
-scripts/data_processing/eeglab2025.1.0/
+scripts/data_processing/eeglab2025.1.0
+scripts/data_processing/Preprocessing-main
 results/large_outputs/
 utilities/
 tests/
