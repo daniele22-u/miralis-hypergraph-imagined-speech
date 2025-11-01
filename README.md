@@ -63,20 +63,20 @@ This work builds upon two key studies:
 thesis_IS_dani/
 ├─ data/
 │  ├─ raw/
+│  ├─ interim/
 │  └─ processed/
-├─ src/
-│  ├─ preprocessing/
+├─ scripts/
+│  ├─ data_processing/
 │  ├─ features/
 │  ├─ graphs/
 │  ├─ models/
-│  ├─ utils/
-│  └─ visualization/
+│  └─ predict/
+│  └─ training/
 ├─ notebooks/
 ├─ configs/
 ├─ results/
 ├─ figures/
 ├─ environment.yml
-├─ requirements.txt
 ├─ LICENSE
 └─ README.md
 ```
@@ -86,6 +86,19 @@ thesis_IS_dani/
 ---
 
 ## 🚀 How to Run
+To execute the preprocessing pipeline, make sure you have the following installed:
+MATLAB (recommended version: 2024b or later)
+Python–MATLAB Engine (official connector between Python and MATLAB)
+👉 Installation guide
+EEGLAB, toolbox for EEG analysis
+👉 https://sccn.ucsd.edu/eeglab/download.php
+After running the preprocessing function kindly shared by [Miralis] (MIT License), located at:
+<project_root>/scripts/data_processing/Preprocessing/
+the converted data will be available in:
+
+<project_root>/data/processed/
+These processed data can then be visualized and explored in the notebook:
+notebooks/dataframe.ipynb
 ####
 ---
 
