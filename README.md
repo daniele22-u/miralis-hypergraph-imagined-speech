@@ -60,7 +60,7 @@ This work builds upon two key studies:
 ---
 ### 📦 Repository Structure
 ```text
-imagined-speech-gcn/
+thesis_IS_dani/
 ├─ data/
 │  ├─ raw/
 │  └─ processed/
