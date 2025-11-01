@@ -1,23 +1,22 @@
-# Python
 __pycache__/
 *.py[cod]
 *.ipynb_checkpoints/
-
-# Env / credenziali
 .env
 .venv/
 .conda/
 
 # macOS / IDE
 .DS_Store
+
 .idea/
 .vscode/
 
-# Dati e modelli (se NON li versioni)
 data/raw_data/
+data/interim/
 data/processed/
 models/
 src/
-#scripts/data_processing/
+scripts/data_processing/eeglab2025.1.0/
 results/large_outputs/
 utilities/
+tests/
