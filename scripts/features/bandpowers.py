@@ -2,19 +2,26 @@
 EEG Bandpower Extraction Script
 --------------------------------
 Computes absolute and relative band powers for all EEG epochs stored in HDF5 files.
-For each subject, session, and epoch, the script calculates channel-wise power across
-canonical frequency bands (delta, theta, alpha, beta, gamma) and saves the results.
+Loads true channel names from a .eloc montage file for correct electrode labeling.
 """
 
 import h5py, mne, numpy as np, pandas as pd
 from pathlib import Path
 
-def load_epochs_from_h5(path_h5: Path, fs: int = 256):
+def load_channel_names_from_eloc(eloc_path: Path):
+    df = pd.read_csv(eloc_path, sep=r"\s+", header=None, engine="python")
+    names = df.iloc[:, -1].astype(str).tolist()
+    return names
+
+def load_epochs_from_h5(path_h5: Path, fs: int = 256, eloc_path: Path | None = None):
     with h5py.File(path_h5, "r") as f:
         data = f["data"][:] # type: ignore
         labels = f["labels"][:] # type: ignore
         subj = f["subject"][()] # type: ignore
-    ch_names = [f"EEG{i+1}" for i in range(data.shape[1])] # type: ignore
+    if eloc_path and eloc_path.exists():
+        ch_names = load_channel_names_from_eloc(eloc_path)
+    else:
+        ch_names = [f"EEG{i+1}" for i in range(data.shape[1])] # type: ignore
     info = mne.create_info(ch_names=ch_names, sfreq=fs, ch_types="eeg")
     ep = mne.EpochsArray(data, info)
     lbl = [l.decode("utf-8") if isinstance(l, (bytes, bytearray)) else str(l) for l in labels] # type: ignore
@@ -24,14 +31,8 @@ def load_epochs_from_h5(path_h5: Path, fs: int = 256):
 def compute_psd_epochs(epochs, fmin=1., fmax=45., n_fft=512):
     n_times = epochs.get_data().shape[-1]
     n_fft = min(n_fft, n_times)
-    try:
-        spec = epochs.compute_psd(method="welch", fmin=fmin, fmax=fmax, n_fft=n_fft, verbose=False)
-        psd = spec.get_data()
-        freqs = spec.freqs
-    except AttributeError:
-        from mne.time_frequency import psd_welch # type: ignore
-        psd, freqs = psd_welch(epochs, fmin=fmin, fmax=fmax, n_fft=n_fft, verbose=False)
-    return psd, freqs
+    spec = epochs.compute_psd(method="welch", fmin=fmin, fmax=fmax, n_fft=n_fft, verbose=False)
+    return spec.get_data(), spec.freqs
 
 def bandpowers_from_psd(psd, freqs, bands):
     bp = {}
@@ -65,7 +66,7 @@ def extract_bandpowers_for_epochs(epochs, bands, session_id):
             rows.append(row)
     return pd.DataFrame(rows)
 
-def iterate_all_files_and_compute(meta_csv_path: Path, fs=256):
+def iterate_all_files_and_compute(meta_csv_path: Path, fs=256, eloc_path: Path | None = None):
     meta = pd.read_csv(meta_csv_path)
     meta["subject_id"] = meta["subject_id"].astype(str).str.strip()
     bands = {"delta": (1,4), "theta": (4,8), "alpha": (8,13), "beta": (13,30), "gamma": (30,45)}
@@ -79,7 +80,7 @@ def iterate_all_files_and_compute(meta_csv_path: Path, fs=256):
                 print(f"Missing file: {pth}")
                 continue
             session_id = pth.stem.split("_")[1] if "_" in pth.stem else "unknown"
-            epochs = load_epochs_from_h5(pth, fs=fs)
+            epochs = load_epochs_from_h5(pth, fs=fs, eloc_path=eloc_path)
             df_feats = extract_bandpowers_for_epochs(epochs, bands, session_id)
             all_feat.append(df_feats)
             print(f"{subj} | {session_id}: {len(df_feats)} rows")
@@ -88,6 +89,6 @@ def iterate_all_files_and_compute(meta_csv_path: Path, fs=256):
 if __name__ == "__main__":
     project_root = Path(__file__).resolve().parents[2]
     meta_csv = project_root / "data" / "interim" / "eeg_metadata.csv"
-    df_band = iterate_all_files_and_compute(meta_csv)
+    eloc_path = project_root / "scripts" / "data_processing" /"Preprocessing"/ "ebneuro.eloc"
+    df_band = iterate_all_files_and_compute(meta_csv, eloc_path=eloc_path)
     df_band.to_csv(project_root / "data" / "interim" / "bandpowers.csv", index=False)
-    print(f"Saved bandpowers to {project_root / 'data' / 'interim' / 'bandpowers.csv'}")

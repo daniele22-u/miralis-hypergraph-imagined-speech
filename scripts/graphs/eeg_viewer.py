@@ -26,7 +26,7 @@ def load_epochs_from_h5(path_h5: Path, fs: int = 256):
         subject = f["subject"][()] # type: ignore
 
     n_epochs, n_channels, _ = data.shape # type: ignore
-    montage = mne.channels.make_standard_montage("standard_1020")
+    montage = mne.channels.read_custom_montage("scripts/data_processing/Preprocessing/ebneuro.locs")
     ch_names = montage.ch_names[:n_channels]
     info = mne.create_info(ch_names=ch_names, sfreq=fs, ch_types="eeg")
 
