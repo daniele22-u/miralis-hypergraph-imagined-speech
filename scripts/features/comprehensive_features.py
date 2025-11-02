@@ -17,13 +17,11 @@ import pandas as pd
 from pathlib import Path
 from scipy import signal, stats
 from typing import Dict, Tuple
+import sys
 
-
-def load_channel_names_from_eloc(eloc_path: Path):
-    """Load channel names from .eloc montage file"""
-    df = pd.read_csv(eloc_path, sep=r"\s+", header=None, engine="python")
-    names = df.iloc[:, -1].astype(str).tolist()
-    return names
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from utils import load_channel_names_from_eloc, decode_label
 
 
 def load_epochs_from_h5(path_h5: Path, fs: int = 256, eloc_path: Path | None = None):
@@ -40,7 +38,7 @@ def load_epochs_from_h5(path_h5: Path, fs: int = 256, eloc_path: Path | None = N
     
     info = mne.create_info(ch_names=ch_names, sfreq=fs, ch_types="eeg")
     ep = mne.EpochsArray(data, info)
-    lbl = [l.decode("utf-8") if isinstance(l, (bytes, bytearray)) else str(l) for l in labels]  # type: ignore
+    lbl = [decode_label(l) for l in labels]  # type: ignore
     ep.metadata = pd.DataFrame({
         "label_name": lbl,
         "subject_id": str(subj),
@@ -232,7 +230,8 @@ def extract_functional_features(data_2d: np.ndarray, channel_idx: int) -> Dict[s
         else:
             feats['func_mean_plv'] = 0.0
             feats['func_max_plv'] = 0.0
-    except:
+    except (ValueError, RuntimeError, np.linalg.LinAlgError) as e:
+        # Handle numerical errors in Hilbert transform or phase computation
         feats['func_mean_plv'] = 0.0
         feats['func_max_plv'] = 0.0
     

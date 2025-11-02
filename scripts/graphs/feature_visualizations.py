@@ -19,6 +19,11 @@ from pathlib import Path
 import h5py
 import mne
 from typing import List, Optional
+import sys
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from utils import load_channel_names_from_eloc, decode_label
 
 
 def load_comprehensive_features(csv_path: Path) -> pd.DataFrame:
@@ -218,8 +223,7 @@ def plot_power_evolution_within_epochs(h5_path: Path, eloc_path: Path,
         labels = f["labels"][:]  # type: ignore
     
     # Load channel names
-    df_eloc = pd.read_csv(eloc_path, sep=r"\s+", header=None, engine="python")
-    ch_names = df_eloc.iloc[:, -1].astype(str).tolist()
+    ch_names = load_channel_names_from_eloc(eloc_path) if eloc_path.exists() else [f"EEG{i+1}" for i in range(data.shape[1])]
     
     fs = 256  # Sampling rate
     window_size = 64  # ~250 ms windows
@@ -232,7 +236,7 @@ def plot_power_evolution_within_epochs(h5_path: Path, eloc_path: Path,
     
     for idx, epoch_idx in enumerate(epoch_indices):
         epoch_data = data[epoch_idx]  # (n_channels, n_samples)
-        label = labels[epoch_idx].decode('utf-8') if isinstance(labels[epoch_idx], bytes) else str(labels[epoch_idx])  # type: ignore
+        label = decode_label(labels[epoch_idx])  # type: ignore
         
         n_channels, n_samples = epoch_data.shape
         
@@ -286,8 +290,8 @@ def plot_topographic_power_maps(df: pd.DataFrame, epoch_idx: int,
     # Load montage
     try:
         montage = mne.channels.read_custom_montage(str(montage_path))
-    except:
-        print("Could not load montage for topographic plotting")
+    except (FileNotFoundError, ValueError, RuntimeError) as e:
+        print(f"Could not load montage for topographic plotting: {e}")
         return
     
     # Create MNE info
@@ -303,6 +307,8 @@ def plot_topographic_power_maps(df: pd.DataFrame, epoch_idx: int,
     fig, axes = plt.subplots(2, 3, figsize=(15, 10))
     axes = axes.flatten()
     
+    im = None  # Store the last image for colorbar
+    
     for i, (band, label) in enumerate(zip(bands, band_labels)):
         power_col = f'spec_{band}'
         if power_col in df_epoch.columns:
@@ -316,11 +322,9 @@ def plot_topographic_power_maps(df: pd.DataFrame, epoch_idx: int,
                                         cmap='RdYlBu_r', contours=6)
             axes[i].set_title(label, fontsize=12, fontweight='bold')
     
-    # Remove extra subplot
+    # Remove extra subplot and add colorbar
     fig.delaxes(axes[5])
-    
-    # Add colorbar
-    plt.colorbar(im, ax=axes[5], label='Power (µV²)')
+    plt.colorbar(im, ax=axes.tolist(), label='Power (µV²)', fraction=0.046, pad=0.04)
     
     label_name = df_epoch['label_name'].iloc[0]
     plt.suptitle(f'Topographic Power Distribution - Epoch {epoch_idx} ({label_name})', 
