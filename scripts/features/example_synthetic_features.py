@@ -10,6 +10,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 import sys
+from scipy import signal
 
 # Add project root to path
 project_root = Path(__file__).resolve().parents[2]
@@ -102,7 +103,6 @@ def demonstrate_feature_extraction():
     # Pre-compute for efficiency (though not critical for single call)
     corr_matrix = np.corrcoef(eeg_data)
     try:
-        from scipy import signal
         phase_data = np.angle(signal.hilbert(eeg_data, axis=1))
     except (ValueError, RuntimeError, np.linalg.LinAlgError):
         phase_data = None
@@ -122,7 +122,6 @@ def demonstrate_feature_extraction():
     # Pre-compute correlation matrix and phase data for efficiency
     corr_matrix = np.corrcoef(eeg_data)
     try:
-        from scipy import signal
         phase_data = np.angle(signal.hilbert(eeg_data, axis=1))
     except (ValueError, RuntimeError, np.linalg.LinAlgError):
         phase_data = None
