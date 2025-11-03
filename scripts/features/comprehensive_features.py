@@ -174,7 +174,9 @@ def extract_spectral_features(signal_1d: np.ndarray, fs: int = 256) -> Dict[str,
 
 # ==================== FUNCTIONAL FEATURES ====================
 
-def extract_functional_features(data_2d: np.ndarray, channel_idx: int) -> Dict[str, float]:
+def extract_functional_features(data_2d: np.ndarray, channel_idx: int, 
+                                corr_matrix: np.ndarray = None,
+                                phase_data: np.ndarray = None) -> Dict[str, float]:
     """
     Extract functional connectivity features for a single channel.
     
@@ -187,42 +189,61 @@ def extract_functional_features(data_2d: np.ndarray, channel_idx: int) -> Dict[s
     Args:
         data_2d: (n_channels, n_samples) array
         channel_idx: Index of the current channel
+        corr_matrix: Pre-computed correlation matrix (n_channels, n_channels)
+        phase_data: Pre-computed phase data (n_channels, n_samples) from Hilbert transform
     """
     feats = {}
     n_channels, n_samples = data_2d.shape
     
-    # Correlation-based connectivity
-    correlations = []
-    for other_idx in range(n_channels):
-        if other_idx != channel_idx:
-            corr = np.corrcoef(data_2d[channel_idx], data_2d[other_idx])[0, 1]
-            correlations.append(abs(corr))
+    # Correlation-based connectivity using pre-computed matrix
+    if corr_matrix is not None:
+        correlations = np.abs(corr_matrix[channel_idx, :])
+        # Exclude self-correlation
+        correlations = np.delete(correlations, channel_idx)
+    else:
+        # Fallback to computing correlations individually
+        correlations = []
+        for other_idx in range(n_channels):
+            if other_idx != channel_idx:
+                corr = np.corrcoef(data_2d[channel_idx], data_2d[other_idx])[0, 1]
+                correlations.append(abs(corr))
+        correlations = np.array(correlations)
     
     if len(correlations) > 0:
         feats['func_mean_corr'] = np.mean(correlations)
         feats['func_max_corr'] = np.max(correlations)
         feats['func_std_corr'] = np.std(correlations)
-        feats['func_num_strong_conn'] = np.sum(np.array(correlations) > 0.7)
+        feats['func_num_strong_conn'] = np.sum(correlations > 0.7)
     else:
         feats['func_mean_corr'] = 0.0
         feats['func_max_corr'] = 0.0
         feats['func_std_corr'] = 0.0
         feats['func_num_strong_conn'] = 0
     
-    # Phase Locking Value (simplified version using Hilbert transform)
+    # Phase Locking Value using pre-computed phase data
     try:
-        # Apply Hilbert transform to get instantaneous phase
-        analytic_signal = signal.hilbert(data_2d[channel_idx])
-        phase_current = np.angle(analytic_signal)
-        
-        plvs = []
-        for other_idx in range(n_channels):
-            if other_idx != channel_idx:
-                analytic_other = signal.hilbert(data_2d[other_idx])
-                phase_other = np.angle(analytic_other)
-                phase_diff = phase_current - phase_other
-                plv = np.abs(np.mean(np.exp(1j * phase_diff)))
-                plvs.append(plv)
+        if phase_data is not None:
+            # Use pre-computed phase data
+            phase_current = phase_data[channel_idx]
+            plvs = []
+            for other_idx in range(n_channels):
+                if other_idx != channel_idx:
+                    phase_diff = phase_current - phase_data[other_idx]
+                    plv = np.abs(np.mean(np.exp(1j * phase_diff)))
+                    plvs.append(plv)
+        else:
+            # Fallback: compute Hilbert transform (slower)
+            analytic_signal = signal.hilbert(data_2d[channel_idx])
+            phase_current = np.angle(analytic_signal)
+            
+            plvs = []
+            for other_idx in range(n_channels):
+                if other_idx != channel_idx:
+                    analytic_other = signal.hilbert(data_2d[other_idx])
+                    phase_other = np.angle(analytic_other)
+                    phase_diff = phase_current - phase_other
+                    plv = np.abs(np.mean(np.exp(1j * phase_diff)))
+                    plvs.append(plv)
         
         if len(plvs) > 0:
             feats['func_mean_plv'] = np.mean(plvs)
@@ -256,6 +277,19 @@ def extract_all_features_for_epochs(epochs, session_id: str, extract_functional:
     for e in range(n_epochs):
         epoch_data = data[e]  # (n_channels, n_samples)
         
+        # Pre-compute correlation matrix for this epoch (if functional features enabled)
+        corr_matrix = None
+        phase_data = None
+        if extract_functional:
+            # Compute correlation matrix once per epoch
+            corr_matrix = np.corrcoef(epoch_data)
+            
+            # Compute phase data once per epoch using Hilbert transform
+            try:
+                phase_data = np.angle(signal.hilbert(epoch_data, axis=1))
+            except (ValueError, RuntimeError, np.linalg.LinAlgError):
+                phase_data = None
+        
         for ch in range(n_channels):
             channel_name = epochs.info['ch_names'][ch]
             signal_1d = epoch_data[ch]
@@ -277,9 +311,9 @@ def extract_all_features_for_epochs(epochs, session_id: str, extract_functional:
             spec_feats = extract_spectral_features(signal_1d, fs=fs)
             row.update(spec_feats)
             
-            # Extract functional features
+            # Extract functional features using pre-computed matrices
             if extract_functional:
-                func_feats = extract_functional_features(epoch_data, ch)
+                func_feats = extract_functional_features(epoch_data, ch, corr_matrix, phase_data)
                 row.update(func_feats)
             
             rows.append(row)
@@ -299,18 +333,24 @@ def iterate_all_files_and_extract(meta_csv_path: Path, fs: int = 256, eloc_path:
     
     all_features = []
     
-    for subj, grp in meta.groupby('subject_id'):
+    # Get unique subjects for counting
+    unique_subjects = meta['subject_id'].unique()
+    print(f"Found {len(unique_subjects)} unique subject(s): {', '.join(unique_subjects)}")
+    
+    for subj_idx, (subj, grp) in enumerate(meta.groupby('subject_id'), 1):
+        print(f"\n[Subject {subj_idx}/{len(unique_subjects)}] Processing subject: {subj}")
+        
         for p in sorted(grp['path_h5'].unique()):
             pth = Path(p)
             if not pth.is_absolute():
                 pth = meta_csv_path.parent.parent / "processed" / Path(p).name
             
             if not pth.exists():
-                print(f"Missing file: {pth}")
+                print(f"  Missing file: {pth}")
                 continue
             
             session_id = pth.stem.split("_")[1] if "_" in pth.stem else "unknown"
-            print(f"\nProcessing {subj} | {session_id}: {pth.name}")
+            print(f"  Processing session {session_id}: {pth.name}")
             
             epochs = load_epochs_from_h5(pth, fs=fs, eloc_path=eloc_path)
             df_feats = extract_all_features_for_epochs(epochs, session_id, extract_functional=True)
