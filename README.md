@@ -27,9 +27,12 @@ The goal is to explore **imagined speech decoding** from EEG signals using **Gra
 - Normalization and channel alignment  
 
 ### 2. Feature Extraction
-- Spectral power in δ, θ, α, β, γ bands  
-- Functional connectivity metrics (correlation, PLV, coherence)  
+- **Temporal Features**: Statistical measures, Hjorth parameters, zero-crossing rate, RMS
+- **Spectral Features**: Power in δ, θ, α, β, γ bands (absolute and relative), spectral entropy, dominant frequency
+- **Functional Features**: Connectivity metrics (correlation, PLV), inter-channel synchronization
 - Graph construction based on electrode distances and connectivity  
+
+📖 **See [Feature Extraction Guide](docs/FEATURES_AND_VISUALIZATION.md)** for detailed documentation
 
 ### 3. Graph Modeling
 - Graph Signal Processing (GSP) for structural and functional representation  
@@ -60,23 +63,29 @@ This work builds upon two key studies:
 ---
 ### 📦 Repository Structure
 ```text
-thesis_IS_dani/
+miralis-hypergraph-imagined-speech/
 ├─ data/
 │  ├─ raw/
-│  ├─ interim/
-│  └─ processed/
+│  ├─ interim/              # Metadata and extracted features
+│  └─ processed/            # Preprocessed EEG epochs (.h5)
 ├─ scripts/
-│  ├─ data_processing/
-│  ├─ features/
-│  ├─ graphs/
+│  ├─ data_processing/      # Preprocessing pipeline
+│  ├─ features/             # Feature extraction
+│  │  ├─ bandpowers.py      # Band power extraction
+│  │  └─ comprehensive_features.py  # Temporal, spectral, functional features
+│  ├─ graphs/               # Visualization tools
+│  │  ├─ eeg_viewer.py      # Interactive EEG viewer
+│  │  └─ feature_visualizations.py  # Feature visualization suite
 │  ├─ models/
-│  └─ predict/
+│  ├─ predict/
 │  └─ training/
 ├─ notebooks/
-├─ configs/
-├─ results/
-├─ figures/
-├─ environment.yml
+│  ├─ dataframe.ipynb       # Dataset exploration
+│  └─ feature_extraction_tutorial.ipynb  # Feature extraction tutorial
+├─ docs/
+│  └─ FEATURES_AND_VISUALIZATION.md  # Feature extraction documentation
+├─ figures/                 # Generated visualizations
+├─ environment.yml          # Conda environment
 ├─ LICENSE
 └─ README.md
 ```
@@ -99,6 +108,32 @@ the converted data will be available in:
 <project_root>/data/processed/
 These processed data can then be visualized and explored in the notebook:
 notebooks/dataframe.ipynb
+
+### Feature Extraction and Visualization
+After preprocessing, extract comprehensive EEG features:
+
+```bash
+# Extract temporal, spectral, and functional features
+python scripts/features/comprehensive_features.py
+
+# Generate visualizations
+python scripts/graphs/feature_visualizations.py
+```
+
+**Features extracted** (per electrode, per epoch):
+- **13 Temporal features**: statistics, Hjorth parameters, RMS, zero-crossing rate
+- **22 Spectral features**: band powers (δ, θ, α, β, γ), spectral entropy, dominant frequency
+- **6 Functional features**: correlation-based connectivity, phase locking value (PLV)
+
+**Visualizations created**:
+- Power variation across epochs for individual electrodes
+- Heatmap of high-power electrodes per epoch
+- Temporal power evolution within epochs
+- Topographic power distribution maps
+- Feature distributions and correlation matrices
+
+📖 See the [Feature Extraction Tutorial](notebooks/feature_extraction_tutorial.ipynb) for examples.
+
 ####
 ---
 
