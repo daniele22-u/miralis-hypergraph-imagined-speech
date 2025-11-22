@@ -43,7 +43,7 @@ BASE_PATH = "/path/to/your/data/directory"
 
 **Example:**
 ```python
-BASE_PATH = "/Users/danieleuras/Library/CloudStorage/OneDrive-PolitecnicodiMilano/File di Francesco Iacomi - h5/data"
+BASE_PATH = "/path/to/your/data/h5_files"
 ```
 
 ### 2. Run All Cells
