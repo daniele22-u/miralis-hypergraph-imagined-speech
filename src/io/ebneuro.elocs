@@ -1,0 +1,8 @@
+# EBNeuro electrode locations file
+# This is a placeholder file - users should replace with their actual electrode locations
+# Format: angle radius label (space-separated)
+# Example format:
+# -18 -0.511 A1
+# -90 -0.333 AF7
+# -60 -0.333 AF3
+# Add your electrode locations here following the standard .elocs format
