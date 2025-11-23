@@ -19,8 +19,22 @@ def load_channel_names_from_eloc(eloc_path: Path) -> List[str]:
     Returns:
         List of channel names
     """
-    df = pd.read_csv(eloc_path, sep=r"\s+", header=None, engine="python")
-    names = df.iloc[:, -1].astype(str).tolist()
+    names = []
+    try:
+        with open(eloc_path, "r", encoding="utf-8", errors="ignore") as fh:
+            for ln in fh:
+                ln = ln.strip()
+                if not ln or ln.startswith("#"):
+                    continue
+                parts = ln.split()
+                if parts:
+                    names.append(parts[-1])
+    except Exception:
+        try:
+            df = pd.read_csv(eloc_path, sep=r"\s+", header=None, engine="python", comment="#")
+            names = df.iloc[:, -1].astype(str).tolist()
+        except Exception:
+            names = []
     return names
 
 
