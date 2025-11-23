@@ -449,7 +449,7 @@ def plot_feature_correlation_matrix(df: pd.DataFrame, output_path: Optional[Path
 
 if __name__ == "__main__":
     project_root = Path(__file__).resolve().parents[2]
-    features_csv = project_root / "data" / "interim" / "comprehensive_features.csv"
+    features_csv = project_root / "data" / "processed" / "comprehensive_features_subjects.csv"
     output_dir = project_root / "figures" / "feature_visualizations"
     output_dir.mkdir(parents=True, exist_ok=True)
     
