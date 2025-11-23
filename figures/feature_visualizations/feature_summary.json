@@ -1,0 +1,29 @@
+{
+  "Dataset Info": {
+    "Total Subjects": 76,
+    "Total Sessions": 7,
+    "Total Epochs": 144,
+    "Total Channels": 61,
+    "Total Labels": 110,
+    "Total Feature Vectors": 2361066
+  },
+  "Feature Counts": {
+    "Temporal Features": 14,
+    "Spectral Features": 20,
+    "Functional Features": 6,
+    "Total Features": 40
+  },
+  "Average Power Statistics": {
+    "Mean Total Power": 31.570130504794317,
+    "Std Total Power": 65.45324183123788,
+    "Max Total Power": 12599.25350576556,
+    "Min Total Power": 0.3948781168491685
+  },
+  "Band Power Averages": {
+    "Delta": 0.27621949663602047,
+    "Theta": 0.11618878921982001,
+    "Alpha": 0.16959192946955262,
+    "Beta": 0.13723739904208793,
+    "Gamma": 0.04988793955327735
+  }
+}
