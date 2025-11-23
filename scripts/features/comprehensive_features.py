@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from scipy import signal, stats
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 import sys
 
 # Add parent directory to path for imports
@@ -24,12 +24,19 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from utils import load_channel_names_from_eloc, decode_label
 
 
-def load_epochs_from_h5(path_h5: Path, fs: int = 256, eloc_path: Path | None = None):
+def load_epochs_from_h5(path_h5: Path, fs: int = 256, eloc_path: Optional[Path] = None):
     """Load EEG epochs from HDF5 file with proper channel names"""
     with h5py.File(path_h5, "r") as f:
         data = f["data"][:]  # type: ignore
         labels = f["labels"][:]  # type: ignore
-        subj = f["subject"][()]  # type: ignore
+        # Try to read a subject identifier from the file; if it's
+        # missing or formatted oddly (e.g., an array), fall back to
+        # deriving it from the filename `XX_YY.h5`.
+        try:
+            subj_ds = f.get("subject", None)
+            subj_val = subj_ds[()] if subj_ds is not None else None
+        except Exception:
+            subj_val = None
     
     if eloc_path and eloc_path.exists():
         ch_names = load_channel_names_from_eloc(eloc_path)
@@ -39,9 +46,30 @@ def load_epochs_from_h5(path_h5: Path, fs: int = 256, eloc_path: Path | None = N
     info = mne.create_info(ch_names=ch_names, sfreq=fs, ch_types="eeg")
     ep = mne.EpochsArray(data, info)
     lbl = [decode_label(l) for l in labels]  # type: ignore
+
+    # Normalize subject id: prefer a scalar/string from the HDF5 `subject`
+    # dataset when it's a simple scalar/bytes; otherwise fall back to the
+    # filename convention `{subject}_{session}.h5`.
+    subject_id = None
+    if subj_val is not None:
+        # If it's bytes or a scalar, try to decode/convert
+        try:
+            if isinstance(subj_val, (bytes, bytearray)):
+                subject_id = subj_val.decode('utf-8', 'ignore')
+            elif isinstance(subj_val, (str, int, float)):
+                subject_id = str(subj_val)
+            elif isinstance(subj_val, (np.ndarray, list)) and subj_val.size == 1:
+                subject_id = str(subj_val.tolist()[0])
+        except Exception:
+            subject_id = None
+
+    if not subject_id:
+        # Fallback: derive subject from filename (part before first underscore)
+        subject_id = path_h5.stem.split("_")[0] if "_" in path_h5.stem else path_h5.stem
+
     ep.metadata = pd.DataFrame({
         "label_name": lbl,
-        "subject_id": str(subj),
+        "subject_id": str(subject_id),
         "epoch_idx": np.arange(len(lbl))
     })
     return ep
@@ -290,7 +318,7 @@ def extract_all_features_for_epochs(epochs, session_id: str, extract_functional:
     return pd.DataFrame(rows)
 
 
-def iterate_all_files_and_extract(meta_csv_path: Path, fs: int = 256, eloc_path: Path | None = None):
+def iterate_all_files_and_extract(meta_csv_path: Path, fs: int = 256, eloc_path: Optional[Path] = None):
     """
     Iterate over all H5 files and extract comprehensive features.
     """
@@ -324,7 +352,7 @@ def iterate_all_files_and_extract(meta_csv_path: Path, fs: int = 256, eloc_path:
 if __name__ == "__main__":
     project_root = Path(__file__).resolve().parents[2]
     meta_csv = project_root / "data" / "interim" / "eeg_metadata.csv"
-    eloc_path = project_root / "scripts" / "data_processing" / "Preprocessing" / "ebneuro.eloc"
+    eloc_path = project_root / "src" / "io" / "ebneuro.locs"
     
     print("Starting comprehensive feature extraction...")
     df_features = iterate_all_files_and_extract(meta_csv, eloc_path=eloc_path)
