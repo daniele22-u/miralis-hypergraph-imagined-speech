@@ -318,13 +318,18 @@ def plot_topographic_power_maps(df: pd.DataFrame, epoch_idx: int,
             evoked = mne.EvokedArray(data[:, np.newaxis], info, tmin=0)
             
             # Plot topomap
-            im, _ = mne.viz.plot_topomap(data, info, axes=axes[i], show=False,
+            im_temp, _ = mne.viz.plot_topomap(data, info, axes=axes[i], show=False,
                                         cmap='RdYlBu_r', contours=6)
             axes[i].set_title(label, fontsize=12, fontweight='bold')
+            
+            # Store the image object for colorbar
+            if im is None:
+                im = im_temp
     
     # Remove extra subplot and add colorbar
     fig.delaxes(axes[5])
-    plt.colorbar(im, ax=axes.tolist(), label='Power (µV²)', fraction=0.046, pad=0.04)
+    if im is not None:
+        plt.colorbar(im, ax=axes.tolist(), label='Power (µV²)', fraction=0.046, pad=0.04)
     
     label_name = df_epoch['label_name'].iloc[0]
     plt.suptitle(f'Topographic Power Distribution - Epoch {epoch_idx} ({label_name})', 
@@ -490,12 +495,23 @@ if __name__ == "__main__":
     
     # 4. Topographic maps
     print("\n4. Creating topographic power maps...")
-    montage_path = project_root / "scripts" / "data_processing" / "Preprocessing" / "ebneuro.locs"
-    if montage_path.exists():
+    # Try both .locs and .eloc file extensions
+    montage_path_locs = project_root / "scripts" / "data_processing" / "Preprocessing" / "ebneuro.locs"
+    montage_path_eloc = project_root / "scripts" / "data_processing" / "Preprocessing" / "ebneuro.eloc"
+    
+    montage_path = None
+    if montage_path_locs.exists():
+        montage_path = montage_path_locs
+    elif montage_path_eloc.exists():
+        montage_path = montage_path_eloc
+    
+    if montage_path:
         plot_topographic_power_maps(
             df, epoch_idx=0, montage_path=montage_path,
             output_path=output_dir / "topographic_power_maps_epoch0.png"
         )
+    else:
+        print("  Skipping topographic maps: montage file not found")
     
     # 5. Feature distributions
     print("\n5. Creating feature distribution plots...")

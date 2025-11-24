@@ -10,6 +10,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 import sys
+from scipy import signal
 
 # Add project root to path
 project_root = Path(__file__).resolve().parents[2]
@@ -99,7 +100,16 @@ def demonstrate_feature_extraction():
     
     # Functional features
     print("\n   [Functional Features]")
-    func_feats = extract_functional_features(eeg_data, channel_idx=0)
+    # Pre-compute for efficiency (though not critical for single call)
+    corr_matrix = np.corrcoef(eeg_data)
+    try:
+        phase_data = np.angle(signal.hilbert(eeg_data, axis=1))
+    except (ValueError, RuntimeError, np.linalg.LinAlgError):
+        phase_data = None
+    
+    func_feats = extract_functional_features(eeg_data, channel_idx=0, 
+                                            corr_matrix=corr_matrix, 
+                                            phase_data=phase_data)
     print(f"   - Mean Correlation: {func_feats['func_mean_corr']:.4f}")
     print(f"   - Max Correlation: {func_feats['func_max_corr']:.4f}")
     print(f"   - Mean PLV: {func_feats['func_mean_plv']:.4f}")
@@ -108,6 +118,13 @@ def demonstrate_feature_extraction():
     # Extract features for all channels
     print("\n3. Extracting features for all channels...")
     all_features = []
+    
+    # Pre-compute correlation matrix and phase data for efficiency
+    corr_matrix = np.corrcoef(eeg_data)
+    try:
+        phase_data = np.angle(signal.hilbert(eeg_data, axis=1))
+    except (ValueError, RuntimeError, np.linalg.LinAlgError):
+        phase_data = None
     
     for ch in range(n_channels):
         features = {
@@ -118,7 +135,9 @@ def demonstrate_feature_extraction():
         # Extract all feature types
         features.update(extract_temporal_features(eeg_data[ch]))
         features.update(extract_spectral_features(eeg_data[ch], fs=fs))
-        features.update(extract_functional_features(eeg_data, channel_idx=ch))
+        features.update(extract_functional_features(eeg_data, channel_idx=ch, 
+                                                    corr_matrix=corr_matrix, 
+                                                    phase_data=phase_data))
         
         all_features.append(features)
     
