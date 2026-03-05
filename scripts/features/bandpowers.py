@@ -168,6 +168,6 @@ def iterate_all_files_and_compute(meta_csv_path: Path, fs=256, eloc_path: Option
 if __name__ == "__main__":
     project_root = Path(__file__).resolve().parents[2]
     meta_csv = project_root / "data" / "interim" / "eeg_metadata.csv"
-    eloc_path = project_root / "src" / "ebneuro.eloc"
+    eloc_path = project_root / "src" / "io" / "ebneuro.locs"
     df_band = iterate_all_files_and_compute(meta_csv, eloc_path=eloc_path)
     df_band.to_csv(project_root / "data" / "interim" / "bandpowers.csv", index=False)

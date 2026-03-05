@@ -51,7 +51,7 @@ def main():
     subset_meta.to_csv(subset_csv, index=False)
 
     # Eloc path (use eloc used elsewhere in repo)
-    eloc_path = project_root / "src" / "io" / "ebneuro.elocs"
+    eloc_path = project_root / "src" / "io" / "ebneuro.locs"
 
     print(f"\nRunning comprehensive extractor on sample metadata: {subset_csv}")
     try:

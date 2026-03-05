@@ -61,7 +61,7 @@ def geodesic_distance_matrix_from_ch_pos(
 def main():
     project_root = Path(__file__).resolve().parents[2]
 
-    locs_path = project_root / "scripts" / "data_processing" / "Preprocessing" / "ebneuro.locs"
+    locs_path = project_root / "src" / "io" / "ebneuro.locs"
 
     output_dir = project_root / "data" / "interim"
     output_dir.mkdir(parents=True, exist_ok=True)

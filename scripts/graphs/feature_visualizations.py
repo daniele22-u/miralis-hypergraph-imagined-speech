@@ -479,7 +479,7 @@ if __name__ == "__main__":
     # 3. Power evolution within epochs
     print("\n3. Creating power evolution plots...")
     h5_file = project_root / "data" / "processed" / f"{subject_id}_S001.h5"
-    eloc_path = project_root / "scripts" / "data_processing" / "Preprocessing" / "ebneuro.eloc"
+    eloc_path = project_root / "src" / "io" / "ebneuro.locs"
     
     if h5_file.exists() and eloc_path.exists():
         sample_epochs = [0, 10, 20, 30, 40] if len(df['epoch_idx'].unique()) > 40 else [0, 5, 10]
@@ -490,7 +490,7 @@ if __name__ == "__main__":
     
     # 4. Topographic maps
     print("\n4. Creating topographic power maps...")
-    montage_path = project_root / "scripts" / "data_processing" / "Preprocessing" / "ebneuro.locs"
+    montage_path = project_root / "src" / "io" / "ebneuro.locs"
     if montage_path.exists():
         plot_topographic_power_maps(
             df, epoch_idx=0, montage_path=montage_path,
