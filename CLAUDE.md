@@ -15,6 +15,7 @@
 **Obiettivo**: Costruire un dizionario neurale semantico che mappi pattern EEG a categorie concettuali attraverso la decodifica dell'imagined speech, usando Graph Neural Networks e, in prospettiva, Hypergraph Neural Networks.
 
 **Documenti di riferimento principali** — leggili sempre se hai dubbi sul progetto:
+
 - `docs/PROGETTO_COMPLETO_IT.md` — tutto ciò che è stato fatto finora
 - `docs/DIREZIONI_E_LIMITAZIONI.md` — roadmap, limitazioni, prossimi passi
 - `docs/papers_found.md` — letteratura di riferimento
@@ -50,7 +51,9 @@ Per il token: `source /opt/homebrew/Caskroom/miniconda/base/etc/profile.d/conda.
 
 ## 4. Dataset
 
-- **Segnale**: EEG a 59 canali validi (60 - 2 riferimento), 256 Hz, epoche ~1.5s
+- **Segnale**: EEG a 59 canali validi, 256 Hz, epoche ~1.5s
+  - File H5 (grezzo): **61 canali** (il casco ha 63 posizioni nel `.locs`, ma Pz e POz non sono stati registrati)
+  - Rimossi A1 e A2 (elettrodi di riferimento, nessuna posizione spaziale) → **59 canali EEG**
 - **Task**: 110 parole immaginarie (chance level ~0.9%)
 - **Soggetti**: 70, con 5 sessioni ciascuno (~220 epoche/sessione)
 - **Formato dati**: HDF5 in `data/processed/`, struttura `(n_epochs, n_channels, n_samples)`
@@ -122,7 +125,7 @@ Vedere `docs/DIREZIONI_E_LIMITAZIONI.md` per il dettaglio completo. Ordine di pr
 ## 8. Convenzioni di Codice
 
 - **Lingua**: commenti e documentazione in **italiano**; codice (variabili, funzioni) in **inglese**
-- **Notebook**: prefisso numerico `EEG_XX_` per la pipeline principale; `baseline_test_` per esperimenti
+- **Notebook**: prefisso numerico `EEG_XX_` per la pipeline principale; `test_` per esperimenti
 - **Commit**: seguire lo stile esistente (`feat:`, `docs:`, `refactor:`)
 - **Branch corrente**: `claude/elegant-neumann`
 - **Nessuna feature engineering manuale** nei nuovi modelli
@@ -134,22 +137,26 @@ Vedere `docs/DIREZIONI_E_LIMITAZIONI.md` per il dettaglio completo. Ordine di pr
 **Dopo ogni sessione di lavoro significativa, Claude DEVE:**
 
 ### 9.1 Aggiornare `docs/PROGETTO_COMPLETO_IT.md`
+
 - Aggiungere i nuovi esperimenti nella sezione 4 (Esperimenti Baseline)
 - Aggiornare il riepilogo risultati
 - Aggiornare gli insight chiave se emergono nuove conclusioni
 - Aggiornare la data in cima al documento
 
 ### 9.2 Aggiornare `docs/DIREZIONI_E_LIMITAZIONI.md`
+
 - Spostare le azioni completate (da "Cosa Possiamo Fare" a risultati)
 - Aggiornare le limitazioni se ne vengono superate
 - Aggiornare le metriche di successo con i risultati reali
 - Aggiornare la data
 
 ### 9.3 Creare un checkpoint datato
+
 - Creare `docs/checkpoints/GG-MM-AA.md` con il riepilogo della sessione
 - Includere: cosa è stato fatto, risultati numerici, conclusioni, prossimo step
 
 ### 9.4 Commit
+
 - Fare sempre commit dopo aggiornamenti significativi
 - Usare `docs:` o `feat:` come prefisso a seconda del tipo di modifica
 
