@@ -4,9 +4,10 @@ Utility functions for EEG data processing
 Shared helper functions used across multiple scripts.
 """
 
+import json
 import pandas as pd
 from pathlib import Path
-from typing import List
+from typing import Dict, List, Tuple
 
 
 def load_channel_names_from_eloc(eloc_path: Path) -> List[str]:
@@ -36,6 +37,50 @@ def load_channel_names_from_eloc(eloc_path: Path) -> List[str]:
         except Exception:
             names = []
     return names
+
+
+def load_label_scheme(
+    scheme: str,
+    interim_dir: Path,
+) -> Tuple[Dict[int, int], int, Dict[int, str]]:
+    """
+    Carica uno schema di etichettatura per i 110 label_id del dataset.
+
+    Args:
+        scheme: "raw110" | "sem5" | "pos4" | "ward4" | "ward5"
+        interim_dir: path alla cartella data/interim/
+
+    Returns:
+        labelid2cluster  — dict {label_id (int) → cluster_id (int)}
+        n_classes        — numero di classi distinte
+        cluster_names    — dict {cluster_id (int) → nome (str)}
+
+    Uso tipico in notebook:
+        labelid2cluster, N_CLASSES, cluster_names = load_label_scheme("sem5", interim_dir)
+    """
+    if scheme == "raw110":
+        return {i: i for i in range(110)}, 110, {i: str(i) for i in range(110)}
+
+    lmap_path = Path(interim_dir) / f"labelid2cluster_{scheme}.json"
+    if not lmap_path.exists():
+        raise FileNotFoundError(
+            f"Schema '{scheme}' non trovato: {lmap_path}\n"
+            f"Schemi disponibili: raw110, sem5, pos4, ward4, ward5"
+        )
+
+    with open(lmap_path, "r", encoding="utf-8") as f:
+        labelid2cluster = {int(k): int(v) for k, v in json.load(f).items()}
+
+    n_classes = len(set(labelid2cluster.values()))
+
+    names_path = Path(interim_dir) / f"cluster_names_{scheme}.json"
+    if names_path.exists():
+        with open(names_path, "r", encoding="utf-8") as f:
+            cluster_names = {int(k): v for k, v in json.load(f).items()}
+    else:
+        cluster_names = {i: f"C{i}" for i in range(n_classes)}
+
+    return labelid2cluster, n_classes, cluster_names
 
 
 def decode_label(label_raw) -> str:
