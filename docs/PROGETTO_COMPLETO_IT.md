@@ -2,7 +2,7 @@
 
 > Tesi Magistrale - Politecnico di Milano, DEIB
 > Autore: Daniele Uras
-> Ultimo aggiornamento: 8 marzo 2026
+> Ultimo aggiornamento: 10 marzo 2026
 
 ---
 
@@ -29,7 +29,8 @@ Il progetto si basa sulla letteratura scientifica recente:
   - Segmentazione in epoche (~1.5s ciascuna a 256 Hz)
   - Normalizzazione e allineamento canali
 - **Output**: file HDF5 in `data/processed/` con struttura `(n_epochs, n_channels, n_samples)`
-- **Canali validi**: 59 (A1 e A2 esclusi come riferimento)
+- **Canali registrati nell'H5**: 61 su 63 presenti nel casco (Pz e POz non acquisiti dal sistema)
+- **Canali validi nei tensori**: 59 (A1 e A2 esclusi — elettrodi di riferimento senza posizione spaziale)
 - **Sessioni**: 5 per soggetto, ~220 epoche per sessione
 
 ### 2.2 Estrazione Feature (40 feature per elettrodo)
