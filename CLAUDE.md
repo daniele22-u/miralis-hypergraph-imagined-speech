@@ -35,17 +35,24 @@
 
 ## 3. Ambiente di Sviluppo
 
-| Parametro | Valore |
-|-----------|--------|
-| **Conda env** | `daniele_310` |
-| **Python** | 3.12 |
-| **Framework DL** | PyTorch 2.8.0 + PyTorch Geometric 2.7.0 |
-| **EEG** | MNE-Python 1.10.2 |
-| **Dev server** | JupyterLab su porta 8888 |
-| **Launch config** | `.claude/launch.json` |
+Due ambienti conda disponibili:
 
-Per avviare JupyterLab: usa `preview_start` con il server `jupyter-lab`.
-Per il token: `source /opt/homebrew/Caskroom/miniconda/base/etc/profile.d/conda.sh && conda activate daniele_310 && jupyter server list`
+| Parametro | `daniele_310` | `daniele_311` |
+|-----------|---------------|---------------|
+| **Python** | 3.10 | 3.11.15 |
+| **PyTorch** | 2.8.0 | 2.5.0 |
+| **Braindecode** | 1.2.0 (no CBraMod) | 1.3.2 (con CBraMod) |
+| **PyG** | 2.7.0 | 2.7.0 |
+| **MNE** | 1.10.2 | 1.11.0 |
+| **Porta JupyterLab** | 8888 | 8889 |
+| **Launch config** | `jupyter-lab` | `jupyter-lab-311` |
+
+**Env raccomandato per nuovi notebook DL**: `daniele_311` (include CBraMod)
+
+Per avviare JupyterLab 311: usa `preview_start` con il server `jupyter-lab-311`.
+Per il token: `source /opt/homebrew/Caskroom/miniconda/base/etc/profile.d/conda.sh && conda activate daniele_311 && jupyter server list`
+
+- **Non usare** `daniele_dl_thesis` come env — usare `daniele_310` o `daniele_311`
 
 ---
 
@@ -183,6 +190,6 @@ Vedere `docs/papers_found.md` per la lista completa con abstract e valutazione.
 
 - **Git worktree attivo**: `.claude/worktrees/elegant-neumann/` — lavora sempre qui
 - **PR aperta**: #8 su GitHub
-- **JupyterLab**: avviare con `preview_start jupyter-lab` se serve testare notebook
-- **Non usare** `daniele_dl_thesis` come env — usare sempre `daniele_310`
+- **JupyterLab**: avviare con `preview_start jupyter-lab-311` per nuovi notebook DL (CBraMod), `jupyter-lab` per notebook legacy
+- **Non usare** `daniele_dl_thesis` come env — usare `daniele_310` (legacy) o `daniele_311` (nuovi notebook)
 - **Non committare** `node_modules/`, file `.pt` di grandi dimensioni, dati grezzi
