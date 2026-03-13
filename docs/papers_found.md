@@ -427,6 +427,40 @@
 
 ---
 
+---
+
+## Section 6: Interpretabilità e Analisi Neuroscientifica
+
+### 6.1 Haufe et al. -- Interpretazione dei Pesi dei Modelli Lineari
+
+**Citation:** Haufe, S., Meinecke, F., Görgen, K., Dähne, S., Haynes, J.D., Blankertz, B., & Bießmann, F. (2014). "On the interpretation of weight vectors of linear models in multivariate neuroimaging." *NeuroImage*, 87, 96-110.
+**Link:** https://doi.org/10.1016/j.neuroimage.2013.10.067
+**Summary:** Dimostra che i pesi di un modello lineare (es. regressione logistica, SVM) **non** possono essere interpretati direttamente come pattern neurali. Fornisce la formula corretta per derivare i "pattern di attivazione" dai pesi: `A = Σ_x W Σ_e^{-1}`, dove Σ_x è la covarianza dei dati e Σ_e quella dei residui. Solo questi pattern sono interpretabili neuroscienficamente.
+**Relevance:** Essenziale per la tesi. Ogni volta che si visualizzano i pesi del classificatore come "mappe di importanza degli elettrodi", si commette l'errore descritto in questo paper. Citare obbligatoriamente nella sezione interpretabilità.
+**Relevance score:** **HIGH**
+
+---
+
+### 6.2 Willett et al. -- Speech Neuroprosthetics ad Alta Performance
+
+**Citation:** Willett, F.R., Kunz, E.M., Fan, C., Avansino, D.T., Wilson, G.H., Choi, E.Y., ... & Henderson, J.M. (2023). "A high-performance speech neuroprosthetic." *Nature*, 620, 1031-1036.
+**Link:** https://doi.org/10.1038/s41586-023-06377-x
+**Summary:** BCI invasivo (array di microelettrodi intracorticale) che decodifica speech immaginato in testo con >99 parole/minuto e ~23% CER. Usa RNN su segnale neurale corticale ad alta risoluzione. Il vocabolario è ~125.000 parole, decodificato tramite modello linguistico.
+**Relevance:** Fornisce il contesto di ciò che è possibile con segnali ad alta risoluzione (intracorticale vs EEG scalp). Utile per contestualizzare i risultati modesti dell'EEG non-invasivo — la differenza di risoluzione spaziale e SNR è enorme. Motivazione per lo sviluppo di BCIs non invasivi.
+**Relevance score:** **MEDIUM** (contesto, non implementabile)
+
+---
+
+### 6.3 Défossez et al. -- Decoding Speech da Segnali Non-Invasivi
+
+**Citation:** Défossez, A., Caucheteux, C., Rapin, J., Kabeli, O., & King, J.R. (2023). "Decoding speech perception from non-invasive brain recordings." *Nature Machine Intelligence*, 5, 1097-1107.
+**Link:** https://doi.org/10.1038/s42256-023-00714-5
+**Summary:** Meta-learning (CLIP-like) che decodifica perceived speech da MEG/EEG. Architettura: encoder del segnale cerebrale + encoder del modello linguistico (wav2vec 2.0), ottimizzati con contrastive loss per allineare le rappresentazioni. Top-10 accuracy ~41% per perceived speech, ~0% per imagined speech (confermando la difficoltà del task).
+**Relevance:** Approccio contrastivo EEG/MEG ↔ modello linguistico è direttamente ispirante per l'approccio EEG ↔ SBERT del progetto (invece di clustering, si potrebbe allineare lo spazio EEG allo spazio semantico SBERT tramite contrastive learning). Il risultato ~0% su imagined speech motiva ulteriormente la necessità di approcci specifici.
+**Relevance score:** **HIGH**
+
+---
+
 ## Summary: Top Papers by Priority
 
 ### Must-Read (directly implement or build upon)
@@ -465,7 +499,10 @@
 | Pereira et al. 2018 -- Semantic Decoding | Semantic regression | Reframes problem via word embeddings |
 | Cooney et al. 2020 -- Neurolinguistics | Brain regions | Informs electrode grouping for hypergraphs |
 | Schirrmeister et al. 2017 -- ConvNets | End-to-end DL | Justifies moving beyond hand-crafted features |
+| Haufe et al. 2014 -- Model Interpretation | Interpretabilità | Obbligatorio per visualizzare mappe di attivazione |
+| Willett et al. 2023 -- Neuroprosthetics | Contesto invasivo | Motivazione per BCI non-invasivo |
+| Défossez et al. 2023 -- Non-Invasive Speech | Contrastive EEG↔LM | Contrastive alignment EEG ↔ spazio semantico |
 
 ---
 
-*Generated from parallel literature search across 5 research domains. Verify all citations before use in thesis.*
+*Aggiornato il 13 marzo 2026. Verify all citations before use in thesis.*
