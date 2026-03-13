@@ -65,8 +65,11 @@ def load_label_scheme(
     if not lmap_path.exists():
         raise FileNotFoundError(
             f"Schema '{scheme}' non trovato: {lmap_path}\n"
-            f"Schemi disponibili: raw110, sem5, pos4, ward4, ward5, eeg_4, eeg_5\n"
-            f"(eeg_4/eeg_5 richiedono l'esecuzione di EEG_00_labels_and_tasks.ipynb)"
+            f"Schemi word-based (affidabili):\n"
+            f"  raw110, ward4, ward5, ward6, pos4, sem5, concr4, phon4\n"
+            f"Schemi EEG-based (instabili cross-subject, ARI≈0 — solo per analisi):\n"
+            f"  eeg_4, eeg_5, eeg_z4, eeg_z5, eeg_hdb2\n"
+            f"Tutti richiedono l'esecuzione di EEG_00_labels_and_tasks.ipynb"
         )
 
     with open(lmap_path, "r", encoding="utf-8") as f:
