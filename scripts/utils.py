@@ -61,15 +61,27 @@ def load_label_scheme(
     if scheme == "raw110":
         return {i: i for i in range(110)}, 110, {i: str(i) for i in range(110)}
 
-    lmap_path = Path(interim_dir) / f"labelid2cluster_{scheme}.json"
-    if not lmap_path.exists():
+    # Cerca prima in configs/label_schemes/ (git-tracked, disponibile subito dopo clone),
+    # poi in data/interim/ (generato localmente da EEG_00_labels_and_tasks.ipynb)
+    _interim = Path(interim_dir)
+    _configs = _interim.parent.parent / "configs" / "label_schemes"
+
+    lmap_path = None
+    for search_dir in [_interim, _configs]:
+        candidate = search_dir / f"labelid2cluster_{scheme}.json"
+        if candidate.exists():
+            lmap_path = candidate
+            break
+
+    if lmap_path is None:
         raise FileNotFoundError(
-            f"Schema '{scheme}' non trovato: {lmap_path}\n"
+            f"Schema '{scheme}' non trovato in data/interim/ né in configs/label_schemes/\n"
             f"Schemi word-based (affidabili):\n"
             f"  raw110, ward4, ward5, ward6, pos4, sem5, concr4, phon4\n"
             f"Schemi EEG-based (instabili cross-subject, ARI≈0 — solo per analisi):\n"
             f"  eeg_4, eeg_5, eeg_z4, eeg_z5, eeg_hdb2\n"
-            f"Tutti richiedono l'esecuzione di EEG_00_labels_and_tasks.ipynb"
+            f"I word-based sono in configs/label_schemes/ (git-tracked).\n"
+            f"Gli EEG-based richiedono l'esecuzione di EEG_00_labels_and_tasks.ipynb"
         )
 
     with open(lmap_path, "r", encoding="utf-8") as f:
@@ -77,8 +89,15 @@ def load_label_scheme(
 
     n_classes = len(set(labelid2cluster.values()))
 
-    names_path = Path(interim_dir) / f"cluster_names_{scheme}.json"
-    if names_path.exists():
+    # Cerca cluster_names nelle stesse directory
+    names_path = None
+    for search_dir in [_interim, _configs]:
+        candidate = search_dir / f"cluster_names_{scheme}.json"
+        if candidate.exists():
+            names_path = candidate
+            break
+
+    if names_path is not None:
         with open(names_path, "r", encoding="utf-8") as f:
             cluster_names = {int(k): v for k, v in json.load(f).items()}
     else:
