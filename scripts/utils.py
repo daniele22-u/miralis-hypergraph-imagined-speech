@@ -65,7 +65,8 @@ def load_label_scheme(
     if not lmap_path.exists():
         raise FileNotFoundError(
             f"Schema '{scheme}' non trovato: {lmap_path}\n"
-            f"Schemi disponibili: raw110, sem5, pos4, ward4, ward5"
+            f"Schemi disponibili: raw110, sem5, pos4, ward4, ward5, eeg_4, eeg_5\n"
+            f"(eeg_4/eeg_5 richiedono l'esecuzione di EEG_00_labels_and_tasks.ipynb)"
         )
 
     with open(lmap_path, "r", encoding="utf-8") as f:
