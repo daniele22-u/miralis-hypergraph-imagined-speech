@@ -68,18 +68,39 @@ def _find_project_root() -> Path:
 project_root = _find_project_root()
 
 # ── cartelle sorgente da caricare ────────────────────────────────────────────
+#
+#  Categorie logiche:
+#  - aggregated : subject_tensors_aggregated_epoch/  (352 MB) ← usato dai modelli DL
+#  - time       : subject_tensors_time/              (1.7 GB) ← tensori temporali completi
+#  - epoch      : eeg_epoch_tensors.pt               (369 MB) ← tensore unificato (alternativa)
+#  - maps       : JSON/NPY piccoli in interim/        (~50 MB) ← cluster maps, embedding cache
+#  - features   : CSV feature per soggetto in interim (~1.6 GB) ← ricalcolabili, solo se servono
+#  - dl_ready   : aggregated + epoch + maps           (~780 MB) ← tutto ciò che serve per i modelli DL
+#  - all        : tutto quanto
+
+_proc = project_root / "data" / "processed"
+_int  = project_root / "data" / "interim"
+
+# file piccoli in interim (JSON, NPY, CSV piccoli) — esclusi i CSV pesanti
+_maps_files = [
+    f for f in _int.iterdir()
+    if f.is_file() and f.suffix in (".json", ".npy", ".csv")
+    and f.stat().st_size < 5 * 1024 * 1024  # < 5 MB
+] if _int.exists() else []
+
 SOURCES = {
-    "subj": [
-        project_root / "data" / "processed" / "subject_tensors",
-    ],
-    "epoch": [
-        project_root / "data" / "processed" / "eeg_epoch_tensors.pt",
-    ],
-    "interim": [
-        project_root / "data" / "interim",
-    ],
+    "aggregated": [_proc / "subject_tensors" / "subject_tensors_aggregated_epoch"],
+    "time":       [_proc / "subject_tensors" / "subject_tensors_time"],
+    "epoch":      [_proc / "eeg_epoch_tensors.pt"],
+    "maps":       _maps_files,
+    "features":   [f for f in _int.iterdir()
+                   if f.is_file() and f.suffix == ".csv"
+                   and f.stat().st_size >= 5 * 1024 * 1024
+                  ] if _int.exists() else [],
 }
-SOURCES["all"] = SOURCES["subj"] + SOURCES["epoch"] + SOURCES["interim"]
+SOURCES["dl_ready"] = SOURCES["aggregated"] + SOURCES["epoch"] + SOURCES["maps"]
+SOURCES["all"] = (SOURCES["aggregated"] + SOURCES["time"] +
+                  SOURCES["epoch"] + SOURCES["maps"] + SOURCES["features"])
 
 
 # ── auto-rilevamento OneDrive su macOS ───────────────────────────────────────
@@ -210,8 +231,10 @@ def main():
     )
     parser.add_argument("--dest", default=None,
                         help="Cartella di destinazione (path locale o remote rclone 'onedrive:path')")
-    parser.add_argument("--what", choices=["all", "subj", "epoch", "interim"], default="subj",
-                        help="Cosa caricare (default: subj — solo subject tensors)")
+    parser.add_argument("--what",
+                        choices=["dl_ready", "aggregated", "time", "epoch", "maps", "features", "all"],
+                        default="dl_ready",
+                        help="Cosa caricare (default: dl_ready — aggregated+epoch+maps, ~780MB)")
     parser.add_argument("--force", action="store_true",
                         help="Ricopia anche i file già presenti con stessa dimensione")
     parser.add_argument("--dry-run", action="store_true",
