@@ -1,6 +1,6 @@
 # Direzioni Future e Limitazioni Attuali
 
-> Ultimo aggiornamento: 8 marzo 2026
+> Ultimo aggiornamento: 13 marzo 2026
 
 ---
 
@@ -12,7 +12,9 @@
 |-------------|-----------|---------|
 | **Variabilita inter-soggetto** | Le feature EEG sono dominate dall'identita del soggetto, non dalla parola immaginata | I modelli subject-independent sono al livello del caso |
 | **Task a 110 classi** | Classificazione multi-classe con 110 parole distinte | Chance level ~0.9%, task estremamente difficile |
-| **Numero limitato di soggetti** | Dataset con pochi soggetti disponibili | Limita la generalizzabilita dei risultati |
+| **Variabilita inter-soggetto irriducibile con feature manuali** | RSA Mantel test: r=0.001, p=0.817 — le feature EEG estratte non correlano con struttura semantica | Feature manuali troppo crude; necessario approccio DL end-to-end |
+| **Cluster EEG instabili inter-soggetto** | ARI cross-subject ≈ 0 (p=1.000) — clustering EEG-driven non replicabile tra soggetti | Solo schemi supervised (Ward/POS/Semantico-BCI) sono affidabili come target |
+| **70 soggetti** | Dataset insolitamente grande (la maggior parte degli studi usa <15 soggetti) | **Vantaggio**: abundant cross-subject pairs per contrastive learning |
 | **Epoche corte** | ~1.5 secondi per trial a 256 Hz | Informazione temporale limitata per trial |
 | **Sbilanciamento** | Non tutte le parole hanno lo stesso numero di trial | Alcune classi sotto-rappresentate |
 
@@ -52,7 +54,22 @@
 
 ### 2.1 Azioni Immediate (pronte con l'infrastruttura attuale)
 
-#### A. Completare il Baseline Spazio-Temporale
+#### A0. Subject-Centering del Segnale EEG (priorità assoluta)
+- **Cosa**: sottrarre la media soggetto da ogni trial — `X_trial -= X_subject_mean` — prima di qualsiasi altra operazione
+- **Come**: nei notebook di caricamento dati, calcolare la media su tutti i trial del soggetto e sottrarla
+- **Perché**: le analisi di questa sessione dimostrano che la struttura nei dati è dominata dall'identità del soggetto (ε²=0.85). Il subject-centering rimuove questo DC offset senza bisogno di modelli complessi
+- **Riferimento**: tecnica standard in neuroimaging cognitiva (RSA, Pattern Analysis), analoga alla baseline correction in event-related analysis
+- **Effort**: bassissimo — 2 righe di codice in ogni notebook
+- **Status**: da implementare come primo passo prima di qualsiasi nuovo esperimento
+
+#### A1. Instance Normalization nei Modelli DL
+- **Cosa**: sostituire BatchNorm con InstanceNorm in tutti i modelli (`nn.InstanceNorm1d`)
+- **Come**: normalizzazione per-trial invece che per-batch: ogni trial normalizzato indipendentemente attraverso i canali
+- **Perché**: rimuove offset di ampiezza soggetto-specifici; Bomatter et al. 2024 mostrano miglioramenti significativi
+- **Effort**: basso (1 riga per modello)
+- **Status**: da implementare dopo subject-centering
+
+#### A2. Completare il Baseline Spazio-Temporale
 - **Cosa**: allenare il GCN spazio-temporale gia preparato in `EEG_GNN_temporal_baseline_spatial_graph_FIXED.ipynb`
 - **Come**: sequenza di 5 grafi per trial, encoding GCN + aggregazione con mean pooling o GRU
 - **Perche**: stabilire un upper bound per i modelli basati su grafi semplici prima di passare agli ipergrafi
@@ -78,39 +95,63 @@
 
 ### 2.2 Sviluppi a Medio Termine
 
-#### E. Hypergraph Neural Networks
+#### E. Cross-Subject Contrastive Learning (Shen et al. 2022)
+- **Cosa**: addestrare un encoder con coppie positive cross-soggetto — stessa parola, soggetti diversi
+- **Come**: coppie positive `(trial parola W soggetto A, trial parola W soggetto B)`, coppie negative `(trial parola W, trial parola V≠W)`. Loss NT-Xent o SupCon. Con 70 soggetti abbiamo coppie abbondanti
+- **Perché**: l'analisi RSA e ARI mostra che la struttura per parola è completamente sommersa dalla struttura per soggetto. Il contrastive cross-soggetto forza l'encoder ad ignorare l'identità del soggetto e a rappresentare il contenuto lessicale
+- **Riferimento**: Shen et al. 2022, Zhao et al. 2023 (Thinking Race — specifico per imagined speech)
+- **Effort**: medio
+
+#### E2. DANN — Gradient Reversal su Subject Label
+- **Cosa**: aggiungere un discriminatore soggetto con gradient reversal all'encoder condiviso
+- **Come**: encoder → task classifier + (gradient reversal →) subject discriminator. Loss combinata forza l'encoder a produrre rappresentazioni che il discriminatore soggetto non riesce a classificare
+- **Perché**: approccio complementare al contrastive learning. Il discriminatore esplicito forza la rimozione dell'informazione soggetto
+- **Riferimento**: Zheng & Lu 2020 (DANN per EEG)
+- **Effort**: medio
+
+#### E3. Allineamento Riemanniano (Euclidean Alignment)
+- **Cosa**: riallineare le matrici di covarianza dei soggetti prima di ogni esperimento
+- **Come**: `pyriemann.utils.mean.mean_riemann` per calcolare la covarianza media; trasformare ogni trial `X → R_s^{-1/2} * X`
+- **Perché**: preprocessing geometricamente principiato che riduce la distanza inter-soggetto nello spazio delle matrici di covarianza
+- **Riferimento**: Jayaram & Barachant 2020
+- **Effort**: basso (preprocessing aggiuntivo)
+
+#### F. Hypergraph Neural Networks
 - **Cosa**: implementare reti neurali su ipergrafi dove le iperedge connettono gruppi di elettrodi
 - **Come**:
   - Costruire ipergrafi basati su regioni cerebrali (frontale, temporale, parietale, occipitale)
-  - Iperedge da clustering funzionale (gruppi di elettrodi co-attivati)
-  - Usare librerie come `hypergraph-nn` o implementare HGNN custom con PyTorch Geometric
+  - Iperedge da clustering funzionale (PLV per banda di frequenza)
+  - Usare framework AllSet (Chien et al. 2022) o implementare HGNN custom con PyTorch Geometric
 - **Perche**: le relazioni di ordine superiore tra gruppi di elettrodi possono catturare pattern che i grafi semplici non modellano
-- **Riferimento**: Li et al. (2025) raggiungono 78% con dynamic hypergraph learning
+- **Riferimento**: Li et al. 2025 raggiungono 78% con dynamic hypergraph learning; per-trial hyperedge construction via PLV/coherence
 - **Effort**: alto
 
-#### F. Graph Attention Networks (GAT)
+#### G. Graph Attention Networks (GAT)
 - **Cosa**: sostituire GCN con GAT per pesare dinamicamente i vicini
 - **Come**: implementare GAT con PyTorch Geometric (`GATConv`)
 - **Perche**: non tutti gli elettrodi vicini contribuiscono ugualmente alla classificazione
 - **Effort**: medio
 
-#### G. Domain Adaptation per Transfer Cross-Soggetto
-- **Cosa**: implementare strategie di adattamento di dominio
+#### H. Domain Adaptation per Transfer Cross-Soggetto
+- **Cosa**: implementare strategie di adattamento di dominio avanzate
 - **Come**:
-  - Allineamento delle distribuzioni (MMD, CORAL)
-  - Adversarial domain adaptation
-  - Subject-specific normalization layers
+  - Allineamento delle distribuzioni (MMD, Deep CORAL)
+  - Adversarial domain adaptation (DANN — vedi E2)
+  - Adaptive Batch Normalization (Lee et al. 2022): aggiornare running stats BN con pochi trial del soggetto target
 - **Perche**: la variabilita inter-soggetto e il problema principale; servono metodi per compensarla
 - **Effort**: alto
 
-#### H. Feature Apprese (Deep Learning)
-- **Cosa**: sostituire o integrare le feature manuali con rappresentazioni apprese
-- **Come**:
-  - Autoencoder convoluzionali sul segnale raw
-  - Contrastive learning (SimCLR/BYOL adattato per EEG)
-  - EEGNet o altri modelli end-to-end
-- **Perche**: le feature manuali potrebbero non catturare i pattern piu discriminativi
-- **Effort**: alto
+#### I. Feature Apprese — EEGNet / EEG Conformer End-to-End
+- **Cosa**: sostituire le 40 feature manuali con input raw (59, 384) direttamente ai modelli
+- **Come**: EEGNet su raw EEG con subject-centering → baseline end-to-end; EEG Conformer per dipendenze temporali a lungo raggio
+- **Perche**: la RSA dimostra che le feature manuali non correlano con la semantica. L'approccio end-to-end ha già il notebook `EEG_04_braindecode_raw_baselines.ipynb` pronto
+- **Effort**: basso (infrastruttura già pronta)
+
+#### J. Neural Prototype Clustering (contributo originale)
+- **Cosa**: costruire prototipi neurali per parola (media dei trial z-scored per soggetto), clusterizzarli a 4-5 gruppi, confrontare con gli schemi semantici tramite ARI/V-measure
+- **Motivazione**: la domanda — "lo spazio EEG recupera parzialmente la struttura semantica?" — è aperta nella letteratura per imagined speech. Pereira et al. 2018 lo hanno dimostrato per fMRI; l'analogo EEG non è stato pubblicato a grande scala
+- **Come**: già implementato parzialmente in `EEG_00_labels_and_tasks.ipynb`. L'estensione è confrontare i cluster EEG-z con Ward-4/POS-4/Semantico-BCI-5 via ARI
+- **Effort**: basso (codice base già presente)
 
 ### 2.3 Sviluppi a Lungo Termine
 
@@ -145,26 +186,29 @@
 
 ## 3. Roadmap Suggerita
 
-### Fase 1: Consolidamento Baseline (immediato)
-1. Completare training GCN spazio-temporale
-2. Rieseguire tutti i baseline sul task a 4-5 categorie semantiche
-3. Implementare experiment tracking (W&B o MLflow)
+### Fase 1: Correzione Fondamentale (immediato)
+1. **Subject-centering** su tutti i notebook (`X_trial -= X_subject_mean`) — prerequisito per tutto il resto
+2. **Instance Normalization** sostituisce BatchNorm in tutti i modelli DL
+3. **EEGNet end-to-end** su segnale raw (59, 384) — già in `EEG_04_braindecode_raw_baselines.ipynb`
+4. **Completare** training GCN spazio-temporale
+5. **Rieseguire** tutti i baseline sul task a 4-5 categorie semantiche (schemi affidabili: Ward-4, POS-4, Semantico-BCI-5)
 
-### Fase 2: Modelli Avanzati su Grafi (breve termine)
-4. Implementare GAT (Graph Attention Networks)
-5. Grafi per-banda (feature filtrate per frequenza)
-6. Feature selection guidata
+### Fase 2: Affrontare la Variabilità Inter-Soggetto (breve termine)
+6. **Allineamento Riemanniano** (pyriemann Euclidean Alignment) — preprocessing aggiuntivo
+7. **Cross-subject contrastive learning** (Shen et al. 2022) — sfrutta i 70 soggetti come vantaggio
+8. **DANN** gradient reversal su subject label (Zheng & Lu 2020)
+9. **GAT** (Graph Attention Networks) — `GATConv` di PyG
 
-### Fase 3: Hypergraph e Transfer (medio termine)
-7. Implementare Hypergraph Neural Networks
-8. Domain adaptation per generalizzazione cross-soggetto
-9. Contrastive learning per rappresentazioni apprese
+### Fase 3: Hypergraph e Analisi Avanzata (medio termine)
+10. **Neural Prototype Clustering** — confronto EEG vs. semantica con ARI (contributo originale)
+11. **Dynamic Hypergraph (DHSLP-style)** — per-trial PLV/coherence hyperedges
+12. **Allineamento Riemanniano** per domain generalization
 
 ### Fase 4: Sistema Completo (lungo termine)
-10. Feature tempo-frequenza e non-lineari
-11. Data augmentation
-12. Pipeline automatizzata end-to-end
-13. Validazione su dataset esterni
+13. Feature tempo-frequenza (wavelet, STFT) — dopo aver stabilito baseline DL
+14. Data augmentation sistematica (Rommel et al. 2022)
+15. Pipeline automatizzata end-to-end
+16. Validazione su dataset esterni (Nieto et al. Inner Speech)
 
 ---
 
