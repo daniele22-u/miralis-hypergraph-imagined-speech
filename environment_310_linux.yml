@@ -279,7 +279,7 @@ dependencies:
   - nss=3.118
   - numba=0.62.1
   - numexpr=2.14.1
-  - numpy=1.26.4
+  - numpy
   - onnx=1.16.2
   - onnxruntime=1.24.2
   - openh264=2.5.0

@@ -161,11 +161,11 @@ def extract_spectral_features(signal_1d: np.ndarray, fs: int = 256) -> Dict[str,
     }
     
     # Compute band powers
-    total_power = np.trapz(psd, freqs)
+    total_power = np.trapezoid(psd, freqs)
     
     for band_name, (fmin, fmax) in bands.items():
         idx = (freqs >= fmin) & (freqs <= fmax)
-        band_power = np.trapz(psd[idx], freqs[idx])
+        band_power = np.trapezoid(psd[idx], freqs[idx])
         feats[f'spec_{band_name}'] = band_power
         feats[f'spec_{band_name}_rel'] = band_power / np.maximum(total_power, 1e-12)
     
