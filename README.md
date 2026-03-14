@@ -125,6 +125,26 @@ python scripts/graphs/feature_visualizations.py
 - **22 Spectral features**: band powers (δ, θ, α, β, γ), spectral entropy, dominant frequency
 - **6 Functional features**: correlation-based connectivity, phase locking value (PLV)
 
+## Data Setup
+
+Since the EEG dataset is very large (~45GB), it is stored externally and linked into the repository framework using symbolic links.
+
+If you are on the Spinlabs machine, simply run the setup script to create the necessary links to the Windows mount:
+
+```bash
+bash scripts/setup_data_symlinks.sh
+```
+
+If your data is stored elsewhere, you can pass the source directory as an argument:
+```bash
+bash scripts/setup_data_symlinks.sh /path/to/your/EEG_tensors_stuff
+```
+
+This will link:
+- `subject_tensors_aggregated_epoch/*` ➔ `data/processed/subject_tensors/subject_tensors_aggregated_epoch/`
+- `subject_tensors_time/*` ➔ `data/processed/subject_tensors/subject_tensors_time/`
+- Helper JSON, CSV, NPY files ➔ `data/interim/`
+
 **Visualizations created**:
 - Power variation across epochs for individual electrodes
 - Heatmap of high-power electrodes per epoch
