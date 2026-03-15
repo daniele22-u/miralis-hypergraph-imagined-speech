@@ -162,10 +162,12 @@ Vedere `docs/DIREZIONI_E_LIMITAZIONI.md` per il dettaglio completo. Ordine di pr
 - Creare `docs/checkpoints/GG-MM-AA.md` con il riepilogo della sessione
 - Includere: cosa è stato fatto, risultati numerici, conclusioni, prossimo step
 
-### 9.4 Commit
+### 9.4 Commit e Merge
 
 - Fare sempre commit dopo aggiornamenti significativi
 - Usare `docs:` o `feat:` come prefisso a seconda del tipo di modifica
+- **Fare sempre merge su `main` dopo ogni sessione**, salvo indicazione esplicita contraria da parte di Daniele
+- Il merge va fatto con `git checkout main && git pull origin main && git merge claude/elegant-neumann --no-ff && git push origin main`
 
 ---
 
