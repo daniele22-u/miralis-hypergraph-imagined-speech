@@ -10,6 +10,7 @@ __pycache__/
 .vscode/
 data/
 models/
+runs/
 src/
 scripts/data_processing/eeglab2025.1.0
 scripts/data_processing/Preprocessing-main
