@@ -225,9 +225,9 @@ function card(slide, x, y, w, h, color) {
   });
 
   rows.forEach((row, ri) => {
-    const y = 1.58 + ri * 0.47;
+    const y = 1.58 + ri * 0.50;
     s.addShape(pres.shapes.RECTANGLE, {
-      x: 0.4, y, w: 9.2, h: 0.43,
+      x: 0.4, y, w: 9.2, h: 0.46,
       fill: { color: ri % 2 === 0 ? C.light : C.white },
       line: { color: ri % 2 === 0 ? C.light : C.white },
     });
@@ -393,9 +393,9 @@ function card(slide, x, y, w, h, color) {
     ["ShallowFBCSPNet", "0.2542 ★", "19", "1.3h"],
   ];
   rows.forEach((row, ri) => {
-    const y = 2.1 + ri * 0.44;
+    const y = 2.1 + ri * 0.42;
     s.addShape(pres.shapes.RECTANGLE, {
-      x: 0.4, y, w: 9.2, h: 0.4,
+      x: 0.4, y, w: 9.2, h: 0.38,
       fill: { color: ri % 2 === 0 ? C.light : C.white },
       line: { color: ri % 2 === 0 ? C.light : C.white },
     });
@@ -428,11 +428,11 @@ function card(slide, x, y, w, h, color) {
 
   // Formula box
   s.addShape(pres.shapes.ROUNDED_RECTANGLE, {
-    x: 2.5, y: 1.15, w: 5.0, h: 0.55,
+    x: 1.5, y: 1.15, w: 7.0, h: 0.55,
     fill: { color: C.navy }, line: { color: C.navy }, rectRadius: 0.08,
   });
   s.addText("x = (x − μ) / σ    (per trial, per channel)", {
-    x: 2.5, y: 1.2, w: 5.0, h: 0.42,
+    x: 1.5, y: 1.2, w: 7.0, h: 0.42,
     fontSize: 14, bold: true, color: C.cyan, fontFace: "Consolas", align: "center", margin: 0,
   });
 
@@ -459,7 +459,7 @@ function card(slide, x, y, w, h, color) {
     ["ShallowFBCSPNet", "0.2542", "0.2525", "−0.0017"],
   ];
   rows.forEach((row, ri) => {
-    const y = 2.27 + ri * 0.42;
+    const y = 2.27 + ri * 0.46;
     s.addShape(pres.shapes.RECTANGLE, {
       x: 0.4, y, w: 9.2, h: 0.38,
       fill: { color: ri % 2 === 0 ? C.light : C.white },
