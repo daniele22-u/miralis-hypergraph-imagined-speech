@@ -602,6 +602,277 @@ function card(slide, x, y, w, h, color) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// SLIDE 11 — Subject-Independent Results
+// ═══════════════════════════════════════════════════════════════════════════
+{
+  const s = pres.addSlide();
+  s.background = { color: C.white };
+  addSlideHeader(s, "Subject-Independent Baseline Results", "Train: subjects 01–50  |  Val: 51–60  |  Test: 61–74  |  4 classes (concr4)  |  Chance = 25%");
+
+  // ── chart data ─────────────────────────────────────────────────────────
+  const siData = [
+    { label: "ATCNet",       noNorm: 0.2502, norm: 0.2499 },
+    { label: "EEGNet",       noNorm: 0.2491, norm: 0.2517 },
+    { label: "Shallow\nFBCSP", noNorm: 0.2542, norm: 0.2525 },
+    { label: "Deep4Net",     noNorm: 0.2504, norm: 0.2500 },
+    { label: "EEG\nConformer", noNorm: 0.2500, norm: 0.2500 },
+    { label: "LaBraM",       noNorm: 0.2505, norm: 0.2439 },
+  ];
+
+  // ── chart geometry ──────────────────────────────────────────────────────
+  const cX = 0.9, cY = 1.25, cW = 7.5, cH = 2.65;
+  const cBot = cY + cH;
+  const yMin = 0.235, yMax = 0.260, yRange = yMax - yMin;
+
+  function siBarH(v) { return Math.max((v - yMin) / yRange * cH, 0); }
+  function siBarY(v) { return cBot - siBarH(v); }
+
+  // grid lines + y labels
+  for (let i = 0; i <= 5; i++) {
+    const val = yMin + (yMax - yMin) * i / 5;
+    const gy = cBot - (val - yMin) / yRange * cH;
+    s.addShape(pres.shapes.LINE, {
+      x: cX, y: gy, w: cW, h: 0,
+      line: { color: i === 0 ? C.gray : "DDDDDD", width: i === 0 ? 1 : 0.5, dashType: i === 0 ? "solid" : "sysDot" }
+    });
+    s.addText((val * 100).toFixed(1) + "%", {
+      x: cX - 0.65, y: gy - 0.13, w: 0.62, h: 0.26,
+      fontSize: 8, color: C.gray, align: "right", fontFace: "Calibri", margin: 0,
+    });
+  }
+
+  // chance line at 25%
+  const chY = cBot - (0.25 - yMin) / yRange * cH;
+  s.addShape(pres.shapes.LINE, {
+    x: cX, y: chY, w: cW, h: 0,
+    line: { color: C.red, width: 1.5, dashType: "dash" }
+  });
+  s.addText("— 25% chance", {
+    x: cX + cW + 0.05, y: chY - 0.14, w: 1.3, h: 0.28,
+    fontSize: 8, color: C.red, bold: true, fontFace: "Calibri", margin: 0,
+  });
+
+  // y-axis line
+  s.addShape(pres.shapes.LINE, {
+    x: cX, y: cY, w: 0, h: cH,
+    line: { color: C.gray, width: 1 }
+  });
+
+  // bars
+  const groupW = cW / siData.length;
+  const barW = 0.38, barGap = 0.07;
+  const innerW = barW * 2 + barGap;
+
+  siData.forEach((d, gi) => {
+    const gx = cX + gi * groupW;
+    const pad = (groupW - innerW) / 2;
+
+    // no-norm bar (navy)
+    const x0 = gx + pad;
+    const h0 = siBarH(d.noNorm);
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: x0, y: siBarY(d.noNorm), w: barW, h: h0,
+      fill: { color: C.navy }, line: { color: C.navy, width: 0 },
+    });
+    s.addText((d.noNorm * 100).toFixed(1) + "%", {
+      x: x0 - 0.05, y: siBarY(d.noNorm) - 0.18, w: barW + 0.1, h: 0.17,
+      fontSize: 6.5, color: C.navy, bold: true, align: "center", fontFace: "Calibri", margin: 0,
+    });
+
+    // norm bar (cyan)
+    const x1 = x0 + barW + barGap;
+    const h1 = siBarH(d.norm);
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: x1, y: siBarY(d.norm), w: barW, h: h1,
+      fill: { color: C.cyan }, line: { color: C.cyan, width: 0 },
+    });
+    s.addText((d.norm * 100).toFixed(1) + "%", {
+      x: x1 - 0.05, y: siBarY(d.norm) - 0.18, w: barW + 0.1, h: 0.17,
+      fontSize: 6.5, color: C.cyan, bold: true, align: "center", fontFace: "Calibri", margin: 0,
+    });
+
+    // group label
+    s.addText(d.label, {
+      x: gx + 0.05, y: cBot + 0.06, w: groupW - 0.1, h: 0.38,
+      fontSize: 8.5, color: C.dark, align: "center", fontFace: "Calibri", margin: 0,
+    });
+  });
+
+  // ── legend (top-right, outside chart) ───────────────────────────────────
+  const legX = cX + cW + 0.08;
+  s.addShape(pres.shapes.RECTANGLE, {
+    x: legX, y: cY + 0.55, w: 0.22, h: 0.18,
+    fill: { color: C.navy }, line: { color: C.navy, width: 0 },
+  });
+  s.addText("No Norm", {
+    x: legX + 0.27, y: cY + 0.52, w: 1.1, h: 0.24,
+    fontSize: 8.5, color: C.dark, fontFace: "Calibri", margin: 0,
+  });
+  s.addShape(pres.shapes.RECTANGLE, {
+    x: legX, y: cY + 0.82, w: 0.22, h: 0.18,
+    fill: { color: C.cyan }, line: { color: C.cyan, width: 0 },
+  });
+  s.addText("+ Inst.Norm", {
+    x: legX + 0.27, y: cY + 0.79, w: 1.1, h: 0.24,
+    fontSize: 8.5, color: C.dark, fontFace: "Calibri", margin: 0,
+  });
+
+  // ── insight box ─────────────────────────────────────────────────────────
+  s.addShape(pres.shapes.ROUNDED_RECTANGLE, {
+    x: 0.4, y: 4.52, w: 9.2, h: 0.65,
+    fill: { color: C.red, transparency: 88 }, line: { color: C.red, width: 1.5 }, rectRadius: 0.08,
+  });
+  s.addText("⚠  All 6 models at chance — cross-subject generalization fails  |  Instance Norm has negligible effect  |  Best: ShallowFBCSP 25.4%", {
+    x: 0.6, y: 4.57, w: 8.8, h: 0.55,
+    fontSize: 11, color: C.red, bold: true, fontFace: "Calibri", align: "center", margin: 0,
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SLIDE 12 — Subject-Specific Results
+// ═══════════════════════════════════════════════════════════════════════════
+{
+  const s = pres.addSlide();
+  s.background = { color: C.white };
+  addSlideHeader(s, "Subject-Specific Baseline Results", "Leave-one-session-out  |  26 subjects  |  4 classes (concr4)  |  Chance = 25%  |  Mean balanced accuracy");
+
+  // ── chart data ─────────────────────────────────────────────────────────
+  const ssData = [
+    { label: "EEGNet",       val: 0.279, test: 0.259 },
+    { label: "Shallow\nFBCSP", val: 0.300, test: 0.256 },
+    { label: "Deep4Net",     val: 0.296, test: 0.233 },
+    { label: "EEG\nConformer", val: 0.267, test: 0.252 },
+    { label: "ATCNet",       val: 0.275, test: 0.238 },
+    { label: "LaBraM",       val: 0.278, test: 0.249 },
+  ];
+
+  // ── chart geometry ──────────────────────────────────────────────────────
+  const cX = 0.9, cY = 1.25, cW = 7.0, cH = 2.65;
+  const cBot = cY + cH;
+  const yMin = 0.22, yMax = 0.33, yRange = yMax - yMin;
+
+  function ssBarH(v) { return Math.max((v - yMin) / yRange * cH, 0); }
+  function ssBarY(v) { return cBot - ssBarH(v); }
+
+  // grid lines + y labels
+  for (let i = 0; i <= 5; i++) {
+    const val = yMin + (yMax - yMin) * i / 5;
+    const gy = cBot - (val - yMin) / yRange * cH;
+    s.addShape(pres.shapes.LINE, {
+      x: cX, y: gy, w: cW, h: 0,
+      line: { color: i === 0 ? C.gray : "DDDDDD", width: i === 0 ? 1 : 0.5, dashType: i === 0 ? "solid" : "sysDot" }
+    });
+    s.addText((val * 100).toFixed(1) + "%", {
+      x: cX - 0.65, y: gy - 0.13, w: 0.62, h: 0.26,
+      fontSize: 8, color: C.gray, align: "right", fontFace: "Calibri", margin: 0,
+    });
+  }
+
+  // chance line at 25%
+  const chY = cBot - (0.25 - yMin) / yRange * cH;
+
+  // y-axis line
+  s.addShape(pres.shapes.LINE, {
+    x: cX, y: cY, w: 0, h: cH,
+    line: { color: C.gray, width: 1 }
+  });
+
+  // bars
+  const groupW = cW / ssData.length;
+  const barW = 0.38, barGap = 0.07;
+  const innerW = barW * 2 + barGap;
+
+  ssData.forEach((d, gi) => {
+    const gx = cX + gi * groupW;
+    const pad = (groupW - innerW) / 2;
+
+    // val_bacc bar (blue)
+    const x0 = gx + pad;
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: x0, y: ssBarY(d.val), w: barW, h: ssBarH(d.val),
+      fill: { color: C.blue }, line: { color: C.blue, width: 0 },
+    });
+    s.addText((d.val * 100).toFixed(1) + "%", {
+      x: x0 - 0.05, y: ssBarY(d.val) - 0.18, w: barW + 0.1, h: 0.17,
+      fontSize: 6.5, color: C.blue, bold: true, align: "center", fontFace: "Calibri", margin: 0,
+    });
+
+    // test_bacc bar (green)
+    const x1 = x0 + barW + barGap;
+    s.addShape(pres.shapes.RECTANGLE, {
+      x: x1, y: ssBarY(d.test), w: barW, h: ssBarH(d.test),
+      fill: { color: C.green }, line: { color: C.green, width: 0 },
+    });
+    s.addText((d.test * 100).toFixed(1) + "%", {
+      x: x1 - 0.05, y: ssBarY(d.test) - 0.18, w: barW + 0.1, h: 0.17,
+      fontSize: 6.5, color: C.green, bold: true, align: "center", fontFace: "Calibri", margin: 0,
+    });
+
+    // group label
+    s.addText(d.label, {
+      x: gx + 0.05, y: cBot + 0.06, w: groupW - 0.1, h: 0.38,
+      fontSize: 8.5, color: C.dark, align: "center", fontFace: "Calibri", margin: 0,
+    });
+  });
+
+  // chance line (drawn now so rpX is available for label below)
+  s.addShape(pres.shapes.LINE, {
+    x: cX, y: chY, w: cW, h: 0,
+    line: { color: C.red, width: 1.5, dashType: "dash" }
+  });
+
+  // ── legend + overfitting note (right panel) ──────────────────────────────
+  const rpX = cX + cW + 0.12;
+
+  // chance label aligned with chance line, in right panel column
+  s.addText("← 25%\nchance", {
+    x: rpX, y: chY - 0.28, w: 1.8, h: 0.46,
+    fontSize: 7.5, color: C.red, bold: true, fontFace: "Calibri", margin: 0, align: "left",
+  });
+  // legend
+  s.addShape(pres.shapes.RECTANGLE, {
+    x: rpX, y: cY + 0.08, w: 0.22, h: 0.18,
+    fill: { color: C.blue }, line: { color: C.blue, width: 0 },
+  });
+  s.addText("Val bacc", {
+    x: rpX + 0.27, y: cY + 0.05, w: 1.5, h: 0.24,
+    fontSize: 9, color: C.dark, fontFace: "Calibri", margin: 0,
+  });
+  s.addShape(pres.shapes.RECTANGLE, {
+    x: rpX, y: cY + 0.38, w: 0.22, h: 0.18,
+    fill: { color: C.green }, line: { color: C.green, width: 0 },
+  });
+  s.addText("Test bacc", {
+    x: rpX + 0.27, y: cY + 0.35, w: 1.5, h: 0.24,
+    fontSize: 9, color: C.dark, fontFace: "Calibri", margin: 0,
+  });
+
+  // overfitting box (right panel, separated from chart)
+  s.addShape(pres.shapes.ROUNDED_RECTANGLE, {
+    x: rpX, y: cY + 0.78, w: 1.8, h: 1.5,
+    fill: { color: C.yellow, transparency: 88 }, line: { color: C.yellow, width: 1.5 }, rectRadius: 0.08,
+  });
+  s.addText("⚠ Overfit", {
+    x: rpX + 0.05, y: cY + 0.90, w: 1.7, h: 0.3,
+    fontSize: 10, color: C.yellow, bold: true, fontFace: "Calibri", align: "center", margin: 0,
+  });
+  s.addText("Train acc\n60–99%\n(vs 25–30% val)", {
+    x: rpX + 0.05, y: cY + 1.22, w: 1.7, h: 0.90,
+    fontSize: 9, color: C.dark, fontFace: "Calibri", align: "center", margin: 0,
+  });
+
+  // ── insight box ─────────────────────────────────────────────────────────
+  s.addShape(pres.shapes.ROUNDED_RECTANGLE, {
+    x: 0.4, y: 4.52, w: 9.2, h: 0.65,
+    fill: { color: C.green, transparency: 88 }, line: { color: C.green, width: 1.5 }, rectRadius: 0.08,
+  });
+  s.addText("✓  EEG is decodable per-subject (val 27–30% > 25% chance)  |  ShallowFBCSP best: 30.0%  |  Overfitting to train sessions = key bottleneck", {
+    x: 0.6, y: 4.57, w: 8.8, h: 0.55,
+    fontSize: 10.5, color: C.green, bold: true, fontFace: "Calibri", align: "center", margin: 0,
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // WRITE
 // ═══════════════════════════════════════════════════════════════════════════
 pres.writeFile({ fileName: "EN_EEG_Project_Status_Mar2026.pptx" })
