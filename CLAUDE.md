@@ -82,12 +82,18 @@ miralis-hypergraph-imagined-speech/
 │   ├── papers_found.md                ← letteratura di riferimento
 │   ├── presentation_progetto.pptx     ← presentazione stato progetto
 │   └── checkpoints/                   ← checkpoint datati delle sessioni
-├── notebooks/
-│   ├── EEG_00_labels_and_tasks.ipynb
-│   ├── EEG_00_feature_significance.ipynb
-│   ├── EEG_01_pipeline_metadata_features_analysis.ipynb
-│   ├── EEG_02_tensors_and_graph.ipynb
-│   ├── EEG_03_visualization_topomaps.ipynb
+├── notebooks/                         ← PATHWAY A: strada principale tesi (GNN → Hypergraph)
+│   ├── EEG_05_braindecode_raw_baseline_indipendant.ipynb
+│   ├── EEG_06_subject_specific.ipynb
+│   ├── EEG_07_cv_subject_independent.ipynb
+│   ├── EEG_08_..._GNN.ipynb           ← prossimo: GCN su grafo elettrodico
+│   ├── ...
+│   ├── pathwayB/                      ← PATHWAY B: engineering (augmentation, domain adaptation)
+│   │   ├── README.md
+│   │   ├── B01_data_augmentation.ipynb
+│   │   ├── B02_domain_adaptation_session.ipynb
+│   │   ├── B03_domain_adaptation_subject.ipynb
+│   │   └── B04_contrastive_learning.ipynb
 │   └── tests/                         ← esperimenti baseline
 ├── scripts/
 │   ├── features/                      ← pipeline feature (solo baseline)
@@ -117,22 +123,31 @@ Vedere `docs/PROGETTO_COMPLETO_IT.md` per il dettaglio completo. Riepilogo:
 
 ## 7. Roadmap Attiva
 
-Vedere `docs/DIREZIONI_E_LIMITAZIONI.md` per il dettaglio completo. Ordine di priorità:
+Due percorsi paralleli. Vedere `docs/DIREZIONI_E_LIMITAZIONI.md` per il dettaglio completo.
 
-1. **[IMMEDIATO]** Completare training GCN spazio-temporale (`EEG_GNN_temporal_baseline_spatial_graph_FIXED.ipynb`)
-2. **[IMMEDIATO]** Rieseguire baseline su 4-5 categorie semantiche
-3. **[BREVE]** EEGNet / EEG Conformer end-to-end (segnale raw come input)
-4. **[BREVE]** Graph Attention Networks (GAT)
-5. **[MEDIO]** Hypergraph Neural Networks (obiettivo principale della tesi)
-6. **[MEDIO]** Domain adaptation cross-soggetto (MMD, CORAL, adversarial)
-7. **[MEDIO]** Contrastive learning subject-invariant
+### 🎓 Pathway A — Tesi (cartella `notebooks/`)
+Priorità principale: contributo scientifico della tesi.
+
+1. **[IMMEDIATO]** EEG_07: 5-fold CV subject-independent → validazione baseline
+2. **[IMMEDIATO]** EEG_08: GCN su grafo elettrodico spaziale (PyG, nodi=elettrodi)
+3. **[BREVE]** EEG_09: Graph Attention Networks (GAT)
+4. **[MEDIO]** EEG_10: Hypergraph Neural Networks (DHSLP/DHSLF — obiettivo tesi)
+
+### 🔧 Pathway B — Engineering (cartella `notebooks/pathwayB/`)
+Miglioramenti ingegneristici ai baseline, utili come comparativi in tesi.
+
+1. B01: Data augmentation per ridurre overfitting inter-sessione (SS)
+2. B02: Domain adaptation cross-sessione (CORAL / MMD)
+3. B03: Domain adaptation cross-soggetto (adversarial)
+4. B04: Contrastive learning subject-invariant (Shen 2022)
 
 ---
 
 ## 8. Convenzioni di Codice
 
 - **Lingua**: commenti e documentazione in **italiano**; codice (variabili, funzioni) in **inglese**
-- **Notebook**: prefisso numerico `EEG_XX_` per la pipeline principale; `test_` per esperimenti
+- **Notebook Pathway A**: prefisso `EEG_XX_` — pipeline principale tesi
+- **Notebook Pathway B**: prefisso `B0X_` in `notebooks/pathwayB/` — engineering
 - **Commit**: seguire lo stile esistente (`feat:`, `docs:`, `refactor:`)
 - **Branch corrente**: `claude/elegant-neumann`
 - **Nessuna feature engineering manuale** nei nuovi modelli
