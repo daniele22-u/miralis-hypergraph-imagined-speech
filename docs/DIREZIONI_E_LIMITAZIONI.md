@@ -1,6 +1,6 @@
 # Direzioni Future e Limitazioni Attuali
 
-> Ultimo aggiornamento: 13 marzo 2026
+> Ultimo aggiornamento: 12 aprile 2026
 
 ---
 
@@ -34,8 +34,8 @@
 |-------------|-----------|---------|
 | **Solo grafi semplici** | Archi tra coppie di nodi, nessuna iperedge | Non modellano interazioni di ordine superiore |
 | **GCN shallow** | Architetture con pochi layer | Aggregazione di vicinato limitata |
-| **Nessun attention mechanism** | Manca Graph Attention (GAT) | Tutti i vicini pesati ugualmente |
-| **Nessun domain adaptation** | Nessuna strategia per il trasferimento tra soggetti | Variabilita inter-soggetto non compensata |
+| **Nessun attention mechanism** | GAT implementato in EEG_09 ma non ancora efficace | Risultati a chance nella prima run |
+| **Nessun domain adaptation efficace** | GRL implementato (EEG_09) ma patience troppo bassa (15 → 40) e λ troppo basso (0.1 → 0.5) | Prima run non ha dato tempo al GRL di agire |
 | **No augmentation** | Nessuna augmentation dei dati EEG | Dataset effettivo non espanso |
 | **No pre-training** | Nessun pre-training self-supervised | Rappresentazioni non apprese in modo non supervisionato |
 
