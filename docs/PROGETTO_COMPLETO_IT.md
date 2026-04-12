@@ -2,7 +2,7 @@
 
 > Tesi Magistrale - Politecnico di Milano, DEIB
 > Autore: Daniele Uras
-> Ultimo aggiornamento: 10 marzo 2026
+> Ultimo aggiornamento: 12 aprile 2026
 
 ---
 
@@ -172,39 +172,64 @@ Notebook `baseline_test_logreg_mlp.ipynb`:
 
 **Conclusione**: la media dei canali perde informazione spaziale discriminativa. Anche con la rappresentazione completa, i modelli vettoriali falliscono.
 
-### 4.2 Modelli GNN
+### 4.2 Modelli Deep Learning End-to-End (EEG_05 / EEG_07)
 
-#### GCN con Grafo Spaziale Statico
-Notebooks: `baseline_test_gcn.ipynb`, `EEG_GNN_baseline_spatial_graph.ipynb`
+Notebook: `EEG_05_braindecode_baselines.ipynb`, `EEG_07_braindecode_5fold.ipynb`
 
-- Grafo k-NN basato su posizioni elettrodi
-- **Risultato**: ~Chance level (sia subject-specific che independent)
-- **Conclusione**: lo smoothing spaziale statico non e sufficiente
+- Architetture Braindecode: EEGNet, EEG Conformer, ShallowFBCSPNet, Deep4Net, ATCNet, Labram
+- Input: segnale EEG grezzo (59 canali × 384 campioni), schema concr4 (4 classi)
+- **Risultato**: tutti i modelli a chance level esatto (test_bacc ≈ 25.0%, std ≤ 0.001)
+- **Conclusione**: deep learning end-to-end standard non riesce a generalizzare cross-soggetto
 
-#### GCN con Grafo Feature-Similarity
-Notebook: `EEG_GNN_baseline_feature_similarity_graph.ipynb`
+### 4.3 GCN con Grafo PCC k-NN (EEG_08)
 
-- Grafo adattivo basato su cosine similarity tra feature
-- **Risultato subject-specific**: ~2x chance level (piccolo miglioramento)
-- **Risultato subject-independent**: ~Chance level
-- **Conclusione**: i grafi adattivi catturano qualcosa della struttura intra-soggetto ma falliscono nella generalizzazione
+Notebook: `EEG_08_gcn_spatial_graph.ipynb`
 
-#### GCN Spazio-Temporale
-Notebook: `EEG_GNN_temporal_baseline_spatial_graph_FIXED.ipynb`
+- Architettura: Temporal Encoder (1D CNN per-nodo) + ChebConv(K=2)
+- Grafo: PCC k-NN (k=6), 59 nodi, 420 archi — ispirato a Lun et al. 2022 (GCNs-Net)
+- Schema: concr4 (4 classi), split subject-independent (train 0-49, val 50-59, test 60-73)
+- Class weights per gestire sbilanciamento tra classi
 
-- Sequenza di 5 grafi (uno per finestra temporale) con connessioni spaziali
-- Aggregazione temporale via pooling o GRU
-- **Stato**: preparato per la fase sperimentale successiva
+| Modello | val_bacc | test_bacc | epochs |
+|---------|----------|-----------|--------|
+| ChebGCN_2L | 0.257 | 0.249 | 24 |
+| ChebGCN_3L | 0.259 | 0.245 | 18 |
+| ChebGCNSkip | 0.254 | **0.255** | 16 |
 
-### 4.3 Riepilogo Risultati
+**Conclusione**: grafo PCC statico senza domain adaptation → chance level (1.02x).
+Class collapse su STATO (~68% predizioni). Causa: grafo medio uguale per tutti i soggetti,
+nessun meccanismo per gestire ε²(soggetto)=0.85.
 
-| Baseline | Tipo Grafo | Subject-Specific | Subject-Independent |
-|----------|-----------|------------------|---------------------|
-| Logistic Regression | Nessuno | ~Chance | ~Chance |
-| MLP | Nessuno | ~Chance | ~Chance |
-| GCN Statico | Spaziale (k-NN) | ~Chance | ~Chance |
-| GCN Adattivo | Feature-Similarity | ~2x Chance | ~Chance |
-| GCN Spazio-Temporale | Spaziale + Tempo | In preparazione | In preparazione |
+### 4.4 Domain Adversarial GAT (EEG_09)
+
+Notebook: `EEG_09_gat_domain_adversarial.ipynb`
+
+- Architettura: Temporal Encoder + GATConv(8 heads) + Gradient Reversal Layer
+- Ispirato a: DAGAM (Xu et al. 2023, arXiv:2202.12948) + GAT (Veličković et al. 2018)
+- Loss: L_task(parola) + λ_adv × L_subj(soggetto, con GRL)
+- Prima run: λ_adv=0.1, patience=15 — early stop prima che alpha DANN faccia effetto
+
+| Modello | val_bacc | test_bacc | epochs |
+|---------|----------|-----------|--------|
+| GAT_2L (no ADV) | 0.262 | 0.253 | 19 |
+| GAT_2L_ADV | 0.255 | 0.253 | 20 |
+| GAT_3L_ADV | 0.251 | 0.250 | 16 |
+
+**Conclusione**: tutti a chance. Problema identificato: patience=15 causa early stop a epoch
+~19 quando alpha DANN è ancora ~0.38 — il GRL non ha tempo di agire efficacemente.
+Seconda run pianificata con λ_adv=0.5 e patience_adv=40.
+
+### 4.5 Riepilogo Risultati
+
+| Modello | Architettura | Subject-Independent (test_bacc) |
+|---------|-------------|--------------------------------|
+| Logistic Regression / MLP | Feature manuali | ~Chance |
+| EEGNet, Conformer, ecc. | Deep learning raw | ~25.0% |
+| ChebGCN (EEG_08) | GCN statico PCC | ~25.5% (1.02x) |
+| GAT + GRL (EEG_09 v1) | GAT + adversarial | ~25.3% (λ=0.1, patience=15) |
+| **GAT + GRL (EEG_09 v2)** | GAT + adversarial | 🔄 in corso (λ=0.5, patience=40) |
+
+Chance level: **25.0%** (4 classi concr4)
 
 ---
 
