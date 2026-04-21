@@ -1,6 +1,6 @@
 # Direzioni Future e Limitazioni Attuali
 
-> Ultimo aggiornamento: 19 aprile 2026
+> Ultimo aggiornamento: 21 aprile 2026
 
 ---
 
@@ -32,12 +32,11 @@
 
 | Limitazione | Dettaglio | Impatto |
 |-------------|-----------|---------|
-| **Fallimento strutturale dimostrato** | EEG_07d: spettro Laplaciano identico tra 4 categorie semantiche — ChebGCN/GAT/HGNN non possono discriminare per definizione matematica | Nessuna architettura GNN standard può superare questo limite |
-| **Effetto soggetto 8.6× l'effetto categoria** | Cosine similarity: stesso soggetto = 0.79 vs. soggetto diverso = 0.71; stessa categoria vs. diversa: differenza = 0.010 | Il segnale soggetto sovrasta il segnale semantico in qualsiasi rappresentazione grafo |
-| **Domain adversarial training fallisce** | GAT + GRL (EEG_09 v2, λ=0.5): rimozione segnale soggetto → collasso totale del modello | L'unico segnale discriminativo era l'identità soggetto; rimosso quello, non resta nulla |
-| **GNN avanzate non migliorano** | LGGNet, AT-DGNN, DiffPool (EEG_10): tutte a chance; modello più semplice = migliore | Segnale classico di assenza di pattern semantico nel grafo |
-| **HGNN a chance** | EEG_11: HGNN_2L, HGNN_2L_DYN, HGNN_ATT_2L tutti a 25.0% | Le relazioni di ordine superiore non creano informazione semantica laddove non esiste |
-| **Subject-specific insufficiente** | EEG_06: mean test_bacc ≈ 25.0–25.6% su 10 soggetti (outlier: 34.4%) | ~330 trial/soggetto non bastano; segnale presente solo per alcuni soggetti |
+| **Solo grafi semplici** | Archi tra coppie di nodi, nessuna iperedge | Non modellano interazioni di ordine superiore |
+| **GCN shallow** | Architetture con pochi layer | Aggregazione di vicinato limitata |
+| **Nessun attention mechanism** | GAT implementato in EEG_09 ma non ancora efficace | Risultati a chance nella prima run |
+| **Nessun domain adaptation efficace** | GRL implementato (EEG_09) ma patience troppo bassa (15 → 40) e λ troppo basso (0.1 → 0.5) | Prima run non ha dato tempo al GRL di agire |
+| **Graph classification non rispettata** | EEG_08/08b/09 usavano grafo statico condiviso — non vera graph classification | Corretto in commit 515628b (21/04/2026); ~38K grafi per-trial ora obbligatori |
 | **No augmentation** | Nessuna augmentation dei dati EEG | Dataset effettivo non espanso |
 | **No pre-training** | Nessun pre-training self-supervised | Rappresentazioni non apprese in modo non supervisionato |
 
@@ -54,130 +53,163 @@
 
 ## 2. Cosa Possiamo Fare Ora
 
-### 2.1 Completato
+### 2.1 Azioni Immediate (pronte con l'infrastruttura attuale)
 
-#### [COMPLETATO] A1. Instance Normalization nei Modelli DL
-- Implementata in EEG_05, EEG_06, EEG_07, EEG_08, EEG_09, EEG_10, EEG_11
-- Risultato: nessun miglioramento rilevante vs. chance
+#### A0. Subject-Centering del Segnale EEG (priorità assoluta)
+- **Cosa**: sottrarre la media soggetto da ogni trial — `X_trial -= X_subject_mean` — prima di qualsiasi altra operazione
+- **Come**: nei notebook di caricamento dati, calcolare la media su tutti i trial del soggetto e sottrarla
+- **Perché**: le analisi di questa sessione dimostrano che la struttura nei dati è dominata dall'identità del soggetto (ε²=0.85). Il subject-centering rimuove questo DC offset senza bisogno di modelli complessi
+- **Riferimento**: tecnica standard in neuroimaging cognitiva (RSA, Pattern Analysis), analoga alla baseline correction in event-related analysis
+- **Effort**: bassissimo — 2 righe di codice in ogni notebook
+- **Status**: da implementare come primo passo prima di qualsiasi nuovo esperimento
 
-#### [COMPLETATO] B. Classificazione su Categorie Semantiche (4-5 classi, schema concr4)
-- Rieseguiti tutti i baseline su concr4 (4 classi)
-- Risultato: tutti a chance (25.0%)
+#### A1. Instance Normalization nei Modelli DL
+- **Cosa**: sostituire BatchNorm con InstanceNorm in tutti i modelli (`nn.InstanceNorm1d`)
+- **Come**: normalizzazione per-trial invece che per-batch: ogni trial normalizzato indipendentemente attraverso i canali
+- **Perché**: rimuove offset di ampiezza soggetto-specifici; Bomatter et al. 2024 mostrano miglioramenti significativi
+- **Effort**: basso (1 riga per modello)
+- **Status**: da implementare dopo subject-centering
 
-#### [COMPLETATO] G. Graph Attention Networks (GAT)
-- Implementato in EEG_09 con GATConv(8 heads)
-- Risultato: a chance. La domain adversarial training (EEG_09 v2) ha confermato il fallimento strutturale
+#### A2. Completare il Baseline Spazio-Temporale
+- **Cosa**: allenare il GCN spazio-temporale gia preparato in `EEG_GNN_temporal_baseline_spatial_graph_FIXED.ipynb`
+- **Come**: sequenza di 5 grafi per trial, encoding GCN + aggregazione con mean pooling o GRU
+- **Perche**: stabilire un upper bound per i modelli basati su grafi semplici prima di passare agli ipergrafi
+- **Effort**: basso, il codice e gia pronto
 
-#### [COMPLETATO] E2. DANN — Gradient Reversal su Subject Label
-- Implementato in EEG_09 v1 (λ=0.1, patience=15) e v2 (λ=0.5, patience_adv=40)
-- Risultato: rimozione segnale soggetto → collasso totale. SMOKING GUN: nessuna informazione semantica residua senza il segnale soggetto
+#### B. Classificazione su Categorie Semantiche (4-5 classi)
+- **Cosa**: rieseguire tutti i baseline sul task ridotto (4-5 cluster semantici invece di 110 parole)
+- **Come**: usare `word2cluster_4.json` / `word2cluster_5.json` gia generati
+- **Perche**: un task piu semplice potrebbe rivelare struttura nel segnale che il task a 110 classi nasconde
+- **Effort**: basso, richiede solo modifica delle label
 
-#### [COMPLETATO] F. Hypergraph Neural Networks
-- Implementato in EEG_11 (HGNN_2L, HGNN_2L_DYN, HGNN_ATT_2L)
-- Basato su Feng et al. 2019, Li et al. 2025, AllSet (Chien et al. 2022)
-- Risultato: tutti a chance (25.0%). Dimostrazione negativa rigorosa confermata da analisi strutturale EEG_07d
+#### C. Analisi Per-Banda dei Grafi
+- **Cosa**: costruire grafi separati per ogni banda di frequenza (delta, theta, alpha, beta, gamma)
+- **Come**: filtrare le feature per banda e calcolare cosine similarity solo su quelle
+- **Perche**: diverse bande EEG codificano informazioni cognitive differenti
+- **Effort**: medio, richiede modifica della pipeline grafi
 
-#### [COMPLETATO] Analisi Strutturale dei Grafi (EEG_07c/07d)
-- Spettro Laplaciano identico tra categorie, ratio effetto soggetto/categoria = 8.6×
-- Risultato: spiegazione matematica del fallimento di tutte le architetture GNN testorate
+#### D. Feature Selection Guidata
+- **Cosa**: applicare metodi di feature selection (mutual information, mRMR, LASSO) per ridurre le 40 feature
+- **Come**: selezionare le feature piu discriminative per il task specifico
+- **Perche**: ridurre rumore e dimensionalita, potenzialmente migliorare la classificazione
+- **Effort**: basso-medio
 
-### 2.2 Azioni Immediate (da implementare)
+### 2.2 Sviluppi a Medio Termine
 
-#### A. Cross-Subject Contrastive Learning (Shen et al. 2022) — PRIORITÀ ALTA
-- **Cosa**: addestrare un encoder con coppie positive cross-soggetto — stessa categoria semantica, soggetti diversi
-- **Come**: coppie positive `(trial categoria C soggetto A, trial categoria C soggetto B)`, coppie negative per categoria diversa. Loss NT-Xent o SupCon. Con 70 soggetti abbiamo coppie abbondanti
-- **Perché**: il DANN ha dimostrato che rimuovere l'informazione soggetto in modo diretto non funziona (collasso totale). Il contrastive learning forza l'encoder a trovare rappresentazioni soggetto-invarianti che preservino il contenuto semantico
+#### E. Cross-Subject Contrastive Learning (Shen et al. 2022)
+- **Cosa**: addestrare un encoder con coppie positive cross-soggetto — stessa parola, soggetti diversi
+- **Come**: coppie positive `(trial parola W soggetto A, trial parola W soggetto B)`, coppie negative `(trial parola W, trial parola V≠W)`. Loss NT-Xent o SupCon. Con 70 soggetti abbiamo coppie abbondanti
+- **Perché**: l'analisi RSA e ARI mostra che la struttura per parola è completamente sommersa dalla struttura per soggetto. Il contrastive cross-soggetto forza l'encoder ad ignorare l'identità del soggetto e a rappresentare il contenuto lessicale
 - **Riferimento**: Shen et al. 2022, Zhao et al. 2023 (Thinking Race — specifico per imagined speech)
 - **Effort**: medio
 
-#### B. Meta-Learning Subject-Specific (MAML / Prototypical Networks) — PRIORITÀ ALTA
-- **Cosa**: addestrare un meta-modello che si adatta rapidamente a un nuovo soggetto con pochi trial
-- **Come**: episodic training su soggetti visti, test di adattamento su soggetti nuovi con k-shot (k=5–20 trial)
-- **Perché**: EEG_06 mostra che il segnale esiste per alcuni soggetti (outlier 34.4%). Il meta-learning può sfruttare pochi trial per adattarsi al profilo EEG specifico del soggetto
-- **Riferimento**: Finn et al. 2017 (MAML), Snell et al. 2017 (Prototypical Networks), He et al. 2021 (meta-EEG)
-- **Effort**: alto
+#### E2. DANN — Gradient Reversal su Subject Label
+- **Cosa**: aggiungere un discriminatore soggetto con gradient reversal all'encoder condiviso
+- **Come**: encoder → task classifier + (gradient reversal →) subject discriminator. Loss combinata forza l'encoder a produrre rappresentazioni che il discriminatore soggetto non riesce a classificare
+- **Perché**: approccio complementare al contrastive learning. Il discriminatore esplicito forza la rimozione dell'informazione soggetto
+- **Riferimento**: Zheng & Lu 2020 (DANN per EEG)
+- **Effort**: medio
 
-#### C. Allineamento Riemanniano (Euclidean Alignment)
+#### E3. Allineamento Riemanniano (Euclidean Alignment)
 - **Cosa**: riallineare le matrici di covarianza dei soggetti prima di ogni esperimento
 - **Come**: `pyriemann.utils.mean.mean_riemann` per calcolare la covarianza media; trasformare ogni trial `X → R_s^{-1/2} * X`
-- **Perché**: preprocessing geometricamente principiato che riduce la distanza inter-soggetto nello spazio delle matrici di covarianza, senza bisogno di modelli complessi
+- **Perché**: preprocessing geometricamente principiato che riduce la distanza inter-soggetto nello spazio delle matrici di covarianza
 - **Riferimento**: Jayaram & Barachant 2020
 - **Effort**: basso (preprocessing aggiuntivo)
 
-#### D. Neural Prototype Clustering (contributo originale)
-- **Cosa**: costruire prototipi neurali per categoria (media dei trial z-scored per soggetto), confrontare con gli schemi semantici tramite ARI/V-measure
-- **Motivazione**: la domanda — "lo spazio EEG recupera parzialmente la struttura semantica a livello soggetto-specifico?" — rimane aperta. Pereira et al. 2018 lo hanno dimostrato per fMRI; l'analogo EEG non è stato pubblicato a grande scala
-- **Come**: già implementato parzialmente in `EEG_00_labels_and_tasks.ipynb`
-- **Effort**: basso (codice base già presente)
-
-### 2.3 Sviluppi a Medio Termine
-
-#### E. Domain Adaptation Avanzata
-- **Cosa**: implementare strategie di adattamento di dominio più sofisticate di DANN
+#### F. Hypergraph Neural Networks
+- **Cosa**: implementare reti neurali su ipergrafi dove le iperedge connettono gruppi di elettrodi
 - **Come**:
-  - Allineamento delle distribuzioni (MMD, Deep CORAL)
-  - Adaptive Batch Normalization (Lee et al. 2022): aggiornare running stats BN con pochi trial del soggetto target
-  - Subject-specific fine-tuning da un modello pre-addestrato cross-soggetto
-- **Perché**: il DANN puro ha fallito; servono approcci che adattino il modello al soggetto target piuttosto che rimuovere l'informazione soggetto
+  - Costruire ipergrafi basati su regioni cerebrali (frontale, temporale, parietale, occipitale)
+  - Iperedge da clustering funzionale (PLV per banda di frequenza)
+  - Usare framework AllSet (Chien et al. 2022) o implementare HGNN custom con PyTorch Geometric
+- **Perche**: le relazioni di ordine superiore tra gruppi di elettrodi possono catturare pattern che i grafi semplici non modellano
+- **Riferimento**: Li et al. 2025 raggiungono 78% con dynamic hypergraph learning; per-trial hyperedge construction via PLV/coherence
 - **Effort**: alto
 
-#### F. EEG Data Augmentation
-- **Cosa**: generare dati sintetici per espandere il dataset (specialmente per setting subject-specific)
-- **Come**: noise injection, time warping, channel dropout, mixup, GAN-based
-- **Perché**: ~330 trial/soggetto sono insufficienti; l'augmentation può aiutare il meta-learning e il fine-tuning
+#### G. Graph Attention Networks (GAT)
+- **Cosa**: sostituire GCN con GAT per pesare dinamicamente i vicini
+- **Come**: implementare GAT con PyTorch Geometric (`GATConv`)
+- **Perche**: non tutti gli elettrodi vicini contribuiscono ugualmente alla classificazione
 - **Effort**: medio
 
-### 2.4 Sviluppi a Lungo Termine
+#### H. Domain Adaptation per Transfer Cross-Soggetto
+- **Cosa**: implementare strategie di adattamento di dominio avanzate
+- **Come**:
+  - Allineamento delle distribuzioni (MMD, Deep CORAL)
+  - Adversarial domain adaptation (DANN — vedi E2)
+  - Adaptive Batch Normalization (Lee et al. 2022): aggiornare running stats BN con pochi trial del soggetto target
+- **Perche**: la variabilita inter-soggetto e il problema principale; servono metodi per compensarla
+- **Effort**: alto
 
-#### G. Feature Tempo-Frequenza
+#### I. Feature Apprese — EEGNet / EEG Conformer End-to-End
+- **Cosa**: sostituire le 40 feature manuali con input raw (59, 384) direttamente ai modelli
+- **Come**: EEGNet su raw EEG con subject-centering → baseline end-to-end; EEG Conformer per dipendenze temporali a lungo raggio
+- **Perche**: la RSA dimostra che le feature manuali non correlano con la semantica. L'approccio end-to-end ha già il notebook `EEG_04_braindecode_raw_baselines.ipynb` pronto
+- **Effort**: basso (infrastruttura già pronta)
+
+#### J. Neural Prototype Clustering (contributo originale)
+- **Cosa**: costruire prototipi neurali per parola (media dei trial z-scored per soggetto), clusterizzarli a 4-5 gruppi, confrontare con gli schemi semantici tramite ARI/V-measure
+- **Motivazione**: la domanda — "lo spazio EEG recupera parzialmente la struttura semantica?" — è aperta nella letteratura per imagined speech. Pereira et al. 2018 lo hanno dimostrato per fMRI; l'analogo EEG non è stato pubblicato a grande scala
+- **Come**: già implementato parzialmente in `EEG_00_labels_and_tasks.ipynb`. L'estensione è confrontare i cluster EEG-z con Ward-4/POS-4/Semantico-BCI-5 via ARI
+- **Effort**: basso (codice base già presente)
+
+### 2.3 Sviluppi a Lungo Termine
+
+#### I. Feature Tempo-Frequenza
 - **Cosa**: aggiungere wavelet transforms, STFT, Hilbert-Huang Transform
-- **Perché**: catturano transitori spettrali che il metodo di Welch non rileva
+- **Perche**: catturano transitori spettrali che il metodo di Welch non rileva
 - **Effort**: medio
 
-#### H. Feature Non-Lineari
+#### J. Feature Non-Lineari
 - **Cosa**: aggiungere sample entropy, approximate entropy, dimensione frattale, esponente di Lyapunov
-- **Perché**: catturano la complessità non-lineare del segnale EEG
+- **Perche**: catturano la complessita non-lineare del segnale EEG
 - **Effort**: medio
 
-#### I. Pipeline Automatizzata End-to-End
+#### K. EEG Data Augmentation
+- **Cosa**: generare dati sintetici per espandere il dataset
+- **Come**: noise injection, time warping, channel dropout, mixup, GAN-based
+- **Perche**: piu dati di training migliorano la generalizzazione
+- **Effort**: medio
+
+#### L. Pipeline Automatizzata End-to-End
 - **Cosa**: creare una pipeline completa dalla raw data alla predizione
 - **Come**: script Python unico o pipeline con DVC/Prefect
-- **Perché**: riproducibilità e facilità di sperimentazione
+- **Perche**: riproducibilita e facilita di sperimentazione
 - **Effort**: medio-alto
 
-#### J. Experiment Tracking
+#### M. Experiment Tracking
 - **Cosa**: integrare MLflow o Weights & Biases
-- **Perché**: tracciare sistematicamente iperparametri, metriche e artefatti
+- **Perche**: tracciare sistematicamente iperparametri, metriche e artefatti
 - **Effort**: basso-medio
 
 ---
 
-## 3. Roadmap Aggiornata
+## 3. Roadmap Suggerita
 
-### Fase 1: Completata (aprile 2026)
-1. [FATTO] **Instance Normalization** in tutti i modelli DL — nessun miglioramento vs. chance
-2. [FATTO] **Baseline DL end-to-end** (EEGNet, Conformer, ecc.) cross-subject concr4 — tutti a chance
-3. [FATTO] **Subject-specific baseline** (EEG_06) — a chance con outlier 34.4%
-4. [FATTO] **GCN ChebConv** su grafo PCC k-NN (EEG_08) — 1.02× chance
-5. [FATTO] **GAT + Domain Adversarial** (EEG_09 v1/v2) — collasso totale senza segnale soggetto
-6. [FATTO] **Advanced GNN** (LGGNet, AT-DGNN, DiffPool — EEG_10) — tutti a chance
-7. [FATTO] **Hypergraph Neural Networks** (EEG_11) — tutti a chance
-8. [FATTO] **Analisi strutturale grafi** (EEG_07c/07d) — dimostrazione matematica del fallimento
+### Fase 1: Correzione Fondamentale (immediato)
+1. **Subject-centering** su tutti i notebook (`X_trial -= X_subject_mean`) — prerequisito per tutto il resto
+2. **Instance Normalization** sostituisce BatchNorm in tutti i modelli DL
+3. **EEGNet end-to-end** su segnale raw (59, 384) — già in `EEG_04_braindecode_raw_baselines.ipynb`
+4. **Completare** training GCN spazio-temporale
+5. **Rieseguire** tutti i baseline sul task a 4-5 categorie semantiche (schemi affidabili: Ward-4, POS-4, Semantico-BCI-5)
 
-### Fase 2: Superare il Limite Strutturale (breve termine — PRIORITÀ ATTUALE)
-1. **Allineamento Riemanniano** (pyriemann Euclidean Alignment) — preprocessing che riduce la distanza inter-soggetto nello spazio delle covarianze
-2. **Cross-subject contrastive learning** (Shen et al. 2022) — sfrutta i 70 soggetti come vantaggio; approccio complementare al DANN
-3. **Neural Prototype Clustering** — confronto EEG vs. semantica con ARI per capire se esiste struttura soggetto-specifica
+### Fase 2: Affrontare la Variabilità Inter-Soggetto (breve termine)
+6. **Allineamento Riemanniano** (pyriemann Euclidean Alignment) — preprocessing aggiuntivo
+7. **Cross-subject contrastive learning** (Shen et al. 2022) — sfrutta i 70 soggetti come vantaggio
+8. **DANN** gradient reversal su subject label (Zheng & Lu 2020)
+9. **GAT** (Graph Attention Networks) — `GATConv` di PyG
 
-### Fase 3: Meta-Learning e Adattamento Soggetto-Specifico (medio termine)
-4. **Meta-learning** (MAML / Prototypical Networks) — sfrutta l'outlier EEG_06 come segnale: il segnale esiste per alcuni soggetti, il meta-learning può adattarsi rapidamente
-5. **Subject-specific fine-tuning** da modello pre-addestrato cross-soggetto
-6. **Data augmentation** per setting subject-specific (~330 trial/soggetto sono insufficienti)
+### Fase 3: Hypergraph e Analisi Avanzata (medio termine)
+10. **Neural Prototype Clustering** — confronto EEG vs. semantica con ARI (contributo originale)
+11. **Dynamic Hypergraph (DHSLP-style)** — per-trial PLV/coherence hyperedges
+12. **Allineamento Riemanniano** per domain generalization
 
 ### Fase 4: Sistema Completo (lungo termine)
-7. Feature tempo-frequenza (wavelet, STFT) — dopo aver stabilito baseline contrastive
-8. Pipeline automatizzata end-to-end
-9. Validazione su dataset esterni (Nieto et al. Inner Speech)
+13. Feature tempo-frequenza (wavelet, STFT) — dopo aver stabilito baseline DL
+14. Data augmentation sistematica (Rommel et al. 2022)
+15. Pipeline automatizzata end-to-end
+16. Validazione su dataset esterni (Nieto et al. Inner Speech)
 
 ---
 
@@ -196,27 +228,14 @@
 
 ## 5. Metriche di Successo
 
-| Obiettivo | Metrica | Target | Risultato Attuale |
-|-----------|---------|--------|-------------------|
-| Baseline vettoriale | bacc 110 classi | > 2% (2× chance) | ~Chance — non raggiunto |
-| DL end-to-end cross-subject | bacc 4 classi | > 30% | ~25.0% — non raggiunto |
-| DL subject-specific | bacc 4 classi | > 40% | ~25.6% (outlier: 34.4%) — non raggiunto |
-| GNN subject-independent | bacc 4 classi | > 30% | ~25.0–25.5% — non raggiunto |
-| GAT + adversarial | bacc 4 classi | > 30% | ~25.2% — non raggiunto; SMOKING GUN: collasso senza segnale soggetto |
-| Hypergraph (riferimento Li et al.) | bacc 4 classi | avvicinare 78% | ~25.0% — non raggiunto; fallimento strutturale dimostrato |
-| Contrastive cross-soggetto | bacc 4 classi | > 30% | da implementare |
-| Meta-learning subject-specific | bacc 4 classi | > 35% | da implementare |
-
-**Nota**: il mancato raggiungimento dei target non è un fallimento sperimentale — è un risultato scientifico rilevante. La dimostrazione matematica del fallimento strutturale (EEG_07d) e la conferma da SMOKING GUN (EEG_09 v2) sono contributi originali alla letteratura su imagined speech decoding.
-
-## 6. Future Work — Meta-Learning
-
-Il meta-learning soggetto-specifico emerge come la direzione più promettente dopo i risultati delle fasi 1–3:
-
-- **Motivazione**: l'outlier EEG_06 (test_bacc=0.344 per un soggetto specifico con Deep4Net) indica che il segnale semantico esiste per alcuni soggetti, ma è altamente soggetto-specifico. L'architettura che si adatta rapidamente al profilo EEG del singolo soggetto può sfruttare questo segnale.
-- **Approcci**: MAML (Model-Agnostic Meta-Learning, Finn et al. 2017), Prototypical Networks (Snell et al. 2017), TaskNorm per EEG (He et al. 2021)
-- **Vantaggi del dataset**: 70 soggetti × 5 sessioni = 350 episodi per meta-training, struttura ideale per episodic learning
-- **Schema proposto**: meta-training su soggetti 0–59, meta-test su soggetti 60–69 con k-shot adaptation (k=10–50 trial)
+| Obiettivo | Metrica | Target |
+|-----------|---------|--------|
+| Baseline vettoriale | Accuracy 110 classi | > 2% (2x chance) |
+| GNN subject-specific | Accuracy 110 classi | > 5% |
+| GNN subject-independent | Accuracy 110 classi | > 2% |
+| Categorie semantiche (subject-specific) | Accuracy 4-5 classi | > 40% |
+| Categorie semantiche (subject-independent) | Accuracy 4-5 classi | > 30% |
+| Hypergraph (riferimento Li et al.) | Accuracy comparabile | Avvicinare 78% |
 
 ---
 

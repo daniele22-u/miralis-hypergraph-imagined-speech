@@ -2,7 +2,7 @@
 
 > Tesi Magistrale - Politecnico di Milano, DEIB
 > Autore: Daniele Uras
-> Ultimo aggiornamento: 19 aprile 2026
+> Ultimo aggiornamento: 21 aprile 2026
 
 ---
 
@@ -200,132 +200,67 @@ Notebook: `EEG_08_gcn_spatial_graph.ipynb`
 Class collapse su STATO (~68% predizioni). Causa: grafo medio uguale per tutti i soggetti,
 nessun meccanismo per gestire ε²(soggetto)=0.85.
 
-### 4.4 Domain Adversarial GAT — Risultati Finali (EEG_09)
+### 4.4 Domain Adversarial GAT (EEG_09)
 
 Notebook: `EEG_09_gat_domain_adversarial.ipynb`
 
-- Architettura: Temporal Encoder + GATConv(8 heads) + Gradient Reversal Layer (GRL)
+- Architettura: Temporal Encoder + GATConv(8 heads) + Gradient Reversal Layer
 - Ispirato a: DAGAM (Xu et al. 2023, arXiv:2202.12948) + GAT (Veličković et al. 2018)
 - Loss: L_task(parola) + λ_adv × L_subj(soggetto, con GRL)
+- Prima run: λ_adv=0.1, patience=15 — early stop prima che alpha DANN faccia effetto
 
-**v1** — λ_adv=0.1, patience=15: early stop prima che alpha DANN faccia effetto (alpha ≈ 0.38 a epoch ~19, il GRL non ha tempo di agire)
+| Modello | val_bacc | test_bacc | epochs |
+|---------|----------|-----------|--------|
+| GAT_2L (no ADV) | 0.262 | 0.253 | 19 |
+| GAT_2L_ADV | 0.255 | 0.253 | 20 |
+| GAT_3L_ADV | 0.251 | 0.250 | 16 |
 
-**v2** — λ_adv=0.5, patience_adv=40 (run finale):
+**Conclusione**: tutti a chance. Problema identificato: patience=15 causa early stop a epoch
+~19 quando alpha DANN è ancora ~0.38 — il GRL non ha tempo di agire efficacemente.
+Seconda run pianificata con λ_adv=0.5 e patience_adv=40.
 
-| Modello | val_bacc | test_bacc |
-|---------|----------|-----------|
-| GAT_2L (no ADV) | 0.262 | 0.250 |
-| GAT_2L_ADV | 0.258 | 0.254 |
-| GAT_3L_ADV | 0.258 | 0.250 |
+### 4.5 GCN Subject-Specific Leave-One-Session-Out (EEG_08b/c)
 
-**SMOKING GUN**: rimuovendo il segnale soggetto con GRL, il modello collassa a chance totale. L'unico segnale discriminativo che il modello imparava era l'identità del soggetto, non la categoria semantica. Confusion matrix GAT_2L_ADV: 0.81–0.82 di predizioni sulla classe 1 per qualsiasi classe reale — collasso completo verso una classe dominante.
+Notebook: `EEG_08b_subject_specific_gcn.ipynb` — risultati in `data/interim/eeg08c_ss_4_norm_results.csv`
 
-**Conclusione**: la domain adversarial training conferma in modo strutturale che nel segnale EEG grezzo cross-soggetto non esiste informazione semantica estraibile con le architetture attuali.
+- Architettura: Temporal Encoder (1D CNN per-nodo) + ChebConv(K=2), come EEG_08
+- Schema: **subject-specific** — ogni soggetto addestrato separatamente, Leave-One-Session-Out (LOSO)
+- Grafo: PCC k-NN (k=6) — ⚠️ questa run usa ancora grafo statico per-soggetto (OLD code, da rieseguire con graph classification per-trial)
+- Schema: concr4 (4 classi), normalizzazione instance-norm attiva
+- 10 soggetti (00-04, 06-09, soggetto 05 escluso per dati mancanti)
+- Figura: `figures/eeg08c_ss_4_norm_boxplot.png`
 
-### 4.5 Analisi Strutturale dei Grafi (EEG_07c / EEG_07d)
+**Risultati medi (10 soggetti):**
 
-Notebook: `EEG_07c_graph_exploratory.ipynb`, `EEG_07d_graph_structure.ipynb`
+| Modello | val_bacc (avg) | test_bacc (avg) | note |
+|---------|----------------|-----------------|------|
+| ChebGCN_2L | 0.298 | 0.247 | ≈ chance |
+| ChebGCN_3L | 0.302 | 0.236 | sotto chance |
+| ChebGCNSkip | 0.302 | **0.263** | 1.05x chance |
 
-Analisi pre-training per capire se la struttura del grafo EEG contenga informazione semantica discriminativa.
+**Migliore singolo soggetto**: soggetto 02 con ChebGCNSkip → test_bacc = 0.315 (1.26x chance)
 
-#### EEG_07c — Analisi Esplorativa
+**Conclusione**: risultati a chance anche in setting subject-specific LOSO. Causa probabile:
+grafo PCC statico calcolato sull'intera sessione di training (non per-trial) — non è vera graph
+classification. Codice corretto in sessione 21/04 (EEG_08b ora usa `pcc_to_edge_index_trial`
+per-trial). Da **rieseguire sulla VM** per confronto valido.
 
-- 6 analisi statistiche sul grafo PCC prima del training
-- ANOVA F-score degli archi ≈ 1.0 per tutte le categorie semantiche → gli archi del grafo non discriminano le categorie
-- t-SNE sui grafi: cluster per SOGGETTO, non per parola immaginata
-- Distanza intra-categoria ≈ distanza inter-categoria → il grafo non separa semanticamente
+> ⚠️ Nota metodologica: i risultati EEG_08c sono stati generati con OLD code (grafo condiviso
+> per-soggetto). La correzione graph classification per-trial è nel commit `515628b`.
+> Re-run necessaria per risultati metodologicamente corretti.
 
-#### EEG_07d — Subject Fingerprint e Spettro Laplaciano
+### 4.6 Riepilogo Risultati
 
-**Subject fingerprint** (cosine similarity tra grafi EEG):
+| Modello | Architettura | Subject-Independent (test_bacc) |
+|---------|-------------|--------------------------------|
+| Logistic Regression / MLP | Feature manuali | ~Chance |
+| EEGNet, Conformer, ecc. | Deep learning raw | ~25.0% |
+| ChebGCN (EEG_08) | GCN statico PCC | ~25.5% (1.02x) |
+| GAT + GRL (EEG_09 v1) | GAT + adversarial | ~25.3% (λ=0.1, patience=15) |
+| ChebGCN SS-LOSO (EEG_08b/c) | GCN subject-specific | ~26.3% (1.05x) ⚠️ old code |
+| **GAT + GRL (EEG_09 v2)** | GAT + adversarial | 🔄 in corso (λ=0.5, patience=40) |
 
-| | Stessa categoria | Categoria diversa |
-|--|------------------|-------------------|
-| Stesso soggetto | 0.785 | 0.801 |
-| Soggetto diverso | 0.705 | 0.709 |
-
-- Effetto soggetto: +0.086 | Effetto categoria: −0.010 | **Ratio: 8.6×**
-- L'identità del soggetto è 8.6× più discriminativa della categoria semantica nel grafo
-
-**Spettro Laplaciano**: le 4 categorie producono spettri Laplaciani sovrapposti in modo perfetto. ChebGCN e HGNN operano su questo spettro — per definizione matematica non possono discriminare tra le categorie.
-
-**Small-world**: σ=2.151, C_real/C_rand=2.1, L_real/L_rand=0.976 — il grafo EEG ha topologia small-world, ma questa proprietà è identica per tutte le categorie.
-
-**Conclusione critica**: il fallimento di tutti i modelli GNN è strutturale e matematicamente dimostrabile — il grafo EEG non contiene informazione semantica discriminativa a livello di spettro Laplaciano.
-
-### 4.6 Advanced GNN (EEG_10)
-
-Notebook: `EEG_10_advanced_gnn.ipynb`
-
-- 4 architetture avanzate, schema cross-subject, concr4 (4 classi)
-- Obiettivo: verificare se architetture GNN più complesse superino il fallimento strutturale
-
-| Modello | val_bacc | Note |
-|---------|----------|------|
-| ChebGCN (baseline EEG_08) | 0.261 | riferimento |
-| LGGNet | 0.259 | loss converge a ln(4)=1.386 |
-| AT-DGNN | 0.254 | |
-| DiffPool-GNN | 0.253 | |
-
-**Nota critica — ln(4)=1.386**: questo valore è il minimo teorico della CrossEntropy per output uniforme su 4 classi. Il modello trova la soluzione ottima per un task senza segnale: predire uniformemente tutte le classi.
-
-**Conclusione**: il modello più semplice (ChebGCN) raggiunge la val_bacc più alta — segnale classico di assenza di pattern segnale. La complessità architetturale non compensa l'assenza di informazione discriminativa nel grafo.
-
-### 4.7 Hypergraph Neural Networks (EEG_11)
-
-Notebook: `EEG_11_hgnn_imagined_speech.ipynb`
-
-Contributo principale della tesi: primo test sistematico di HGNN su imagined speech a grande scala (70 soggetti).
-
-- Basato su: Feng et al. 2019 (HGNN), Li et al. 2025 (DHSLP), AllSet (Chien et al. 2022)
-- 3 architetture HGNN, schema cross-subject, concr4
-- Ottimizzazioni implementate: hyperedge_index globale, preload dati in RAM, dataset pre-built (~3.7 GB)
-
-| Modello | test_bacc | Pattern collasso |
-|---------|-----------|-----------------|
-| HGNN_2L | 0.250 | Split classi 1+2 |
-| HGNN_2L_DYN | 0.247 | Collasso su classe 3 |
-| HGNN_ATT_2L | 0.250 | Collasso su classe 1 |
-
-**Conclusione**: tutti a chance (25.0%). Il fallimento non è architetturale ma strutturale: dimostrato matematicamente da EEG_07d che lo spettro Laplaciano è identico tra categorie. Gli iperedge aggiungono ordine superiore ma non creano informazione semantica laddove non esiste nel segnale.
-
-### 4.8 Subject-Specific Baseline (EEG_06)
-
-Notebook: `EEG_06_subject_specific.ipynb`
-
-- Schema Leave-One-Session-Out: train sessioni 1-4, test sessione 5
-- 10 soggetti, 6 modelli Braindecode, concr4, instance norm
-- Obiettivo: verificare se esiste segnale semantico a livello subject-specific (~330 trial/soggetto)
-
-| Modello | mean_test_bacc | std |
-|---------|----------------|-----|
-| EEGNet | 0.2532 | 0.0196 |
-| ShallowFBCSPNet | 0.2486 | 0.0200 |
-| Deep4Net | 0.2561 | 0.0476 |
-| EEGConformer | 0.2488 | 0.0162 |
-| ATCNet | 0.2342 | 0.0343 |
-| Labram | 0.2485 | 0.0045 |
-
-**Outlier rilevante**: Deep4Net su un soggetto specifico raggiunge test_bacc=0.344 (1.38× chance) — suggerisce che per alcuni soggetti il segnale semantico esiste, ma non è generalizzabile con i dati disponibili (~330 trial/soggetto).
-
-**Conclusione**: anche il setting subject-specific è a chance per la maggior parte dei soggetti. Il segnale esiste sporadicamente per pochi soggetti, ma l'insufficienza dei dati per soggetto (330 trial vs. migliaia tipicamente necessari) e la variabilità intra-individuale non permettono la generalizzazione.
-
-### 4.9 Riepilogo Risultati
-
-| Modello | Architettura | Subject-Independent (test_bacc) | Subject-Specific (test_bacc) |
-|---------|-------------|--------------------------------|------------------------------|
-| Logistic Regression / MLP | Feature manuali | ~Chance | ~Chance |
-| EEGNet, Conformer, ecc. (EEG_05/07) | DL raw cross-subject | ~25.0% | — |
-| EEGNet, Conformer, ecc. (EEG_06) | DL raw subject-specific | — | ~25.0%–25.6% (outlier: 34.4%) |
-| ChebGCN (EEG_08) | GCN statico PCC | ~25.5% (1.02×) | — |
-| GAT + GRL (EEG_09 v1) | GAT + adversarial (λ=0.1) | ~25.3% | — |
-| GAT + GRL (EEG_09 v2) | GAT + adversarial (λ=0.5) | ~25.2% | — |
-| LGGNet / AT-DGNN / DiffPool (EEG_10) | GNN avanzate | ~25.3–25.4% | — |
-| HGNN_2L / HGNN_DYN / HGNN_ATT (EEG_11) | Hypergraph NN | ~25.0% | — |
-
-**Chance level**: 25.0% (4 classi concr4)
-
-**Conclusione trasversale**: nessuna architettura supera il chance level in modo statisticamente rilevante in setting cross-subject. EEG_07d dimostra matematicamente perché: il grafo EEG ha spettro Laplaciano identico tra categorie semantiche, e l'effetto soggetto è 8.6× l'effetto categoria. Il percorso promettente rimane il meta-learning subject-specific o il contrastive learning cross-soggetto con normalizzazione esplicita dell'identità soggetto.
+Chance level: **25.0%** (4 classi concr4)
 
 ---
 
@@ -370,15 +305,6 @@ miralis-hypergraph-imagined-speech/
 │   ├── EEG_01_pipeline_metadata_features_analysis.ipynb  # Pipeline feature
 │   ├── EEG_02_tensors_and_graph.ipynb     # Tensori e grafi
 │   ├── EEG_03_visualization_topomaps.ipynb  # Visualizzazioni topografiche
-│   ├── EEG_05_braindecode_baselines.ipynb  # Baseline DL Braindecode cross-subject
-│   ├── EEG_06_subject_specific.ipynb       # Baseline subject-specific LOSO
-│   ├── EEG_07_braindecode_5fold.ipynb      # Braindecode 5-fold cross-subject
-│   ├── EEG_07c_graph_exploratory.ipynb     # Analisi esplorativa grafi pre-training
-│   ├── EEG_07d_graph_structure.ipynb       # Subject fingerprint + spettro Laplaciano
-│   ├── EEG_08_gcn_spatial_graph.ipynb      # GCN ChebConv su grafo PCC k-NN
-│   ├── EEG_09_gat_domain_adversarial.ipynb # GAT + Gradient Reversal Layer (DANN)
-│   ├── EEG_10_advanced_gnn.ipynb           # LGGNet, AT-DGNN, DiffPool cross-subject
-│   ├── EEG_11_hgnn_imagined_speech.ipynb   # Hypergraph Neural Networks (contributo tesi)
 │   └── tests/
 │       ├── baseline_test_logreg_mlp.ipynb
 │       ├── baseline_test_gcn.ipynb
@@ -414,25 +340,17 @@ miralis-hypergraph-imagined-speech/
 
 ## 8. Insight Chiave del Progetto
 
-1. **La variabilita inter-soggetto domina** lo spazio delle feature: i trial si raggruppano per soggetto, non per parola immaginata (ε²=0.85 per soggetto vs. ε²=0.03 per parola, confermato da EEG_07d con ratio 8.6×).
+1. **La variabilita inter-soggetto domina** lo spazio delle feature: i trial si raggruppano per soggetto, non per parola immaginata.
 
 2. **I modelli vettoriali sono insufficienti** per il task a 110 parole, anche con rappresentazioni ad alta dimensionalita (11.800 feature).
 
 3. **I grafi spaziali statici non bastano**: lo smoothing basato sulla prossimita degli elettrodi non codifica informazione lessicale.
 
-4. **I grafi adattivi mostrano una promessa limitata**: la feature-similarity cattura una piccola struttura intra-soggetto (~2× chance) ma non generalizza tra soggetti.
+4. **I grafi adattivi mostrano una promessa limitata**: la feature-similarity cattura una piccola struttura intra-soggetto (~2x chance) ma non generalizza tra soggetti.
 
 5. **La struttura temporale e critica**: la suddivisione in 5 finestre temporali preserva dinamiche importanti che l'aggregazione distrugge.
 
-6. **Il fallimento delle GNN e strutturale, non architetturale**: EEG_07d dimostra matematicamente che lo spettro Laplaciano del grafo EEG e identico tra le 4 categorie semantiche. ChebGCN, GAT e HGNN operano su questo spettro — non possono discriminare per definizione matematica, indipendentemente dalla complessita dell'architettura.
-
-7. **La domain adversarial training ha confermato il problema**: rimuovendo il segnale soggetto con GRL (EEG_09 v2), il modello collassa completamente — l'unico segnale discriminativo era l'identita del soggetto.
-
-8. **Le Hypergraph Neural Networks sono a chance**: EEG_11 mostra che le relazioni di ordine superiore non creano informazione semantica laddove non esiste nel segnale. Il contributo HGNN della tesi e una dimostrazione negativa rigorosa.
-
-9. **Il segnale semantico esiste per alcuni soggetti**: l'outlier di EEG_06 (Deep4Net, test_bacc=0.344 per un soggetto specifico) suggerisce che l'informazione e presente ma altamente soggetto-specifica e non generalizzabile con i dati disponibili.
-
-10. **La prossima frontiera e il meta-learning e il contrastive learning**: l'approccio MAML/Prototypical Networks per adattamento rapido soggetto-specifico, o il contrastive learning cross-soggetto (Shen et al. 2022), sono le direzioni piu promettenti per superare il limite strutturale dimostrato.
+6. **Servono relazioni di ordine superiore**: la prossima frontiera sono le hypergraph neural networks, che possono modellare interazioni tra gruppi di elettrodi, non solo coppie.
 
 ---
 
