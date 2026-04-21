@@ -2,7 +2,7 @@
 
 > Tesi Magistrale - Politecnico di Milano, DEIB
 > Autore: Daniele Uras
-> Ultimo aggiornamento: 12 aprile 2026
+> Ultimo aggiornamento: 21 aprile 2026
 
 ---
 
@@ -219,7 +219,37 @@ Notebook: `EEG_09_gat_domain_adversarial.ipynb`
 ~19 quando alpha DANN è ancora ~0.38 — il GRL non ha tempo di agire efficacemente.
 Seconda run pianificata con λ_adv=0.5 e patience_adv=40.
 
-### 4.5 Riepilogo Risultati
+### 4.5 GCN Subject-Specific Leave-One-Session-Out (EEG_08b/c)
+
+Notebook: `EEG_08b_subject_specific_gcn.ipynb` — risultati in `data/interim/eeg08c_ss_4_norm_results.csv`
+
+- Architettura: Temporal Encoder (1D CNN per-nodo) + ChebConv(K=2), come EEG_08
+- Schema: **subject-specific** — ogni soggetto addestrato separatamente, Leave-One-Session-Out (LOSO)
+- Grafo: PCC k-NN (k=6) — ⚠️ questa run usa ancora grafo statico per-soggetto (OLD code, da rieseguire con graph classification per-trial)
+- Schema: concr4 (4 classi), normalizzazione instance-norm attiva
+- 10 soggetti (00-04, 06-09, soggetto 05 escluso per dati mancanti)
+- Figura: `figures/eeg08c_ss_4_norm_boxplot.png`
+
+**Risultati medi (10 soggetti):**
+
+| Modello | val_bacc (avg) | test_bacc (avg) | note |
+|---------|----------------|-----------------|------|
+| ChebGCN_2L | 0.298 | 0.247 | ≈ chance |
+| ChebGCN_3L | 0.302 | 0.236 | sotto chance |
+| ChebGCNSkip | 0.302 | **0.263** | 1.05x chance |
+
+**Migliore singolo soggetto**: soggetto 02 con ChebGCNSkip → test_bacc = 0.315 (1.26x chance)
+
+**Conclusione**: risultati a chance anche in setting subject-specific LOSO. Causa probabile:
+grafo PCC statico calcolato sull'intera sessione di training (non per-trial) — non è vera graph
+classification. Codice corretto in sessione 21/04 (EEG_08b ora usa `pcc_to_edge_index_trial`
+per-trial). Da **rieseguire sulla VM** per confronto valido.
+
+> ⚠️ Nota metodologica: i risultati EEG_08c sono stati generati con OLD code (grafo condiviso
+> per-soggetto). La correzione graph classification per-trial è nel commit `515628b`.
+> Re-run necessaria per risultati metodologicamente corretti.
+
+### 4.6 Riepilogo Risultati
 
 | Modello | Architettura | Subject-Independent (test_bacc) |
 |---------|-------------|--------------------------------|
@@ -227,6 +257,7 @@ Seconda run pianificata con λ_adv=0.5 e patience_adv=40.
 | EEGNet, Conformer, ecc. | Deep learning raw | ~25.0% |
 | ChebGCN (EEG_08) | GCN statico PCC | ~25.5% (1.02x) |
 | GAT + GRL (EEG_09 v1) | GAT + adversarial | ~25.3% (λ=0.1, patience=15) |
+| ChebGCN SS-LOSO (EEG_08b/c) | GCN subject-specific | ~26.3% (1.05x) ⚠️ old code |
 | **GAT + GRL (EEG_09 v2)** | GAT + adversarial | 🔄 in corso (λ=0.5, patience=40) |
 
 Chance level: **25.0%** (4 classi concr4)
