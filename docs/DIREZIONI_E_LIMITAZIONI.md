@@ -1,6 +1,6 @@
 # Direzioni Future e Limitazioni Attuali
 
-> Ultimo aggiornamento: 12 aprile 2026
+> Ultimo aggiornamento: 21 aprile 2026
 
 ---
 
@@ -36,6 +36,7 @@
 | **GCN shallow** | Architetture con pochi layer | Aggregazione di vicinato limitata |
 | **Nessun attention mechanism** | GAT implementato in EEG_09 ma non ancora efficace | Risultati a chance nella prima run |
 | **Nessun domain adaptation efficace** | GRL implementato (EEG_09) ma patience troppo bassa (15 → 40) e λ troppo basso (0.1 → 0.5) | Prima run non ha dato tempo al GRL di agire |
+| **Graph classification non rispettata** | EEG_08/08b/09 usavano grafo statico condiviso — non vera graph classification | Corretto in commit 515628b (21/04/2026); ~38K grafi per-trial ora obbligatori |
 | **No augmentation** | Nessuna augmentation dei dati EEG | Dataset effettivo non espanso |
 | **No pre-training** | Nessun pre-training self-supervised | Rappresentazioni non apprese in modo non supervisionato |
 
