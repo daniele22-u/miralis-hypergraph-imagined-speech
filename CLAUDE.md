@@ -137,6 +137,29 @@ Vedere `docs/DIREZIONI_E_LIMITAZIONI.md` per il dettaglio completo. Ordine di pr
 - **Branch corrente**: `claude/elegant-neumann`
 - **Nessuna feature engineering manuale** nei nuovi modelli
 
+### 8.1 Regola Fondamentale: Graph Classification
+
+**Nei notebook GNN (EEG_08, EEG_08b, EEG_09, EEG_10 e tutti i futuri), il paradigma è sempre GRAPH CLASSIFICATION:**
+
+- **1 grafo per trial** — edge_index calcolato on-the-fly per ogni trial nel metodo `get()` del dataset
+- **~38K grafi totali** — 70 soggetti × 5 sessioni × 110 parole
+- **MAI usare un grafo statico condiviso** tra trial (né globale per tutti i soggetti, né per soggetto)
+- Il grafo statico (`build_pcc_graph` o equivalente) va usato SOLO per display/log/topomap
+
+Implementazione corretta in PyG:
+```python
+# ✓ CORRETTO — graph classification
+def get(self, idx):
+    x_np = load_trial(idx)
+    edge_index = pcc_to_edge_index_trial(x_np, k=self.k)  # per-trial!
+    return Data(x=x, edge_index=edge_index, y=label)
+
+# ✗ SBAGLIATO — grafo condiviso (non è graph classification)
+def get(self, idx):
+    x = load_trial(idx)
+    return Data(x=x, edge_index=self.shared_edge_index, y=label)
+```
+
 ---
 
 ## 9. Obbligo di Aggiornamento Documenti
