@@ -106,6 +106,52 @@ def load_label_scheme(
     return labelid2cluster, n_classes, cluster_names
 
 
+def get_keep_channels(eloc_path: Path) -> Tuple[List[int], List[str]]:
+    """
+    Restituisce gli indici e i nomi dei 61 canali EEG validi dal file H5.
+
+    Logica:
+      - Il file .locs ha 63 posizioni (il casco EBNeuro).
+      - Il file H5 grezzo ha 61 canali: Pz e POz (posizioni 62-63 nel .locs)
+        NON erano connessi al casco durante la registrazione → non presenti nell'H5.
+      - A1 e A2 SONO inclusi: il modello impara autonomamente quali canali usare.
+      - Risultato: 61 canali EEG, tutti inclusi.
+
+    Riepilogo:
+        63 posizioni .locs
+        - 2 non registrati (Pz, POz) → 61 canali H5  ← questo è N_CHANS
+        (A1, A2 rimangono — non si rimuovono)
+
+    Args:
+        eloc_path: Path al file ebneuro.locs
+
+    Returns:
+        keep_idx   — lista di 61 indici (0-based) nel segnale H5
+        keep_names — lista di 61 nomi canale corrispondenti
+    """
+    names_all = []
+    with open(eloc_path) as f:
+        for line in f:
+            parts = line.strip().split()
+            if len(parts) >= 4:
+                names_all.append(parts[3])
+
+    # I primi 61 nomi corrispondono ai 61 canali presenti nell'H5.
+    # Pz e POz (posizioni 62-63 nel .locs) NON erano connessi → non nell'H5.
+    # A1 e A2 sono inclusi: il modello impara autonomamente quali canali usare.
+    N_H5_CHANS  = 61
+    ch_names_h5 = names_all[:N_H5_CHANS]
+
+    keep_idx   = list(range(N_H5_CHANS))   # tutti e 61
+    keep_names = ch_names_h5
+
+    assert len(keep_idx) == 61, (
+        f"Attesi 61 canali H5, trovati {len(keep_idx)}. "
+        f"Controlla il file .locs: {eloc_path}"
+    )
+    return keep_idx, keep_names
+
+
 def decode_label(label_raw) -> str:
     """
     Decode label from various formats (bytes, string, etc.)
