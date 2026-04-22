@@ -152,9 +152,46 @@ Miglioramenti ingegneristici ai baseline, utili come comparativi in tesi.
 - **Branch corrente**: `claude/elegant-neumann`
 - **Nessuna feature engineering manuale** nei nuovi modelli
 
-### 8.1 Regola Fondamentale: Graph Classification
+### 8.1 Regola Fondamentale: Experiment Tracking con W&B
 
-**Nei notebook GNN (EEG_08, EEG_08b, EEG_09, EEG_10 e tutti i futuri), il paradigma è sempre GRAPH CLASSIFICATION:**
+**Ogni nuovo notebook di training DEVE integrare Weights & Biases (wandb.ai).**
+
+- **Entity**: `uras-daniele22-politecnico-di-milano`
+- **Project**: `miralis-imagined-speech`
+- **Una run per modello** — `wandb.init(..., reinit=True)` dentro il loop sui modelli
+- **Nome run**: `eegXX_{model_name}_{cluster_scheme}` (es. `eeg11_HGNN_2L_concr4`)
+
+**Cosa loggare obbligatoriamente:**
+```python
+# Config (in wandb.init)
+config = {
+    "notebook": "EEG_XX_...", "model": model_name,
+    "n_classes": N_CLASSES, "cluster_scheme": CLUSTER_SCHEME,
+    "lr": LR, "batch_size": BATCH_SIZE, "max_epochs": MAX_EPOCHS,
+    "n_train_subj": len(SUBJ_TRAIN), ...
+}
+
+# Per ogni epoca (in training loop)
+run.log({"train/loss": ..., "train/acc": ..., "val/bacc": ..., "lr": ..., "epoch": epoch})
+
+# Summary finale
+run.summary["val_bacc"]  = val_bacc
+run.summary["test_bacc"] = test_bacc
+run.log({"confusion_matrix": wandb.plot.confusion_matrix(...)})
+run.finish()
+```
+
+**Installazione** (una tantum su ogni VM/env):
+```bash
+pip install wandb
+wandb login  # inserire API key da wandb.ai/settings
+```
+
+---
+
+### 8.2 Regola Fondamentale: Graph Classification
+
+**Nei notebook GNN (EEG_08, EEG_08b, EEG_09, EEG_10, EEG_11 e tutti i futuri), il paradigma è sempre GRAPH CLASSIFICATION:**
 
 - **1 grafo per trial** — edge_index calcolato on-the-fly per ogni trial nel metodo `get()` del dataset
 - **~38K grafi totali** — 70 soggetti × 5 sessioni × 110 parole
