@@ -429,7 +429,18 @@
 
 ---
 
-## Section 6: Interpretabilità e Analisi Neuroscientifica
+## Section 6: Neurofisiologia e Connettività EEG nell'Imagined Speech
+
+### 6.0 Iacomi et al. -- Connectivity Signatures for Imagined Speech (stesso dataset)
+
+**Citation:** Iacomi, D., Uras, D., Piccoli, A., Colacino, S., Ieracitano, C., Mammone, N., Gasparini, F., Versaci, M., Morabito, F.C., & Bianchi, A.M. (2026). "EEG functional connectivity signatures of imagined speech production: a task-related analysis using spectral and phase-based metrics." *(venue da verificare — preprint o conferenza 2026)*.
+**Summary:** Analisi sistematica della connettività funzionale EEG durante l'imagined speech usando quattro metriche spettrali e di fase: PLV, wPLI, CPCCabs, CPCCim. Introduce un **consensus filter**: un edge viene mantenuto solo se appare in ≥2/4 metriche, riducendo i falsi positivi (Type I error) nell'analisi di connettività. Principali risultati: (1) la banda **gamma** è la più funzionalmente integrata per l'imagined speech (p=0.0015 vs beta); (2) tre pathways neurali stabili emergono: CL→FL,TL (delta, motor-language), TR→CL (gamma, auditory-to-motor), POL→CR (alpha, visual-spatial); (3) il filtro a consenso riduce il rumore aumentando l'affidabilità delle connessioni riportate. Lo studio usa lo **stesso dataset** del progetto (70 soggetti, EBNeuro, 61 canali, Politecnico di Milano).
+**Relevance:** Direttamente rilevante su più livelli: (a) il **consensus filter** è una strategia di pruning basata su evidenza neurofisiologica da adottare in EEG_07e per selezionare gli edge dei grafi; (b) la dominanza gamma suggerisce di costruire grafi di connettività **per banda** (non solo wideband) e di privilegiare la banda gamma per i grafi GNN; (c) i tre pathways stabili identificati possono guidare la costruzione di iperedge per i futuri ipergraph (raggruppando elettrodi che co-attivano nei pathways); (d) CPCCabs viene proposto come metrica più robusta di PLV/wPLI in bassa SNR — da considerare per EEG_07e.
+**Relevance score:** **CRITICO** (stesso dataset, stesso laboratorio, risultati direttamente utilizzabili)
+
+---
+
+## Section 7: Interpretabilità e Analisi Neuroscientifica
 
 ### 6.1 Haufe et al. -- Interpretazione dei Pesi dei Modelli Lineari
 
@@ -467,6 +478,7 @@
 
 | Paper | Topic | Why |
 |-------|-------|-----|
+| **Iacomi et al. 2026** | Connettività IS (stesso dataset) | Consensus filter, gamma dominance, 3 pathways → input diretto per EEG_07e e EEG_08 |
 | Li et al. 2025 -- DHSLP/DHSLF | Hypergraph for imagined speech | Target architecture, 78% accuracy benchmark |
 | Bomatter et al. 2024 -- Instance Norm | Normalization | 1-line change, could reveal word-level structure |
 | Shen et al. 2022 -- Subject-Invariant Contrastive | Contrastive learning | Directly counters subject-dominated embeddings |
@@ -505,4 +517,4 @@
 
 ---
 
-*Aggiornato il 13 marzo 2026. Verify all citations before use in thesis.*
+*Aggiornato il 24 aprile 2026. Verify all citations before use in thesis.*
