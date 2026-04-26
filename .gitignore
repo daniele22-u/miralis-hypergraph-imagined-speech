@@ -11,6 +11,7 @@ __pycache__/
 data/
 models/
 runs/
+tests/
 src/
 scripts/data_processing/eeglab2025.1.0
 scripts/data_processing/Preprocessing-main
