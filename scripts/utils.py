@@ -108,26 +108,28 @@ def load_label_scheme(
 
 def get_keep_channels(eloc_path: Path) -> Tuple[List[int], List[str]]:
     """
-    Restituisce gli indici e i nomi dei 61 canali EEG validi dal file H5.
+    Restituisce gli indici e i nomi dei 59 canali EEG validi.
 
     Logica:
       - Il file .locs ha 63 posizioni (il casco EBNeuro).
       - Il file H5 grezzo ha 61 canali: Pz e POz (posizioni 62-63 nel .locs)
         NON erano connessi al casco durante la registrazione → non presenti nell'H5.
-      - A1 e A2 SONO inclusi: il modello impara autonomamente quali canali usare.
-      - Risultato: 61 canali EEG, tutti inclusi.
+      - Il codice prende i primi 61 nomi dal .locs (allineati con l'H5) e
+        rimuove A1 e A2 (elettrodi di riferimento mastoideo, nessuna posizione
+        spaziale reale — theta=0, radius=0 nel .locs).
+      - Risultato: 59 canali EEG con posizioni scalari valide.
 
     Riepilogo:
         63 posizioni .locs
-        - 2 non registrati (Pz, POz) → 61 canali H5  ← questo è N_CHANS
-        (A1, A2 rimangono — non si rimuovono)
+        - 2 non registrati (Pz, POz) → 61 canali H5
+        - 2 riferimenti (A1, A2)     → 59 canali EEG
 
     Args:
         eloc_path: Path al file ebneuro.locs
 
     Returns:
-        keep_idx   — lista di 61 indici (0-based) nel segnale H5
-        keep_names — lista di 61 nomi canale corrispondenti
+        keep_idx   — lista di 59 indici (0-based) nel segnale H5
+        keep_names — lista di 59 nomi canale corrispondenti
     """
     names_all = []
     with open(eloc_path) as f:
@@ -136,17 +138,17 @@ def get_keep_channels(eloc_path: Path) -> Tuple[List[int], List[str]]:
             if len(parts) >= 4:
                 names_all.append(parts[3])
 
-    # I primi 61 nomi corrispondono ai 61 canali presenti nell'H5.
-    # Pz e POz (posizioni 62-63 nel .locs) NON erano connessi → non nell'H5.
-    # A1 e A2 sono inclusi: il modello impara autonomamente quali canali usare.
+    # I primi 61 nomi corrispondono ai 61 canali presenti nell'H5
+    # (Pz e POz — posizioni 62-63 — non erano connessi durante la registrazione)
     N_H5_CHANS  = 61
+    REFERENCE   = {"A1", "A2"}   # mastoid refs, nessuna posizione spaziale
     ch_names_h5 = names_all[:N_H5_CHANS]
 
-    keep_idx   = list(range(N_H5_CHANS))   # tutti e 61
-    keep_names = ch_names_h5
+    keep_idx   = [i for i, n in enumerate(ch_names_h5) if n not in REFERENCE]
+    keep_names = [ch_names_h5[i] for i in keep_idx]
 
-    assert len(keep_idx) == 61, (
-        f"Attesi 61 canali H5, trovati {len(keep_idx)}. "
+    assert len(keep_idx) == 59, (
+        f"Attesi 59 canali EEG, trovati {len(keep_idx)}. "
         f"Controlla il file .locs: {eloc_path}"
     )
     return keep_idx, keep_names

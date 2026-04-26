@@ -2,7 +2,7 @@
 
 > Tesi Magistrale - Politecnico di Milano, DEIB
 > Autore: Daniele Uras
-> Ultimo aggiornamento: 21 aprile 2026
+> Ultimo aggiornamento: 26 aprile 2026
 
 ---
 
@@ -262,6 +262,63 @@ per-trial). Da **rieseguire sulla VM** per confronto valido.
 
 Chance level: **25.0%** (4 classi concr4)
 
+### 4.7 Analisi Connettività Inter-Soggetti (EEG_07e — sessione 26/04)
+
+Notebook: `EEG_07e_build_graphs_tensors.ipynb` — cella statica aggiunta (id `197633c8`)
+
+Confronto inter-soggetti su trial singolo (`accendere_img.csv`) per 6 soggetti campione.
+Quattro rappresentazioni di connettività confrontate:
+
+| Rappresentazione | Descrizione |
+|-----------------|-------------|
+| PCC matrix | Matrice correlazione grezza — struttura a blocchi visibile |
+| Adj threshold | Tutte le coppie con PCC > p50 (0.157) — non top-k |
+| k-NN raw | Top-6 vicini per nodo — sempre 263±15 archi (fisso per costruzione) |
+| Consensus | Arco sopravvive in ≥2/5 metriche (PCC/PLV/wPLI/CPCCabs/CPCCim) — cache-free |
+
+**Risultati chiave:**
+
+| Soggetto | Archi thr | Archi consensus | Gruppo |
+|----------|-----------|----------------|--------|
+| P002_S005 | **1507** | 194 | Alta connettività |
+| P008_S004 | **1525** | 237 | Alta connettività |
+| P011_S003 | 1285 | 202 | Alta connettività |
+| P000_S001 | 942 | 208 | Media |
+| P014_S001 | 738 | 185 | Bassa connettività |
+| P005_S004 | 679 | 194 | Bassa connettività |
+
+**Insight principali:**
+- **Adj threshold è la metrica più discriminativa**: spread 679–1525 archi (~2x), riflette la forza assoluta della connettività EEG del soggetto
+- **Consensus è stabile** (185–237 archi): il filtro multi-metrica comprime le differenze — NON utile per discriminare soggetti
+- **k-NN non discrimina**: per costruzione ogni nodo ha sempre k=6 vicini
+- **Due gruppi naturali** già visibili da trial singolo: alta connettività (P002/P008/P011) vs bassa (P005/P014)
+- **HE co-membership**: differenze visive drammatiche tra i due gruppi — P002/P008 mostrano blocchi cyan brillanti, P005/P014 quasi bui
+- **Bug cache identificato**: `_cache_key()` usa `Path(stem)` — stessa chiave per lo stesso word tra soggetti diversi; workaround implementato chiamando le funzioni di metrica direttamente
+
+**Output salvati:**
+- `figures/eeg07e_cross_subject_connectivity.png` — griglia 6×6 (PCC | adj_thr | k-NN | consensus | HE | bar)
+- `figures/eeg07e_cross_subject_profiles.png` — profili sovrapposti + barchart archi
+
+### 4.8 Subject Clustering EEG-First (EEG_08 — direzione Francesco)
+
+Notebook: `EEG_08_subject_clustering.ipynb` — **in preparazione**
+
+**Contesto**: Francesco ha chiuso l'approccio di EEG_08 precedente (usare l'accuracy come proxy per "capacità IS"). Motivazione: la varianza delle accuracies tra soggetti è troppo bassa e troppo vicina al baseline per essere un segnale primario affidabile.
+
+**Nuova direzione (istruzione Francesco):**
+> "Parti dai dati EEG grezzi, clusterizza i soggetti sulla base delle feature EEG, trova 2-3 cluster naturali. Solo DOPO vai a vedere come quei cluster si mappano sull'accuracy — usa l'accuracy per validare/interpretare i cluster, non per definirli."
+
+**Piano implementativo:**
+1. Feature per-soggetto (media multi-trial su campione di sessioni):
+   - `thresh_density` = n_archi(PCC>p50) / n_coppie — la metrica più discriminativa trovata
+   - `mean_pcc` = media off-diagonale matrice PCC
+   - `pcc_block_strength` = primo autovalore del Laplaciano normalizzato (struttura a blocchi)
+   - Band power medio per canale (delta/theta/alpha/beta/gamma)
+2. Feature matrix: 70 soggetti × ~10 feature
+3. K-Means e clustering gerarchico → 2–3 cluster
+4. Visualizzazione: PCA/UMAP dello spazio soggetti, colorato per cluster
+5. Post-hoc: sovrapposizione accuracy da EEG_06 — i cluster corrispondono a performance diversa?
+
 ---
 
 ## 5. Clustering Semantico
@@ -340,7 +397,7 @@ miralis-hypergraph-imagined-speech/
 
 ## 8. Insight Chiave del Progetto
 
-1. **La variabilita inter-soggetto domina** lo spazio delle feature: i trial si raggruppano per soggetto, non per parola immaginata.
+1. **La variabilita inter-soggetto domina** lo spazio delle feature: i trial si raggruppano per soggetto, non per parola immaginata (ε²=0.85 per soggetto vs 0.03 per parola).
 
 2. **I modelli vettoriali sono insufficienti** per il task a 110 parole, anche con rappresentazioni ad alta dimensionalita (11.800 feature).
 
@@ -351,6 +408,10 @@ miralis-hypergraph-imagined-speech/
 5. **La struttura temporale e critica**: la suddivisione in 5 finestre temporali preserva dinamiche importanti che l'aggregazione distrugge.
 
 6. **Servono relazioni di ordine superiore**: la prossima frontiera sono le hypergraph neural networks, che possono modellare interazioni tra gruppi di elettrodi, non solo coppie.
+
+7. **L'accuracy non è segnale primario per la variabilità inter-soggetto**: la spread delle accuracies tra soggetti è troppo bassa (~21–27% in concr4, very small range) per distinguere soggetti "capaci IS" da non-capaci. L'approccio corretto è clustering EEG-first (features grezze → cluster → validation post-hoc con accuracy).
+
+8. **La connettività threshold (adj_thr) è il segnale più discriminativo trovato**: il numero di coppie con PCC > p50 varia da ~679 a ~1525 tra soggetti (~2x), mentre consensus (185–237) e k-NN (~263 fisso) non discriminano. Due gruppi naturali emergono già da trial singolo.
 
 ---
 
