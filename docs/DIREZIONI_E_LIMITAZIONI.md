@@ -1,6 +1,6 @@
 # Direzioni Future e Limitazioni Attuali
 
-> Ultimo aggiornamento: 21 aprile 2026
+> Ultimo aggiornamento: 26 aprile 2026
 
 ---
 
@@ -52,6 +52,36 @@
 ---
 
 ## 2. Cosa Possiamo Fare Ora
+
+### 2.0 Priorità Assoluta: Subject Clustering EEG-First (istruzione Francesco)
+
+> **Contesto**: l'approccio precedente (usare accuracy come proxy per "capacità IS") è stato chiuso da Francesco. La varianza delle accuracies tra soggetti (21–27% in concr4) è troppo bassa e troppo vicina al baseline per essere un segnale primario.
+
+**Direzione corretta**: partire dai dati EEG grezzi, costruire feature per-soggetto, clusterizzare i soggetti in 2–3 gruppi naturali, poi sovrapporre l'accuracy come validazione post-hoc.
+
+**Notebook target**: `EEG_08_subject_clustering.ipynb`
+
+**Passi concreti:**
+
+1. **Feature per-soggetto** (media su campione di trial da CSV_ROOT):
+   - `thresh_density` = fraczione coppie con PCC > p50 → metrica più discriminativa già trovata (spread 2x tra soggetti)
+   - `mean_pcc` = media off-diagonale PCC
+   - `pcc_spectral_gap` = differenza tra primo e secondo autovalore del Laplaciano PCC normalizzato (struttura a blocchi)
+   - Band power per banda (delta/theta/alpha/beta/gamma) mediate sui canali
+   - `he_density` = somma co-membership ipergrafo normalizzata
+
+2. **Feature matrix**: 70 soggetti × ~8–10 feature → standardizzare con StandardScaler
+
+3. **Clustering**:
+   - K-Means (k=2, k=3) + silhouette score per scegliere k
+   - Clustering gerarchico (Ward) come confronto
+   - DBSCAN per trovare cluster naturali senza k fisso
+
+4. **Visualizzazione**: PCA (2D) + UMAP dello spazio soggetti, colorato per cluster; heatmap feature per cluster
+
+5. **Post-hoc**: sovrapporre accuracies da EEG_06 (`figures/eeg06_subject_ranking_concr4_norm.png`) — i cluster corrispondono a performance diversa?
+
+**Perché questo approccio è corretto**: la struttura nei dati EEG (ε²=0.85 per soggetto) garantisce che ci sia segnale discriminativo tra soggetti. Il clustering EEG-first trova questa struttura senza dipendere dall'accuracy del classificatore — che è rumorosa e vicina al caso.
 
 ### 2.1 Azioni Immediate (pronte con l'infrastruttura attuale)
 
@@ -187,7 +217,13 @@
 
 ## 3. Roadmap Suggerita
 
-### Fase 1: Correzione Fondamentale (immediato)
+### Fase 0: Subject Clustering (PROSSIMO PASSO — Francesco)
+0. **EEG_08_subject_clustering.ipynb** — clustering soggetti da feature EEG (§2.0 sopra)
+   - Feature: thresh_density, mean_pcc, spectral_gap, band powers
+   - K-Means k=2,3 + gerarchico Ward
+   - Post-hoc: accuracy overlay da EEG_06
+
+### Fase 1: Correzione Fondamentale (immediato, dopo EEG_08)
 1. **Subject-centering** su tutti i notebook (`X_trial -= X_subject_mean`) — prerequisito per tutto il resto
 2. **Instance Normalization** sostituisce BatchNorm in tutti i modelli DL
 3. **EEGNet end-to-end** su segnale raw (59, 384) — già in `EEG_04_braindecode_raw_baselines.ipynb`
