@@ -58,14 +58,33 @@ Per il token: `source /opt/homebrew/Caskroom/miniconda/base/etc/profile.d/conda.
 
 ## 4. Dataset
 
-- **Segnale**: EEG a 59 canali validi, 256 Hz, epoche ~1.5s
-  - File H5 (grezzo): **61 canali** (il casco ha 63 posizioni nel `.locs`, ma Pz e POz non sono stati registrati)
-  - Rimossi A1 e A2 (elettrodi di riferimento, nessuna posizione spaziale) → **59 canali EEG**
+- **Segnale**: EEG a 61 canali, 256 Hz, epoche ~1.5s (384 campioni)
 - **Task**: 110 parole immaginarie (chance level ~0.9%)
-- **Soggetti**: 70, con 5 sessioni ciascuno (~220 epoche/sessione)
-- **Formato dati**: HDF5 in `data/processed/`, struttura `(n_epochs, n_channels, n_samples)`
-- **Tensori PyTorch**: in `data/interim/` come file `.pt` per soggetto
-- **Clustering semantico**: `word2cluster_4.json`, `word2cluster_5.json` (4-5 categorie)
+- **Soggetti**: ~70, con 5 sessioni ciascuno
+- **Clustering semantico**: `concr4` (4 categorie semantiche) e `gram4` (Verbi/Sostantivi/Aggettivi/Altro)
+
+### ⚠️ REGOLA FONDAMENTALE: Sorgente Dati per i Modelli GNN
+
+**I notebook EEG_09/10/12/13 leggono ESCLUSIVAMENTE dai CSV grezzi di Paolo.**
+**NON usare mai i file H5 (`data/processed/`) — sono abbandonati.**
+
+```
+data/raw_csv/training_set/
+    PXXX_SYYY/              ← soggetto X, sessione Y
+        accendere_img.csv   ← shape (61, 384): righe=canali, colonne=samples
+        acqua_img.csv
+        ...                 ← 110 file CSV per sessione
+```
+
+- Caricamento: `pd.read_csv(path, header=None).values` → `(61, 384)` float32
+- Nessun header, nessun indice: solo valori numerici
+- Split subject-independent: SUBJ_TRAIN=0–49, SUBJ_VAL=50–59, SUBJ_TEST=60–73
+
+### Mapping parole → label
+
+- `configs/label_schemes/label2idx.json` — word → label_idx (0–109)
+- `configs/label_schemes/labelid2cluster_concr4.json` — label_idx → cluster_id
+- `configs/label_schemes/labelid2cluster_gram4.json` — label_idx → cluster_id (grammaticale)
 
 **Finding critico**: i trial si raggruppano per **soggetto**, non per parola. La variabilità inter-soggetto domina (ε²=0.85 per soggetto vs 0.03 per parola).
 
