@@ -13,6 +13,12 @@ models/
 runs/
 tests/
 src/
+# contiene i checkpoints di ogni esperimento graphs (eeg08)
+notebooks/wandb/
+checkpoints/      
+
+
+datasets/       
 scripts/data_processing/eeglab2025.1.0
 scripts/data_processing/Preprocessing-main
 results/large_outputs/
