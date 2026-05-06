@@ -148,7 +148,7 @@ Due percorsi paralleli. Vedere `docs/DIREZIONI_E_LIMITAZIONI.md` per il dettagli
 Priorità principale: contributo scientifico della tesi.
 
 1. **[IMMEDIATO]** EEG_07: 5-fold CV subject-independent → validazione baseline
-2. **[IMMEDIATO]** EEG_08: GCN su grafo elettrodico spaziale (PyG, nodi=elettrodi)
+2. **[IMMEDIATO]** EEG_08: ablation GNN — GCN/GAT/DANN × 10 graph types × W&B tracking (in corso)
 3. **[BREVE]** EEG_09: Graph Attention Networks (GAT)
 4. **[MEDIO]** EEG_10: Hypergraph Neural Networks (DHSLP/DHSLF — obiettivo tesi)
 
@@ -210,7 +210,7 @@ wandb login  # inserire API key da wandb.ai/settings
 
 ### 8.2 Regola Fondamentale: Graph Classification
 
-**Nei notebook GNN (EEG_08, EEG_08b, EEG_09, EEG_10, EEG_11 e tutti i futuri), il paradigma è sempre GRAPH CLASSIFICATION:**
+**Nei notebook GNN (EEG_08, EEG_09, EEG_10, EEG_11 e tutti i futuri), il paradigma è sempre GRAPH CLASSIFICATION:**
 
 - **1 grafo per trial** — edge_index calcolato on-the-fly per ogni trial nel metodo `get()` del dataset
 - **~38K grafi totali** — 70 soggetti × 5 sessioni × 110 parole
