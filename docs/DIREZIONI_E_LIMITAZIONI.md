@@ -1,6 +1,6 @@
 # Direzioni Future e Limitazioni Attuali
 
-> Ultimo aggiornamento: 26 aprile 2026
+> Ultimo aggiornamento: 8 maggio 2026
 
 ---
 
@@ -53,39 +53,34 @@
 
 ## 2. Cosa Possiamo Fare Ora
 
-### 2.0 Priorità Assoluta: Subject Clustering EEG-First (istruzione Francesco)
+### 2.0 ✅ COMPLETATO: Subject Clustering EEG-First (EEG_08c)
 
 > **Contesto**: l'approccio precedente (usare accuracy come proxy per "capacità IS") è stato chiuso da Francesco. La varianza delle accuracies tra soggetti (21–27% in concr4) è troppo bassa e troppo vicina al baseline per essere un segnale primario.
 
-**Direzione corretta**: partire dai dati EEG grezzi, costruire feature per-soggetto, clusterizzare i soggetti in 2–3 gruppi naturali, poi sovrapporre l'accuracy come validazione post-hoc.
+**Implementato in EEG_08c** (18 celle):
+- Feature matrix 70 soggetti × 367d (band power + degree + ISC)
+- KMeans k=2..6 + Silhouette + Elbow → k=3 ottimale
+- Dendrogramma Ward + t-SNE + PCA 2D
+- Post-hoc accuracy overlay + Kruskal-Wallis + Spearman
 
-**Notebook target**: `EEG_08_subject_clustering.ipynb`
+**Risultato**: **null result empirico** — KW p=0.939, silhouette 0.253. Le feature EEG statiche non separano soggetti per decodificabilità. Cluster k=3 = 3 outlier EEG (P017, P055, P063) con accuracy media. Francesco aveva ragione: la variabilità EEG inter-soggetto è reale ma non predice la performance del classificatore.
 
-**Passi concreti:**
-
-1. **Feature per-soggetto** (media su campione di trial da CSV_ROOT):
-   - `thresh_density` = fraczione coppie con PCC > p50 → metrica più discriminativa già trovata (spread 2x tra soggetti)
-   - `mean_pcc` = media off-diagonale PCC
-   - `pcc_spectral_gap` = differenza tra primo e secondo autovalore del Laplaciano PCC normalizzato (struttura a blocchi)
-   - Band power per banda (delta/theta/alpha/beta/gamma) mediate sui canali
-   - `he_density` = somma co-membership ipergrafo normalizzata
-
-2. **Feature matrix**: 70 soggetti × ~8–10 feature → standardizzare con StandardScaler
-
-3. **Clustering**:
-   - K-Means (k=2, k=3) + silhouette score per scegliere k
-   - Clustering gerarchico (Ward) come confronto
-   - DBSCAN per trovare cluster naturali senza k fisso
-
-4. **Visualizzazione**: PCA (2D) + UMAP dello spazio soggetti, colorato per cluster; heatmap feature per cluster
-
-5. **Post-hoc**: sovrapporre accuracies da EEG_06 (`figures/eeg06_subject_ranking_concr4_norm.png`) — i cluster corrispondono a performance diversa?
-
-**Perché questo approccio è corretto**: la struttura nei dati EEG (ε²=0.85 per soggetto) garantisce che ci sia segnale discriminativo tra soggetti. Il clustering EEG-first trova questa struttura senza dipendere dall'accuracy del classificatore — che è rumorosa e vicina al caso.
+**Implicazione per la tesi**: non ha senso segmentare l'analisi per "capacità IS" — i modelli devono essere valutati sull'intera popolazione senza pre-selezione soggetti.
 
 ### 2.1 Azioni Immediate (pronte con l'infrastruttura attuale)
 
-#### A0. Subject-Centering del Segnale EEG (priorità assoluta)
+#### A-1. ✅ HGNN Subject-Specific LOSO (EEG_09b) — COMPLETATO
+- Architettura HGNN (Feng 2019) su ipergrafi pruned
+- 74 soggetti, LOSO split — top: P031 31.8%, mediana ~25%, ~47% sopra chance
+- BCI illiteracy confermata: ~53% soggetti a/sotto chance anche con HGNN
+- Bug risolti: N_CHANNELS mancante, H shape mismatch, wandb MailboxClosedError
+
+#### A0. 🔄 HGNN Subject-Independent Ablation (EEG_09) — DA ESEGUIRE SUL SERVER
+- Notebook pronto: `EEG_09_hgnn_classification.ipynb`
+- 5 metriche × pruned only → 5 run W&B
+- Eseguire con `git pull origin main` sul server → run celle sequenziali
+
+#### A0'. Subject-Centering del Segnale EEG (priorità assoluta)
 - **Cosa**: sottrarre la media soggetto da ogni trial — `X_trial -= X_subject_mean` — prima di qualsiasi altra operazione
 - **Come**: nei notebook di caricamento dati, calcolare la media su tutti i trial del soggetto e sottrarla
 - **Perché**: le analisi di questa sessione dimostrano che la struttura nei dati è dominata dall'identità del soggetto (ε²=0.85). Il subject-centering rimuove questo DC offset senza bisogno di modelli complessi
