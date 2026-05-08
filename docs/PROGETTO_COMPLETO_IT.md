@@ -2,7 +2,7 @@
 
 > Tesi Magistrale - Politecnico di Milano, DEIB
 > Autore: Daniele Uras
-> Ultimo aggiornamento: 26 aprile 2026
+> Ultimo aggiornamento: 8 maggio 2026
 
 ---
 
@@ -251,14 +251,16 @@ per-trial). Da **rieseguire sulla VM** per confronto valido.
 
 ### 4.6 Riepilogo Risultati
 
-| Modello | Architettura | Subject-Independent (test_bacc) |
-|---------|-------------|--------------------------------|
-| Logistic Regression / MLP | Feature manuali | ~Chance |
-| EEGNet, Conformer, ecc. | Deep learning raw | ~25.0% |
-| ChebGCN (EEG_08) | GCN statico PCC | ~25.5% (1.02x) |
-| GAT + GRL (EEG_09 v1) | GAT + adversarial | ~25.3% (λ=0.1, patience=15) |
-| ChebGCN SS-LOSO (EEG_08b/c) | GCN subject-specific | ~26.3% (1.05x) ⚠️ old code |
-| **GAT + GRL (EEG_09 v2)** | GAT + adversarial | 🔄 in corso (λ=0.5, patience=40) |
+| Modello | Architettura | Setting | test_bacc |
+|---------|-------------|---------|-----------|
+| Logistic Regression / MLP | Feature manuali | S-Indep | ~Chance |
+| EEGNet, Conformer, ecc. | Deep learning raw | S-Indep | ~25.0% |
+| ChebGCN (EEG_08) | GCN statico PCC | S-Indep | ~25.5% (1.02x) |
+| GAT + GRL (EEG_09 v1 GAT) | GAT + adversarial PyG | S-Indep | ~25.3% |
+| ChebGCN LOSO (EEG_08b) | GCN per-trial pruned | S-Spec | ~26.3% |
+| GCN/GAT/DANN ablation (EEG_08) | 5 metriche pruned | S-Indep | ~25% (🔄 da rieseguire) |
+| **HGNN Subject-Specific (EEG_09b)** | HGNN 2L ipergrafi pruned | S-Spec | **top: 31.8%** (mediana: ~25%) |
+| **HGNN Subject-Independent (EEG_09)** | HGNN 2L ipergrafi pruned | S-Indep | 🔄 da eseguire |
 
 Chance level: **25.0%** (4 classi concr4)
 
@@ -299,25 +301,110 @@ Quattro rappresentazioni di connettività confrontate:
 - `figures/eeg07e_cross_subject_connectivity.png` — griglia 6×6 (PCC | adj_thr | k-NN | consensus | HE | bar)
 - `figures/eeg07e_cross_subject_profiles.png` — profili sovrapposti + barchart archi
 
-### 4.8 Subject Clustering EEG-First (EEG_08 — direzione Francesco)
+### 4.8 Subject Clustering EEG-First (EEG_08c — sessione 28/04–08/05)
 
-Notebook: `EEG_08_subject_clustering.ipynb` — **in preparazione**
+Notebook: `EEG_08c_subject_quality_metrics.ipynb` — **completato**
 
-**Contesto**: Francesco ha chiuso l'approccio di EEG_08 precedente (usare l'accuracy come proxy per "capacità IS"). Motivazione: la varianza delle accuracies tra soggetti è troppo bassa e troppo vicina al baseline per essere un segnale primario affidabile.
+**Contesto**: Francesco ha chiuso l'approccio precedente (usare l'accuracy come proxy per "capacità IS"). Motivazione: la varianza delle accuracies tra soggetti è troppo bassa e troppo vicina al baseline per essere un segnale primario affidabile.
 
-**Nuova direzione (istruzione Francesco):**
+**Nuova direzione (istruzione Francesco — implementata):**
 > "Parti dai dati EEG grezzi, clusterizza i soggetti sulla base delle feature EEG, trova 2-3 cluster naturali. Solo DOPO vai a vedere come quei cluster si mappano sull'accuracy — usa l'accuracy per validare/interpretare i cluster, non per definirli."
 
-**Piano implementativo:**
-1. Feature per-soggetto (media multi-trial su campione di sessioni):
-   - `thresh_density` = n_archi(PCC>p50) / n_coppie — la metrica più discriminativa trovata
-   - `mean_pcc` = media off-diagonale matrice PCC
-   - `pcc_block_strength` = primo autovalore del Laplaciano normalizzato (struttura a blocchi)
-   - Band power medio per canale (delta/theta/alpha/beta/gamma)
-2. Feature matrix: 70 soggetti × ~10 feature
-3. K-Means e clustering gerarchico → 2–3 cluster
-4. Visualizzazione: PCA/UMAP dello spazio soggetti, colorato per cluster
-5. Post-hoc: sovrapposizione accuracy da EEG_06 — i cluster corrispondono a performance diversa?
+**Implementazione (18 celle):**
+- Feature per-soggetto: band power (5 bande × 61 canali = 305d) + node degree connectivity (61d) + ISC similarity (1d) = 367d totali
+- PCA → riduzione a 20 componenti (spiegano ~85% varianza)
+- K-Means k=2..6 + Silhouette + Elbow per selezione k → **k=3 ottimale** (silhouette = 0.253)
+- Dendrogramma Ward linkage
+- t-SNE 2D + PCA 2D scatter colorato per cluster
+- Post-hoc accuracy overlay (carica `eeg08b_subject_ranking.csv`)
+- Test statistici: Kruskal-Wallis + Spearman ISC vs accuracy
+
+**Risultati (null result confermato):**
+
+| Metrica | Valore |
+|---------|--------|
+| Silhouette k=3 | 0.253 |
+| Kruskal-Wallis p | **0.939** (non significativo) |
+| Spearman ISC vs accuracy | ~0 |
+
+**Conclusione**: le feature EEG statiche (band power + connettività) **non clusterizzano** i soggetti in gruppi con performance di decodifica diverse. Il cluster k=3 corrisponde a 3 soggetti EEG-outlier (P017, P055, P063) con accuracy media. La struttura EEG inter-soggetto è reale (ε²=0.85) ma non predice la decodificabilità dei trial → confermato empiricamente il feedback di Francesco.
+
+### 4.9 Dataset Grafi/Ipergrafi EEG_07f (sessione 26–28/04)
+
+Notebook: `EEG_07f_build_graphs_hypergraphs.ipynb` — **completato**
+
+**Build completo dataset graph classification:**
+- 38.883 trial totali × 5 metriche (PCC, |PCC|, Im-PCC, wPLI, PLV) × 2 varianti (raw / consensus-pruned)
+- 4 output per trial: grafo raw, grafo pruned, ipergrafo raw, ipergrafo pruned
+- Shape per trial: `x=(61, 384)`, `adj=(61,61)`, `H=(61,E)` con E variabile dopo pruning
+- Paradigma: 1 file `.pt` per trial — **GRAPH CLASSIFICATION**
+- Output: `data/graphs_{metric}/`, `data/graphs_pruned_{metric}/`, `data/hypergraphs_{metric}/`, `data/hypergraphs_pruned_{metric}/`
+
+**Analisi post-hoc aggiunta (3 celle):**
+- Topomap connettività: grado pesato per canale per 4 varianti × 5 metriche (output: `figures/topomap_P000_acqua.png`)
+- Mean adjacency per cluster semantico (concr4): matrici medie + 6 differenze pairwise TwoSlopeNorm
+- Visualizzazione brain sLORETA dorsal view con overlay parcellazione Desikan-Killiany (fsaverage)
+
+### 4.10 GCN/GAT/DANN Ablation su Grafi Pruned (EEG_08 — sessione 28/04)
+
+Notebook: `EEG_08_gnn_classification.ipynb` — **configurato, da rieseguire con pruned**
+
+**Configurazione aggiornata:**
+- `GRAPH_DIRS` ora usa esclusivamente grafi pruned (`graphs_pruned_*`)
+- 10 tipi di grafo: 5 metriche × pruned only
+- 3 modelli: GCN, GAT, DANN (Domain Adversarial)
+- Metrica: balanced accuracy (4 classi concr4, chance = 25%)
+- Risultato atteso: ~25% (confermato nella run precedente con raw — grafo statico spaziale non sufficiente)
+
+**EEG_08b subject-specific** aggiornato analogamente a pruned-only.
+
+### 4.11 HGNN Subject-Independent Ablation (EEG_09 — sessione 28/04–08/05)
+
+Notebook: `EEG_09_hgnn_classification.ipynb` — **creato, da eseguire sul server**
+
+**Architettura: HGNN (Feng et al. 2019, AAAI)**
+- Formula: `X' = Dv^{-1/2} H W De^{-1} H^T Dv^{-1/2} X Θ`
+- Implementazione: batched bmm per (B,N,C) × (B,N,E)
+- Dataset standard PyTorch (non PyG) — H denso (61,61) con padding consensus
+
+**Configurazione:**
+- 5 metriche (pcc, abs_pcc, im_pcc, wpli, plv) × pruned only = 5 run
+- Split: TRAIN sogg 0–49, VAL 50–59, TEST 60–73
+- MAX_EPOCHS=60, PATIENCE=12, HIDDEN=128, LR=1e-3
+- W&B tracking con heatmap output
+- Instance norm attiva (Bomatter 2024)
+
+**Note tecniche:**
+- H pruned ha E variabile dopo consensus → `F.pad(H, (0, N_CHANNELS - H.shape[1]))` normalizza a (61,61)
+- `VARIANTS = [True]` (pruned only, conforme a policy post-07f)
+
+### 4.12 HGNN Subject-Specific LOSO (EEG_09b — sessione 28/04–08/05)
+
+Notebook: `EEG_09b_hgnn_subject_specific.ipynb` — **completato e debuggato**
+
+**Schema: subject-specific LOSO**
+- Per ogni soggetto: test=ultima sessione, val=penultima, train=resto
+- Stessa architettura HGNN di EEG_09
+
+**Bug corretti:**
+1. `N_CHANNELS` non definito nel CONFIG → aggiunto `N_CHANNELS = 61`, `N_SAMPLES = 384`
+2. H shape mismatch (E variabile dopo pruning) → `F.pad(H, (0, N_CHANNELS - H.shape[1]))`
+3. `KeyError: 'Test bAcc'` (SUBJECT_RESULTS vuoto) → guard `if not SUBJECT_RESULTS:`
+4. `wandb.sdk.mailbox.MailboxClosedError` in loop Jupyter → `settings=wandb.Settings(start_method='thread')`
+
+**Risultati:**
+
+| Soggetto top | Test bAcc | Note |
+|-------------|-----------|------|
+| P031 | 0.318 | Miglior soggetto Top-1 |
+| P015 | ~0.53 | Miglior soggetto Top-2 |
+| Mediana | ~0.25 | Chance level |
+| % sopra chance | ~47% (35/74) | BCI illiteracy confermata |
+
+**Insight chiave:**
+- Forte bias verso classe ASTRATTO nei soggetti top (recall 0.70–0.86)
+- P034: class collapse su STATO (recall 0.86, altre classi ~0)
+- ~53% dei soggetti sotto o a chance anche con HGNN subject-specific
 
 ---
 
