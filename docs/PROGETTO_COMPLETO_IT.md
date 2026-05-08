@@ -260,7 +260,7 @@ per-trial). Da **rieseguire sulla VM** per confronto valido.
 | ChebGCN LOSO (EEG_08b) | GCN per-trial pruned | S-Spec | ~26.3% |
 | GCN/GAT/DANN ablation (EEG_08) | 5 metriche pruned | S-Indep | ~25% (🔄 da rieseguire) |
 | **HGNN Subject-Specific (EEG_09b)** | HGNN 2L ipergrafi pruned | S-Spec | **top: 31.8%** (mediana: ~25%) |
-| **HGNN Subject-Independent (EEG_09)** | HGNN 2L ipergrafi pruned | S-Indep | 🔄 da eseguire |
+| **HGNN Subject-Independent (EEG_09)** | HGNN 2L ipergrafi pruned | S-Indep | **~25.7%** (range 0.253–0.260) |
 
 Chance level: **25.0%** (4 classi concr4)
 
@@ -373,6 +373,20 @@ Notebook: `EEG_09_hgnn_classification.ipynb` — **creato, da eseguire sul serve
 - MAX_EPOCHS=60, PATIENCE=12, HIDDEN=128, LR=1e-3
 - W&B tracking con heatmap output
 - Instance norm attiva (Bomatter 2024)
+
+**Risultati (eseguito 08/05/2026):**
+
+| Metrica | Val bAcc | Test bAcc |
+|---------|----------|-----------|
+| pcc     | 0.264    | **0.260** |
+| abs_pcc | 0.262    | 0.253     |
+| im_pcc  | 0.260    | 0.256     |
+| wpli    | 0.261    | 0.255     |
+| plv     | 0.255    | 0.260     |
+
+Chance level: 25.0% — tutti i modelli a ~25–26%. Range test: 0.253–0.260 (spread <1%).
+
+**Conclusione**: ipergrafo statico pruned in setting subject-independent → chance level, identico al GCN su grafi semplici. La topologia ipergraph statica non porta vantaggio rispetto al grafo semplice. Necessaria modellazione temporale esplicita.
 
 **Note tecniche:**
 - H pruned ha E variabile dopo consensus → `F.pad(H, (0, N_CHANNELS - H.shape[1]))` normalizza a (61,61)
