@@ -75,10 +75,10 @@
 - BCI illiteracy confermata: ~53% soggetti a/sotto chance anche con HGNN
 - Bug risolti: N_CHANNELS mancante, H shape mismatch, wandb MailboxClosedError
 
-#### A0. 🔄 HGNN Subject-Independent Ablation (EEG_09) — DA ESEGUIRE SUL SERVER
-- Notebook pronto: `EEG_09_hgnn_classification.ipynb`
-- 5 metriche × pruned only → 5 run W&B
-- Eseguire con `git pull origin main` sul server → run celle sequenziali
+#### A0. ✅ HGNN Subject-Independent Ablation (EEG_09) — COMPLETATO
+- 5 metriche × pruned only → tutti a chance (test 0.253–0.260)
+- Spread < 1% tra metriche — nessuna metrica si distingue
+- **Conclusione**: ipergrafo statico pruned = grafo semplice in S-Indep → serve modellazione temporale
 
 #### A0'. Subject-Centering del Segnale EEG (priorità assoluta)
 - **Cosa**: sottrarre la media soggetto da ogni trial — `X_trial -= X_subject_mean` — prima di qualsiasi altra operazione
