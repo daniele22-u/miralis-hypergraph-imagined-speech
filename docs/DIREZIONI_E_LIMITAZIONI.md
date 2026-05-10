@@ -1,6 +1,6 @@
 # Direzioni Future e Limitazioni Attuali
 
-> Ultimo aggiornamento: 8 maggio 2026
+> Ultimo aggiornamento: 10 maggio 2026
 
 ---
 
@@ -80,6 +80,25 @@
 - Spread < 1% tra metriche — nessuna metrica si distingue
 - **Conclusione**: ipergrafo statico pruned = grafo semplice in S-Indep → serve modellazione temporale
 
+#### A1b. ✅ T-HGNN: Temporal Encoder + HGNN (EEG_10) — COMPLETATO
+- CNN 1D per-nodo (384→64) + HGNN 2L, S-Indep
+- Risultato: 0.241–0.252 test bAcc — *peggio* di EEG_09
+- Causa: CNN overfitta la compressione temporale in S-Indep
+- Lezione: compressione CNN prima di HGNN non generalizza cross-subject
+
+#### A1c. ✅ W-HGNN: Windowed HGNN con H fisso (EEG_11) — COMPLETATO
+- K=8 finestre, H_pruned soft fisso, feat nodo = Linear(48→32) per finestra
+- Risolve tautologia H_mask ⊙ |PCC(x_k)| — H_pruned già PCC-based
+- Risultato: 0.249–0.261 test bAcc — pari a EEG_09 (nessun guadagno)
+- Conferma: bottleneck è variabilità inter-soggetto, non architettura temporale
+
+#### A1d. ✅ W-HGNN Subject-Specific LOSO (EEG_12) — COMPLETATO
+- Replica EEG_09b con W-HGNN, 74 soggetti, LOSO split
+- Best: P007=0.344 (nuovo record, +8.2% vs P031=0.318 di EEG_09b)
+- Delta medio vs HGNN statico: −0.004 (≈ zero)
+- Soffitto attuale: ~34% su 4 classi, ~50% soggetti sotto chance (BCI illiteracy)
+- Gap con target tesi (Li et al. 2025 ~78%): enorme — necessario salto architetturale
+
 #### A0'. Subject-Centering del Segnale EEG (priorità assoluta)
 - **Cosa**: sottrarre la media soggetto da ogni trial — `X_trial -= X_subject_mean` — prima di qualsiasi altra operazione
 - **Come**: nei notebook di caricamento dati, calcolare la media su tutti i trial del soggetto e sottrarla
@@ -142,15 +161,20 @@
 - **Riferimento**: Jayaram & Barachant 2020
 - **Effort**: basso (preprocessing aggiuntivo)
 
-#### F. Hypergraph Neural Networks
-- **Cosa**: implementare reti neurali su ipergrafi dove le iperedge connettono gruppi di elettrodi
+#### F. ✅ Hypergraph Neural Networks (EEG_09–12) — COMPLETATO (topologia fissa)
+- HGNN statico, T-HGNN, W-HGNN implementati e testati (EEG_09–12)
+- Risultato: soffitto ~34% S-Spec, ~26% S-Indep — nessun breakthrough
+- **Prossimo step**: EEG_13 — DHSLP (Li et al. 2025): iperedge APPRESE end-to-end (non costruite da PCC)
+
+#### F2. 🔄 DHSLP/DHSLF — Dynamic Hypergraph con Iperedge Apprese (EEG_13 — TARGET TESI)
+- **Cosa**: replicare Li et al. 2025 — iperedge come parametri learnable (non PCC/PLV hard-coded)
+- **Differenza chiave da EEG_09–12**: in EEG_09–12 H_pruned è costruito da PCC (ingegneria manuale). In DHSLP le iperedge sono vettori di parametri `E_j ∈ R^d` aggiornati da backprop — la rete decide QUALI elettrodi raggruppare
 - **Come**:
-  - Costruire ipergrafi basati su regioni cerebrali (frontale, temporale, parietale, occipitale)
-  - Iperedge da clustering funzionale (PLV per banda di frequenza)
-  - Usare framework AllSet (Chien et al. 2022) o implementare HGNN custom con PyTorch Geometric
-- **Perche**: le relazioni di ordine superiore tra gruppi di elettrodi possono catturare pattern che i grafi semplici non modellano
-- **Riferimento**: Li et al. 2025 raggiungono 78% con dynamic hypergraph learning; per-trial hyperedge construction via PLV/coherence
-- **Effort**: alto
+  - `H = softmax(X @ E^T)` — matrice incidenza soft da prodotto scalare feature-iperedge
+  - Stack temporale: K finestre → K iperedge-set → aggregazione con attention o mean
+  - Loss: cross-entropy su concr4 (4 classi)
+- **Riferimento**: Li et al. 2025, arXiv — DHSLP/DHSLF, ~78% accuracy su imagined speech
+- **Effort**: alto — ma è l'obiettivo principale della tesi
 
 #### G. Graph Attention Networks (GAT)
 - **Cosa**: sostituire GCN con GAT per pesare dinamicamente i vicini
