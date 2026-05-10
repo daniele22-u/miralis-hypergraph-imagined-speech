@@ -2,7 +2,7 @@
 
 > Tesi Magistrale - Politecnico di Milano, DEIB
 > Autore: Daniele Uras
-> Ultimo aggiornamento: 8 maggio 2026
+> Ultimo aggiornamento: 10 maggio 2026
 
 ---
 
@@ -258,10 +258,12 @@ per-trial). Da **rieseguire sulla VM** per confronto valido.
 | ChebGCN (EEG_08) | GCN statico PCC | S-Indep | ~25.5% (1.02x) |
 | GAT + GRL (EEG_09 v1 GAT) | GAT + adversarial PyG | S-Indep | ~25.3% |
 | ChebGCN LOSO (EEG_08b) | GCN per-trial pruned | S-Spec | ~26.3% |
-| GCN/GAT/DANN ablation (EEG_08) | 5 metriche pruned | S-Indep | ~25% (🔄 da rieseguire) |
-| **HGNN Subject-Specific (EEG_09b)** | HGNN 2L ipergrafi pruned | S-Spec | **top: 31.8%** (mediana: ~25%) |
-| **HGNN Subject-Independent (EEG_09)** | HGNN 2L ipergrafi pruned | S-Indep | **~25.7%** (range 0.253–0.260) |
-| **T-HGNN (EEG_10)** | CNN temporale + HGNN pruned | S-Indep | **~24.8%** (range 0.241–0.252) ↓ sotto chance |
+| GCN/GAT/DANN ablation (EEG_08) | 5 metriche pruned | S-Indep | ~25% |
+| **HGNN S-Indep (EEG_09)** | HGNN 2L ipergrafi pruned | S-Indep | **~25.7%** (range 0.253–0.260) |
+| **HGNN S-Spec LOSO (EEG_09b)** | HGNN 2L ipergrafi pruned | S-Spec | **top: 31.8%** (P031), mediana ~25% |
+| **T-HGNN (EEG_10)** | CNN 1D per-nodo + HGNN | S-Indep | **~24.8%** (0.241–0.252) ↓ sotto chance |
+| **W-HGNN S-Indep (EEG_11)** | H_pruned soft fisso, features per finestra | S-Indep | **~25.5%** (0.249–0.261) |
+| **W-HGNN S-Spec LOSO (EEG_12)** | W-HGNN, K=8 finestre, LOSO | S-Spec | **top: 34.4%** (P007), mediana ~25%, delta medio vs 09b: ≈0 |
 
 Chance level: **25.0%** (4 classi concr4)
 
@@ -420,6 +422,96 @@ Notebook: `EEG_09b_hgnn_subject_specific.ipynb` — **completato e debuggato**
 - Forte bias verso classe ASTRATTO nei soggetti top (recall 0.70–0.86)
 - P034: class collapse su STATO (recall 0.86, altre classi ~0)
 - ~53% dei soggetti sotto o a chance anche con HGNN subject-specific
+
+### 4.13 T-HGNN: Temporal Encoder + HGNN (EEG_10 — sessione 08–10/05)
+
+Notebook: `EEG_10_temporal_hgnn.ipynb` — **completato**
+
+**Motivazione**: EEG_09 usa x=(61,384) come feature nodo dirette → nessuna modellazione temporale esplicita. EEG_10 introduce un encoder 1D CNN per canale prima dell'HGNN.
+
+**Architettura (T-HGNN)**:
+- `TemporalEncoder`: Conv1d(1,16,k=25,s=4) → BN+ELU → Conv1d(16,32,k=15,s=4) → BN+ELU → Conv1d(32,64,k=8,s=4) → BN+ELU → AdaptiveAvgPool1d(1) → (B,N,64)
+- Input x=(B,61,384) reshape a (B×61,1,384), CNN, reshape a (B,61,64)
+- HGNN 2L su feature temporali compressed (64d invece di 384d)
+- Anti-collapse: WeightedRandomSampler + label_smoothing=0.1
+
+**Risultati (5 metriche × pruned, S-Indep):**
+
+| Metrica | Val bAcc | Test bAcc |
+|---------|----------|-----------|
+| pcc     | 0.262    | 0.248     |
+| abs_pcc | 0.265    | 0.252     |
+| im_pcc  | 0.258    | 0.250     |
+| wpli    | 0.260    | 0.249     |
+| plv     | 0.260    | 0.241     |
+
+**Conclusione**: T-HGNN *peggiore* di EEG_09 (24.8% vs 25.7%). L'encoder CNN introduce overfitting — il segnale compresso 64d perde informazione rispetto ai 384 sample diretti nel setting subject-independent. Mild overfitting (val > test consistently).
+
+**Lezione**: comprimere il segnale temporale prima dell'HGNN non aiuta — la variabilità inter-soggetto è troppo alta per imparare una compressione generalizzabile.
+
+**Bug risolto**: class collapse ASTRATTO (WeightedRandomSampler + class_weights = double-counting → bias invertito). Fix: rimuovere `weight=class_weights` da CrossEntropyLoss — sampler già bilancia i batch.
+
+---
+
+### 4.14 W-HGNN: Windowed HGNN con H_pruned Fisso (EEG_11 — sessione 08–10/05)
+
+Notebook: `EEG_11_dynamic_hgnn.ipynb` — **completato**
+
+**Ragionamento evolutivo**:
+- EEG_11 v1: H_k = |PCC(x_k)| per finestra → rumoroso (47 df per 61² correlazioni su 48 sample)
+- EEG_11 v2: H_k = H_pruned ⊙ |PCC(x_k)| → tautologico (H_pruned già basato su PCC)
+- **EEG_11 finale (W-HGNN)**: H_pruned soft come topologia FISSA, feature nodo variano per finestra
+
+**Architettura (W-HGNN)**:
+- K=8 finestre temporali (384/8 = 48 sample ≈ 188ms)
+- Per ogni finestra k: `feat_k = Linear(x_k: 48→32)` + `out_k = HGNN(feat_k, H_pruned)` → H invariato
+- `z = mean(out_1..K)` → Linear → logits(B,4)
+- H_pruned soft (non binarizzato) — topologia consensus-validated noise-free
+
+**Risultati (5 metriche × pruned, S-Indep):**
+
+| Metrica | Val bAcc | Test bAcc |
+|---------|----------|-----------|
+| pcc     | 0.256    | 0.249     |
+| abs_pcc | 0.253    | 0.260     |
+| im_pcc  | 0.262    | 0.261     |
+| wpli    | 0.260    | 0.252     |
+| plv     | 0.261    | 0.253     |
+
+**Conclusione**: W-HGNN ≈ HGNN statico (EEG_09). La variazione temporale nei feature dei nodi non introduce guadagno misurabile in S-Indep. Il bottleneck rimane la variabilità inter-soggetto (ε²=0.85), non la scelta di architettura temporale.
+
+---
+
+### 4.15 W-HGNN Subject-Specific LOSO (EEG_12 — sessione 10/05)
+
+Notebook: `EEG_12_whgnn_subject_specific.ipynb` — **completato**
+
+**Schema**: replica di EEG_09b (HGNN statico LOSO) con architettura W-HGNN. LOSO per sessione (test=ultima, val=penultima, train=resto). 74 soggetti totali.
+
+**Risultati top-10:**
+
+| Soggetto | W-HGNN (EEG_12) | HGNN (EEG_09b) | Delta |
+|----------|-----------------|----------------|-------|
+| P007 | **0.344** | 0.250 | +0.094 |
+| P051 | 0.333 | 0.279 | +0.054 |
+| P057 | 0.316 | 0.225 | +0.091 |
+| P070 | 0.315 | 0.250 | +0.065 |
+| P045 | 0.312 | 0.257 | +0.056 |
+
+**Statistiche globali:**
+- Best: P007 = 0.344 (nuovo record, vs 0.318 di P031 in EEG_09b, +8.2% relativo)
+- Delta medio W-HGNN vs HGNN: **−0.004** (praticamente zero)
+- ~50% soggetti sopra chance, ~50% sotto — BCI illiteracy invariata
+
+**Insight confusion matrix**:
+- P007: distribuzione più bilanciata tra classi
+- P045: collasso su AZIONE (0.85 recall) — WeightedSampler non risolve tutto
+- P051/P057: collasso parziale su ASTRATTO (0.61–0.66 recall)
+- Bias per-soggetto è diverso → problema strutturale (identità soggetto), non architetturale
+
+**Conclusione**: W-HGNN migliora il tetto dei soggetti top (+0.09 per i migliori) ma non cambia la distribuzione complessiva. Il delta medio ≈ 0 conferma che il guadagno temporale è marginale. Il soffitto attuale con questo paradigma è ~34% su 4 classi in setting subject-specific.
+
+**Gap con target tesi**: Li et al. 2025 (DHSLP) raggiungono ~78% con dynamic hypergraph *appreso* end-to-end — differenza chiave: le iperedge non sono costruite da PCC ma imparate come parametri della rete. Prossimo step: EEG_13.
 
 ---
 
