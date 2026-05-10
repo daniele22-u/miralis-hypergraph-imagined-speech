@@ -261,6 +261,7 @@ per-trial). Da **rieseguire sulla VM** per confronto valido.
 | GCN/GAT/DANN ablation (EEG_08) | 5 metriche pruned | S-Indep | ~25% (🔄 da rieseguire) |
 | **HGNN Subject-Specific (EEG_09b)** | HGNN 2L ipergrafi pruned | S-Spec | **top: 31.8%** (mediana: ~25%) |
 | **HGNN Subject-Independent (EEG_09)** | HGNN 2L ipergrafi pruned | S-Indep | **~25.7%** (range 0.253–0.260) |
+| **T-HGNN (EEG_10)** | CNN temporale + HGNN pruned | S-Indep | **~24.8%** (range 0.241–0.252) ↓ sotto chance |
 
 Chance level: **25.0%** (4 classi concr4)
 
