@@ -105,7 +105,17 @@ miralis-hypergraph-imagined-speech/
 │   ├── EEG_05_braindecode_raw_baseline_indipendant.ipynb
 │   ├── EEG_06_subject_specific.ipynb
 │   ├── EEG_07_cv_subject_independent.ipynb
-│   ├── EEG_08_..._GNN.ipynb           ← prossimo: GCN su grafo elettrodico
+│   ├── EEG_08_..._GNN.ipynb
+│   ├── EEG_09_gat_subject_independent.ipynb
+│   ├── EEG_10_hypergraph_nn.ipynb
+│   ├── EEG_11_hgnn_subject_independent.ipynb
+│   ├── EEG_12_subject_specific_gnn.ipynb
+│   ├── EEG_13b_dhslp_subject_specific.ipynb  ← DHSLP soggetto-specifico, fix overfitting
+│   ├── EEG_14_dhslp_pretrain_finetune.ipynb  ← pretrain S-indep + calibrazione per sogg.
+│   ├── EEG_15_li_trial_hypergraph.ipynb      ← Li et al. 2025 fedele (⚠️ non ancora eseguito)
+│   ├── EEG_16_subject_clustering.ipynb       ← clustering strutturale su adj pruned
+│   ├── EEG_17_cluster_connectivity.ipynb     ← connettività media per cluster semantico
+│   ├── EEG_18_functional_clustering.ipynb    ← clustering funzionale 4D→305D→1041D
 │   ├── ...
 │   ├── pathwayB/                      ← PATHWAY B: engineering (augmentation, domain adaptation)
 │   │   ├── README.md
@@ -136,29 +146,65 @@ Vedere `docs/PROGETTO_COMPLETO_IT.md` per il dettaglio completo. Riepilogo:
 | Logistic Regression / MLP | ~Chance | ~Chance |
 | GCN Grafo Statico (k-NN) | ~Chance | ~Chance |
 | GCN Feature-Similarity | ~2x Chance ⚠️ | ~Chance |
-| GCN Spazio-Temporale | 🔄 In corso | 🔄 In corso |
+| GCN Spazio-Temporale | completato | completato |
+
+### Risultati recenti (maggio 2026)
+
+**EEG_12/13b — DHSLP soggetto-specifico con fix overfitting**
+- Modifiche: hidden 128→64, dropout 0.3→0.6, WD 1e-3→5e-3, label smoothing 0.1→0.2, mixup α=0.4
+- Gap train/val: 0.67 → 0.04
+- Migliori soggetti: ~34% bAcc (4 classi, chance=25%)
+
+**EEG_14 — Pretrain subject-independent + calibrazione per soggetto**
+- PRE-CAL: 26.1% mean bAcc (modello pretrained valutato direttamente)
+- POST-CAL: 26.3% mean bAcc (fine-tune sess. 1-4, test sess. 5) — Δ≈0, 7/13 soggetti migliorati
+- Conclusione: pretrain generalizza appena sopra chance; fine-tuning non aiuta sistematicamente
+
+**EEG_15 — Li et al. 2025 fedele sui nostri dati**
+- Split 300/200/50 (usa tutti i 550 trial), grid 3087 config, pipeline identica al paper
+- ⚠️ Non ancora eseguito — risultati da aggiornare dopo run
+
+**EEG_16 — Clustering strutturale su adj pruned**
+- Feature: matrice adj pruned 61×61 per soggetto, PCA→KMeans(k=2): 52+22 soggetti
+- Mann-Whitney U vs bAcc: **p=0.800 (ns)** — struttura topografica NON predice decodificabilità
+
+**EEG_17 — Connettività media per cluster semantico**
+- DEV[sogg,k] = deviazione individuale dalla grand mean connettività della popolazione
+- Finding: deviazione è firma individuale stabile, non correlata a bAcc
+
+**EEG_18 — Clustering funzionale (4D → 305D → 1041D)**
+- 4 scalari (§1–§4): sil=0.18, KW p=0.93 (ns)
+- 305D multi-band power (§10 A): sil=0.32, KW p=0.074 (ns)
+- 732D Li gamma-temporal (§10 B): sil=0.624, KW p=0.023★ ma cluster 70+3 = outlier detection
+- 1041D combined (§10 C): sil=0.589, KW p=0.023★ — stessa struttura outlier
+- ARI strutturale vs funzionale ≈ 0 — ortogonali
+- **Risultato negativo robusto**: 1041D di feature esaurite, nessuna predice bAcc
 
 ---
 
 ## 7. Roadmap Attiva
 
-Due percorsi paralleli. Vedere `docs/DIREZIONI_E_LIMITAZIONI.md` per il dettaglio completo.
+### ✅ Completati (maggio 2026)
 
-### 🎓 Pathway A — Tesi (cartella `notebooks/`)
-Priorità principale: contributo scientifico della tesi.
+- **EEG_13b**: fix overfitting subject-specific (gap train/val 0.67→0.04)
+- **EEG_14**: pretrain S-indep + calibrazione per soggetto (26.1%→26.3% bAcc, Δ≈0)
+- **EEG_15**: Li et al. 2025 fedele implementato (⚠️ non ancora eseguito)
+- **EEG_16**: clustering strutturale su adj pruned (p=0.800 ns vs bAcc)
+- **EEG_17**: connettività media per cluster semantico (firma individuale, ns vs bAcc)
+- **EEG_18**: clustering funzionale 4D→305D→1041D (tutto ns, ARI=0 vs strutturale)
 
-1. **[IMMEDIATO]** EEG_07: 5-fold CV subject-independent → validazione baseline
-2. **[IMMEDIATO]** EEG_08: ablation GNN — GCN/GAT/DANN × 10 graph types × W&B tracking (in corso)
-3. **[BREVE]** EEG_09: Graph Attention Networks (GAT)
-4. **[MEDIO]** EEG_10: Hypergraph Neural Networks (DHSLP/DHSLF — obiettivo tesi)
+### 🎯 Prossimi passi
 
-### 🔧 Pathway B — Engineering (cartella `notebooks/pathwayB/`)
-Miglioramenti ingegneristici ai baseline, utili come comparativi in tesi.
-
-1. B01: Data augmentation per ridurre overfitting inter-sessione (SS)
-2. B02: Domain adaptation cross-sessione (CORAL / MMD)
-3. B03: Domain adaptation cross-soggetto (adversarial)
-4. B04: Contrastive learning subject-invariant (Shen 2022)
+1. **[IMMEDIATO]** Eseguire EEG_15 sui dati completi — aggiornare risultati
+2. **[IMMEDIATO]** Scrittura tesi — il quadro sperimentale è sostanzialmente completo
+   - Cap. variabilità inter-soggetto: null results SONO il contributo
+   - Cap. metodi: descrivere EEG_13b, EEG_14, EEG_15, EEG_16/17/18
+3. **[BREVE]** Focus intra-soggetto
+   - Ablation freeze encoder in EEG_14 (solo classificatore fine-tunato)
+   - Confronto sistematico W-HGNN vs DHSLP vs Li et al. per soggetto
+4. **[MEDIO]** Dizionario neurale semantico
+   - Embedding per cluster semantico dai migliori soggetti
+   - Separabilità nello spazio latente
 
 ---
 
@@ -289,3 +335,33 @@ Vedere `docs/papers_found.md` per la lista completa con abstract e valutazione.
 - **JupyterLab**: avviare con `preview_start jupyter-lab-311` per nuovi notebook DL (CBraMod), `jupyter-lab` per notebook legacy
 - **Non usare** `daniele_dl_thesis` come env — usare `daniele_310` (legacy) o `daniele_311` (nuovi notebook)
 - **Non committare** `node_modules/`, file `.pt` di grandi dimensioni, dati grezzi
+
+---
+
+## 12. Narrativa Scientifica della Tesi
+
+**Il quadro è chiaro (maggio 2026).** Abbiamo esaurito sistematicamente le spiegazioni semplici della variabilità inter-soggetto EEG. I risultati negativi SONO il contributo scientifico.
+
+### Cosa abbiamo trovato
+- Struttura topografica (connettività pruned) NON predice decodificabilità: p=0.800
+- Feature funzionali 1041D (band power + Li gamma-temporal) NON predicono bAcc: tutti ns
+- Clustering strutturale e funzionale sono ortogonali: ARI≈0
+- Fine-tuning da pretrain non aiuta sistematicamente: Δ≈0 su 13 soggetti
+- Modelli subject-specific migliori arrivano a ~34% bAcc (4 classi, chance=25%)
+
+### Cosa significa
+La variabilità inter-soggetto nella decodifica IS non è spiegata da:
+- Topografia della connettività EEG (struttura statica del grafo)
+- Pattern di potenza spettrale multi-banda (5 bande × 61 canali)
+- Feature temporali gamma (Li et al. 2025, 12 feature × 61 canali)
+- Combinazioni di tutto quanto sopra
+
+### Implicazione per la tesi
+- Presentare il clustering negativo come "esaurimento sistematico" — più forte di un singolo null result
+- I migliori soggetti (34% bAcc) esistono e sono riproducibili → modelli intra-soggetto hanno senso
+- Il dizionario neurale semantico è realizzabile solo per soggetti ad alta capacità IS
+
+### Cosa NON fare
+- Non proporre ulteriore clustering inter-soggetto su feature EEG statiche — già esaurito
+- Non aspettarsi che un modello subject-independent superi chance su questo dataset
+- Non proporre feature engineering manuale come soluzione principale
