@@ -23,3 +23,5 @@ scripts/data_processing/eeglab2025.1.0
 scripts/data_processing/Preprocessing-main
 results/large_outputs/
 utilities/
+figures/*.npz
+figures/eeg15v4_raw12.npz
