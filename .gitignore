@@ -25,3 +25,5 @@ results/large_outputs/
 utilities/
 figures/*.npz
 figures/eeg15v4_raw12.npz
+figures/eeg15v4_raw12.npz
+figures/*.npz
