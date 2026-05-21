@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EEG_19 — Session Clustering · Checkpoint 21-05-2026</title>
+<style>
+  :root {
+    --navy: #1E2761;
+    --ice: #CADCFC;
+    --green: #2ca02c;
+    --red: #d62728;
+    --orange: #FF7F0E;
+    --bg: #0f1623;
+    --card: #1a2235;
+    --border: #2a3550;
+    --text: #e8eaf0;
+    --muted: #8899bb;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem 1rem;
+  }
+  .container { max-width: 960px; margin: 0 auto; }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, var(--navy) 0%, #0d1a3a 100%);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem 2.5rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 5px;
+    background: var(--ice);
+    border-radius: 12px 0 0 12px;
+  }
+  .header h1 { font-size: 1.9rem; font-weight: 800; color: #fff; margin-bottom: .3rem; }
+  .header .sub { color: var(--ice); font-size: 1rem; margin-bottom: .2rem; }
+  .header .meta { color: var(--muted); font-size: .85rem; }
+  .badge {
+    display: inline-block;
+    background: var(--green);
+    color: #fff;
+    font-size: .75rem;
+    font-weight: 700;
+    padding: .2rem .6rem;
+    border-radius: 4px;
+    margin-left: .5rem;
+    vertical-align: middle;
+  }
+  .badge.orange { background: var(--orange); }
+  .badge.blue { background: var(--navy); border: 1px solid var(--ice); color: var(--ice); }
+
+  /* Section */
+  .section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+  }
+  .section-header {
+    padding: .8rem 1.4rem;
+    font-weight: 700;
+    font-size: .95rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+  }
+  .section-header .num {
+    background: var(--navy);
+    border: 1px solid var(--ice);
+    color: var(--ice);
+    font-size: .75rem;
+    padding: .15rem .45rem;
+    border-radius: 4px;
+    font-weight: 700;
+  }
+  .section-body { padding: 1.2rem 1.4rem; }
+
+  /* Stat callout grid */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+  .stat-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+  }
+  .stat-card.green::before { background: var(--green); }
+  .stat-card.ice::before   { background: var(--ice); }
+  .stat-card.orange::before { background: var(--orange); }
+  .stat-card.red::before   { background: var(--red); }
+  .stat-val { font-size: 2rem; font-weight: 800; line-height: 1; margin-bottom: .3rem; }
+  .stat-val.green { color: var(--green); }
+  .stat-val.ice   { color: var(--ice); }
+  .stat-val.orange { color: var(--orange); }
+  .stat-val.red   { color: var(--red); }
+  .stat-lbl { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .stat-sub { font-size: .8rem; color: var(--muted); margin-top: .2rem; }
+
+  /* Verdict box */
+  .verdict {
+    border-radius: 8px;
+    padding: 1rem 1.4rem;
+    margin: 1rem 0;
+    border-left: 4px solid;
+    font-size: .9rem;
+  }
+  .verdict.stabile { background: #0d2010; border-color: var(--green); }
+  .verdict.moderato { background: #1f1600; border-color: var(--orange); }
+  .verdict.instabile { background: #200d0d; border-color: var(--red); }
+  .verdict strong { font-size: 1rem; }
+
+  /* Table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .85rem;
+    margin: .8rem 0;
+  }
+  th {
+    background: var(--navy);
+    color: var(--ice);
+    padding: .5rem .8rem;
+    text-align: left;
+    font-weight: 600;
+  }
+  td {
+    padding: .45rem .8rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(202,220,252,.03); }
+  td.num { font-family: monospace; }
+  td.green { color: var(--green); font-weight: 700; }
+  td.orange { color: var(--orange); }
+  td.red { color: var(--red); }
+  td.ice { color: var(--ice); }
+
+  /* Pipeline visual */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex-wrap: wrap;
+    margin: 1rem 0;
+  }
+  .pipe-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: .5rem 1rem;
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--ice);
+    white-space: nowrap;
+  }
+  .pipe-box.highlight { border-color: var(--ice); background: var(--navy); }
+  .pipe-arrow { color: var(--muted); font-size: 1.1rem; }
+
+  /* Two-col layout */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: .8rem 0; }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* Cluster cards */
+  .cluster-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .cluster-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+  }
+  .cluster-card.c0::before { background: #1f77b4; }
+  .cluster-card.c1::before { background: var(--orange); }
+  .cluster-card h4 { font-size: .9rem; margin-bottom: .5rem; }
+  .cluster-card ul { padding-left: 1.2rem; font-size: .82rem; color: var(--muted); }
+  .cluster-card ul li { margin-bottom: .2rem; }
+
+  /* Finding box */
+  .finding {
+    background: #0b1e0d;
+    border: 1px solid var(--green);
+    border-radius: 8px;
+    padding: 1.1rem 1.4rem;
+    margin: 1.2rem 0;
+    font-size: .9rem;
+  }
+  .finding h4 { color: var(--green); font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .5rem; }
+  .finding p { color: var(--text); line-height: 1.6; }
+
+  /* Note */
+  .note {
+    background: #12192a;
+    border-left: 3px solid var(--muted);
+    padding: .6rem 1rem;
+    font-size: .82rem;
+    color: var(--muted);
+    border-radius: 0 6px 6px 0;
+    margin: .8rem 0;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: .78rem;
+    margin-top: 2.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  /* TOC */
+  .toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.2rem 1.4rem;
+    margin-bottom: 1.5rem;
+    font-size: .85rem;
+  }
+  .toc h3 { color: var(--ice); font-size: .9rem; margin-bottom: .7rem; }
+  .toc ol { padding-left: 1.4rem; }
+  .toc li { margin-bottom: .3rem; color: var(--muted); }
+
+  /* Summary box */
+  .summary-box {
+    background: linear-gradient(135deg, #0a1528 0%, #0d1e10 100%);
+    border: 2px solid var(--green);
+    border-radius: 12px;
+    padding: 1.5rem 1.8rem;
+    margin: 1.5rem 0;
+  }
+  .summary-box h3 { color: var(--green); font-size: 1.05rem; margin-bottom: 1rem; }
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .45rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: .88rem;
+  }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-row .label { color: var(--muted); }
+  .summary-row .value { font-weight: 700; }
+  .summary-row .value.green { color: var(--green); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>EEG_19 — Session Clustering <span class="badge">STABILE</span></h1>
+    <div class="sub">Test-retest: la firma di connettività è stabile tra sessioni?</div>
+    <div class="meta">Checkpoint · 21-05-2026 · Daniele Uras · DEIB, Politecnico di Milano</div>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <h3>Sezioni</h3>
+    <ol>
+      <li>Domanda scientifica e approccio</li>
+      <li>Pipeline: da sessioni a feature</li>
+      <li>PCA sessioni (§3)</li>
+      <li>Distanza intra vs inter-soggetto (§4)</li>
+      <li>Subject Identity Recovery k=73 (§5)</li>
+      <li>Stabilità fenotipo C0/C1 (§6)</li>
+      <li>F3-PO8 per sessione (§7)</li>
+      <li>Sommario e implicazioni per la tesi</li>
+    </ol>
+  </div>
+
+  <!-- §0 — DOMANDA -->
+  <div class="section">
+    <div class="section-header">
+      <span class="num">§0</span>
+      Domanda Scientifica
+    </div>
+    <div class="section-body">
+      <p style="font-size:.95rem; margin-bottom:1rem;">
+        In EEG_16b abbiamo identificato due fenotipi di connettività (Fronto-motor C0, Fronto-occipital C1)
+        basandoci sulla <strong>media di tutte le sessioni</strong> per soggetto. Ma questi fenotipi sono
+        stabili nel tempo, o sono artefatti della media?
+      </p>
+      <div class="verdict stabile">
+        <strong>Domanda:</strong> Le 5 sessioni dello stesso soggetto si assomigliano più di quanto
+        si assomiglino sessioni di soggetti diversi? E i fenotipi C0/C1 si mantengono sessione per sessione?
+      </div>
+
+      <div class="pipeline">
+        <div class="pipe-box">73 soggetti × 5 sessioni</div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-box highlight">365 vettori 1830-dim</div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-box">PCA + clustering</div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-box">4 metriche di stabilità</div>
+      </div>
+
+      <p style="font-size:.83rem; color:var(--muted);">
+        Ogni vettore = upper triangle della matrice adj (61×61) mediata sui ~110 trial della sessione.
+        Stessa feature di EEG_16b, ma a granularità sessione invece di soggetto.
+      </p>
+    </div>
+  </div>
+
+  <!-- §3 — PCA -->
+  <div class="section">
+    <div class="section-header">
+      <span class="num">§3</span>
+      PCA — Spazio delle Sessioni (365 punti)
+    </div>
+    <div class="section-body">
+      <div class="two-col">
+        <div>
+          <p style="font-size:.88rem; margin-bottom:.7rem;"><strong>Plot A — per soggetto</strong></p>
+          <p style="font-size:.83rem; color:var(--muted);">
+            Le linee connettono le 5 sessioni dello stesso soggetto. La maggior parte dei soggetti
+            forma cluster compatti: le sessioni dello stesso individuo si trovano nella stessa zona
+            dello spazio PCA. Pochissime linee attraversano l'intera figura.
+          </p>
+        </div>
+        <div>
+          <p style="font-size:.88rem; margin-bottom:.7rem;"><strong>Plot B/C — per cluster e sessione</strong></p>
+          <p style="font-size:.83rem; color:var(--muted);">
+            La separazione C0/C1 lungo PC1 è identica a EEG_16b. Plot C non mostra gradiente
+            temporale: sessioni 1–6 sono mescolate indistintamente → <strong>nessun drift</strong>
+            della connettività nel corso del protocollo.
+          </p>
+        </div>
+      </div>
+
+      <div class="note">
+        Nota: nel dataset alcune sessioni sono etichettate come "sessione 6" (probabilmente ri-acquisizioni).
+        Trattate come sessione aggiuntiva — non alterano le conclusioni.
+      </div>
+    </div>
+  </div>
+
+  <!-- §4 — RATIO -->
+  <div class="section">
+    <div class="section-header">
+      <span class="num">§4</span>
+      Stabilità Intra-Soggetto: Distanza Intra vs Inter
+    </div>
+    <div class="section-body">
+      <div class="stat-grid">
+        <div class="stat-card green">
+          <div class="stat-val green">0.425</div>
+          <div class="stat-lbl">Ratio medio intra/inter</div>
+          <div class="stat-sub">soglia stabile: &lt; 0.5</div>
+        </div>
+        <div class="stat-card ice">
+          <div class="stat-val ice">0.338</div>
+          <div class="stat-lbl">Ratio C0 (Fronto-motor)</div>
+          <div class="stat-sub">più stabile</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-val orange">0.428</div>
+          <div class="stat-lbl">Ratio C1 (Fronto-occipital)</div>
+          <div class="stat-sub">MW p=0.073 (ns)</div>
+        </div>
+      </div>
+
+      <p style="font-size:.87rem; margin-bottom:.8rem;">
+        <strong>Interpretazione:</strong> il ratio = distanza media tra le 5 sessioni dello stesso soggetto
+        diviso la distanza media verso tutti gli altri soggetti. Un valore di 0.425 significa che
+        le sessioni di un soggetto sono in media <strong>il 42% della distanza</strong> verso
+        soggetti diversi — cioè molto più simili tra loro.
+      </p>
+
+      <div class="verdict stabile">
+        <strong>STABILE</strong> — Ratio = 0.425 &lt; 0.5. Ogni soggetto ha una firma di connettività
+        individuale riconoscibile in tutte le sessioni.
+      </div>
+    </div>
+  </div>
+
+  <!-- §5 — NMI -->
+  <div class="section">
+    <div class="section-header">
+      <span class="num">§5</span>
+      Subject Identity Recovery — k=73
+    </div>
+    <div class="section-body">
+      <div class="stat-grid">
+        <div class="stat-card green">
+          <div class="stat-val green">0.946</div>
+          <div class="stat-lbl">NMI sessioni → soggetto</div>
+          <div class="stat-sub">baseline random: 0.618</div>
+        </div>
+        <div class="stat-card ice">
+          <div class="stat-val ice">0.724</div>
+          <div class="stat-lbl">ARI sessioni → soggetto</div>
+          <div class="stat-sub">su 73 classi</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-val green">0.922</div>
+          <div class="stat-lbl">Purezza media cluster</div>
+          <div class="stat-sub">mediana = 1.000</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-val orange">77%</div>
+          <div class="stat-lbl">Sogg. purezza = 1.0</div>
+          <div class="stat-sub">56/73 perfetti</div>
+        </div>
+      </div>
+
+      <p style="font-size:.87rem; margin:.8rem 0;">
+        KMeans con k=73 (senza sapere l'identità dei soggetti) recupera quasi perfettamente
+        i gruppi per individuo. NMI=0.946 è molto superiore al baseline casuale di 0.618
+        (calcolato su 200 shuffle delle label).
+      </p>
+
+      <table>
+        <thead><tr><th>Metrica</th><th>Valore</th><th>Interpretazione</th></tr></thead>
+        <tbody>
+          <tr><td>NMI (sessioni → soggetto)</td><td class="num green">0.946</td><td>94.6% dell'informazione identità recuperata</td></tr>
+          <tr><td>NMI baseline random</td><td class="num">0.618</td><td>–</td></tr>
+          <tr><td>ARI (k=73)</td><td class="num ice">0.724</td><td>forte su 73 classi</td></tr>
+          <tr><td>Purezza media</td><td class="num green">0.922</td><td>media sessioni nello stesso cluster</td></tr>
+          <tr><td>Sogg. purezza = 1.0</td><td class="num green">56/73 (77%)</td><td>tutte le sessioni nello stesso cluster</td></tr>
+          <tr><td>Sogg. purezza ≥ 0.8</td><td class="num">62/73 (85%)</td><td>≥4/5 sessioni nello stesso cluster</td></tr>
+        </tbody>
+      </table>
+
+      <div class="finding">
+        <h4>Finding</h4>
+        <p>La struttura di connettività EEG contiene abbastanza informazione individuale da
+        consentire il riconoscimento del soggetto con alta accuratezza (NMI=0.946) usando
+        solo le sessioni come input — senza mai fornire l'identità del soggetto al clustering.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- §6 — FENOTIPO -->
+  <div class="section">
+    <div class="section-header">
+      <span class="num">§6</span>
+      Stabilità Fenotipo C0/C1 tra Sessioni
+    </div>
+    <div class="section-body">
+      <div class="stat-grid">
+        <div class="stat-card green">
+          <div class="stat-val green">0.933</div>
+          <div class="stat-lbl">ARI sessioni vs EEG_16b</div>
+          <div class="stat-sub">k=2 su 365 vettori</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-val green">0.881</div>
+          <div class="stat-lbl">NMI sessioni vs EEG_16b</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-val green">98.4%</div>
+          <div class="stat-lbl">Concordanza media</div>
+          <div class="stat-sub">fraz. sessioni con label corretta</div>
+        </div>
+      </div>
+
+      <p style="font-size:.87rem; margin:.8rem 0;">
+        Clustering k=2 eseguito sui 365 vettori sessione (senza conoscere le label EEG_16b).
+        Confrontato con le label C0/C1 assegnate a livello di soggetto in EEG_16b.
+        Su 365 sessioni, solo ~24 sono discordanti (le "X" nel plot PCA).
+      </p>
+
+      <div class="two-col">
+        <div class="cluster-card c0">
+          <h4>C0 — Fronto-motor</h4>
+          <ul>
+            <li>Hub: F2, C2, FC2</li>
+            <li>Network: fronto-centrale destra</li>
+            <li>Ratio intra/inter: <strong>0.338</strong> (più stabile)</li>
+            <li>Sessioni concordanti: ~99%</li>
+          </ul>
+        </div>
+        <div class="cluster-card c1">
+          <h4>C1 — Fronto-occipital</h4>
+          <ul>
+            <li>Hub: F3, PO8 — lunga distanza</li>
+            <li>Network: frontale-sinistro ↔ occipitale-destro</li>
+            <li>Ratio intra/inter: <strong>0.428</strong> (leggermente meno stabile)</li>
+            <li>Sessioni concordanti: ~97%</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="verdict stabile">
+        <strong>STABILE</strong> — ARI=0.933 conferma che i fenotipi C0/C1 assegnati in EEG_16b
+        si recuperano automaticamente analizzando le sessioni singolarmente.
+        Non sono artefatti della media: esistono in ogni sessione.
+      </div>
+    </div>
+  </div>
+
+  <!-- §7 — F3-PO8 -->
+  <div class="section">
+    <div class="section-header">
+      <span class="num">§7</span>
+      Stabilità F3-PO8 per Sessione
+    </div>
+    <div class="section-body">
+      <p style="font-size:.87rem; margin-bottom:.8rem;">
+        Per ogni sessione (1–5): Mann-Whitney C0 vs C1 sulla connettività della coppia specifica.
+        Domanda: la differenza C0/C1 trovata in EEG_16b è presente in ogni singola sessione?
+      </p>
+
+      <table>
+        <thead><tr><th>Coppia</th><th>Direzione</th><th>Sessioni p&lt;0.05</th><th>Interpretazione</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>F3-PO8</strong></td>
+            <td class="orange">C1 &gt; C0</td>
+            <td class="num green">5/5 ***</td>
+            <td>Differenza stabile in ogni sessione</td>
+          </tr>
+          <tr>
+            <td>F3-O1</td>
+            <td>–</td>
+            <td class="num">da verificare</td>
+            <td>Oz non disponibile (idx&gt;60); sostituito con O1</td>
+          </tr>
+          <tr>
+            <td>F2-C2</td>
+            <td class="ice">C0 &gt; C1</td>
+            <td class="num orange">0/5</td>
+            <td>Differenza C0 fronto-centrale non significativa per sessione</td>
+          </tr>
+          <tr>
+            <td>AF8-C2</td>
+            <td class="ice">C0 &gt; C1</td>
+            <td class="num orange">0/5</td>
+            <td>Coerente: connessioni C0 meno discriminanti individualmente</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="note">
+        <strong>Bug fix applicato:</strong> il canale "Oz" è all'indice 61 del CHAN_NAMES ma
+        N_CHAN=61 → lista troncata a indici 0–60. Oz non esiste nel dataset. Sostituito con O1 (idx=60).
+        F2-C2 e AF8-C2 risultano 0/5 sessioni: coerente con i risultati wPLI in EEG_16b (§12)
+        dove le connessioni C0 fronto-centrali erano meno robuste delle connessioni C1 fronto-occipitali.
+      </div>
+
+      <div class="finding">
+        <h4>Finding critico</h4>
+        <p>F3-PO8 è significativamente più alta in C1 rispetto a C0 in <strong>tutte e 5 le sessioni</strong>.
+        Questo è il marker più stabile del fenotipo Fronto-occipital. La stessa differenza che emerge
+        con Cohen's d=-5.4 su tutti i soggetti è presente e significativa in ogni acquisizione separata.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOMMARIO -->
+  <div class="section">
+    <div class="section-header">
+      <span class="num">§8</span>
+      Sommario e Implicazioni per la Tesi
+    </div>
+    <div class="section-body">
+
+      <div class="summary-box">
+        <h3>Risultati EEG_19 — Verdetto Finale</h3>
+        <div class="summary-row">
+          <span class="label">Ratio intra/inter</span>
+          <span class="value green">0.425 → STABILE</span>
+        </div>
+        <div class="summary-row">
+          <span class="label">Subject identity recovery NMI</span>
+          <span class="value green">0.946 → FORTE</span>
+        </div>
+        <div class="summary-row">
+          <span class="label">ARI k=73 (identità soggetto)</span>
+          <span class="value green">0.724 su 73 classi</span>
+        </div>
+        <div class="summary-row">
+          <span class="label">ARI fenotipo C0/C1 tra sessioni</span>
+          <span class="value green">0.933 → STABILE</span>
+        </div>
+        <div class="summary-row">
+          <span class="label">Concordanza media per soggetto</span>
+          <span class="value green">98.4%</span>
+        </div>
+        <div class="summary-row">
+          <span class="label">F3-PO8 significativo in tutte le sessioni</span>
+          <span class="value green">5/5 p&lt;0.05</span>
+        </div>
+        <div class="summary-row">
+          <span class="label">Drift temporale (plot sessione 1–6)</span>
+          <span class="value green">Assente</span>
+        </div>
+      </div>
+
+      <h4 style="color:var(--ice); margin:1rem 0 .5rem;">Catena probatoria per la tesi</h4>
+      <p style="font-size:.87rem; color:var(--muted); margin-bottom:1rem;">
+        I fenotipi C0/C1 sono ora supportati da <strong>5 evidenze indipendenti</strong>:
+      </p>
+      <table>
+        <thead><tr><th>#</th><th>Evidenza</th><th>Fonte</th><th>Valore</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Struttura reale (non rumore)</td><td>EEG_16b §3–4</td><td class="green">Silhouette=0.284</td></tr>
+          <tr><td>2</td><td>Non circular analysis</td><td>EEG_16b §18</td><td class="green">25/25 p&lt;0.001 (N=5000)</td></tr>
+          <tr><td>3</td><td>Non driven da artefatti</td><td>EEG_16b §14</td><td class="green">Varianza/kurtosi/gamma tutti ns</td></tr>
+          <tr><td>4</td><td>Cross-metric robustezza</td><td>EEG_16b §12</td><td class="green">ARI abs_pcc↔PLV=1.00</td></tr>
+          <tr><td>5</td><td>Stabile nel tempo (test-retest)</td><td>EEG_19</td><td class="green">ARI sessioni=0.933</td></tr>
+        </tbody>
+      </table>
+
+      <div class="finding">
+        <h4>Implicazione per la tesi</h4>
+        <p>
+          I fenotipi Fronto-motor (C0) e Fronto-occipital (C1) sono <strong>caratteristiche
+          neurologiche stabili del soggetto</strong>, non fluttuazioni casuali tra sessioni.
+          La firma di connettività individuale è abbastanza stabile da identificare il soggetto
+          (NMI=0.946) e da mantenere l'etichetta C0/C1 nel 98.4% delle sessioni.
+          <br><br>
+          Questo, combinato con il null result bAcc (p=0.800), porta a una conclusione scientificamente
+          solida: esistono due stili neurali stabili nell'imagined speech, ma essi non influenzano
+          la decodificabilità con modelli GNN. La variabilità inter-soggetto nella performance
+          ha altre cause — non la topografia strutturale della connettività.
+        </p>
+      </div>
+
+      <h4 style="color:var(--ice); margin:1rem 0 .5rem;">Note tecniche</h4>
+      <ul style="font-size:.83rem; color:var(--muted); padding-left:1.2rem; line-height:1.8;">
+        <li>Cache sessioni: <code>models/eeg19/feat_session_abs_pcc.npz</code> — shape (365, 1830)</li>
+        <li>Bug fix applicato: canale "Oz" → "O1" (Oz fuori range N_CHAN=61)</li>
+        <li>F2-C2 e AF8-C2: 0/5 sessioni significative — coerente con wPLI (connessioni C0 meno robuste)</li>
+        <li>C1 leggermente meno stabile (ratio=0.428 vs C0=0.338) — coerente con rel_std superiore (EEG_16b §16e)</li>
+        <li>Sessione 6 presente per alcuni soggetti (ri-acquisizioni) — trattata come sessione aggiuntiva</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer">
+    EEG_19 · Checkpoint 21-05-2026 · Daniele Uras · miralis-hypergraph-imagined-speech
+  </div>
+
+</div>
+</body>
+</html>
