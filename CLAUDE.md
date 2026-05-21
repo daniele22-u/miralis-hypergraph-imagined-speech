@@ -113,9 +113,11 @@ miralis-hypergraph-imagined-speech/
 │   ├── EEG_13b_dhslp_subject_specific.ipynb  ← DHSLP soggetto-specifico, fix overfitting
 │   ├── EEG_14_dhslp_pretrain_finetune.ipynb  ← pretrain S-indep + calibrazione per sogg.
 │   ├── EEG_15_li_trial_hypergraph.ipynb      ← Li et al. 2025 fedele (⚠️ non ancora eseguito)
-│   ├── EEG_16_subject_clustering.ipynb       ← clustering strutturale su adj pruned
+│   ├── EEG_16_subject_clustering.ipynb       ← clustering strutturale su adj pruned (v1)
+│   ├── EEG_16b_subject_clustering_v2.ipynb  ← clustering su 1830-dim upper triangle, ipergrafo, XAI
 │   ├── EEG_17_cluster_connectivity.ipynb     ← connettività media per cluster semantico
 │   ├── EEG_18_functional_clustering.ipynb    ← clustering funzionale 4D→305D→1041D
+│   ├── EEG_19_session_clustering.ipynb       ← test-retest: stabilità fenotipi tra sessioni
 │   ├── ...
 │   ├── pathwayB/                      ← PATHWAY B: engineering (augmentation, domain adaptation)
 │   │   ├── README.md
@@ -168,6 +170,25 @@ Vedere `docs/PROGETTO_COMPLETO_IT.md` per il dettaglio completo. Riepilogo:
 - Feature: matrice adj pruned 61×61 per soggetto, PCA→KMeans(k=2): 52+22 soggetti
 - Mann-Whitney U vs bAcc: **p=0.800 (ns)** — struttura topografica NON predice decodificabilità
 
+**EEG_16b — Clustering soggetti su upper triangle completo (1830-dim)**
+- Feature: upper triangle abs_pcc 61×61 = 1830-dim, media su tutti i trial (~550 × 5 sessioni)
+- P022 escluso come outlier singleton confermato da PCA
+- KMeans(k=2) su PCA 20 componenti: **C0 ~36 sogg (fronto-motor)** · **C1 ~37 sogg (fronto-occipital)**
+- Silhouette ipergrafo=0.284, silhouette grafo=0.240 → ipergrafo superiore come clustering
+- XAI Cohen's d: coppia top F3-PO8 d=−5.4; regione più discriminante: frontale (mean|d|=0.861)
+- Permutation test N=5000: 0/5000 shuffle raggiunge d osservato → **non circolare**
+- Cross-metric ARI: ARI(abs_pcc, PLV)=1.00 · ARI(abs_pcc, wPLI)=0.95 → struttura robusta
+- Signal quality: varianza p=0.504 ns · kurtosi p=0.170 ns · gamma p=0.068 ns (borderline)
+- **Null result bAcc**: Mann-Whitney p=0.800 (ns) — connettività strutturale ≠ performance IS
+
+**EEG_19 — Test-retest: stabilità fenotipi tra sessioni**
+- 73 soggetti × 5 sessioni = 365 vettori; stessa feature di EEG_16b (1830-dim abs_pcc)
+- Ratio intra/inter soggetto = 0.425 → sessioni stesso soggetto molto più simili
+- NMI subject recovery = 0.946 (vs random 0.618); 56/73 sogg (77%) perfetti 5/5 sessioni
+- ARI fenotipo C0/C1 = 0.933 · concordanza = 98.4% → fenotipo EEG_16b presente in ogni sessione
+- F3-PO8: p<0.05 in 5/5 sessioni → marker C1 stabile temporalmente
+- **Conclusione**: i fenotipi sono caratteristica del soggetto, non artefatto della media; nessun drift temporale
+
 **EEG_17 — Connettività media per cluster semantico**
 - DEV[sogg,k] = deviazione individuale dalla grand mean connettività della popolazione
 - Finding: deviazione è firma individuale stabile, non correlata a bAcc
@@ -190,8 +211,10 @@ Vedere `docs/PROGETTO_COMPLETO_IT.md` per il dettaglio completo. Riepilogo:
 - **EEG_14**: pretrain S-indep + calibrazione per soggetto (26.1%→26.3% bAcc, Δ≈0)
 - **EEG_15**: Li et al. 2025 fedele implementato (⚠️ non ancora eseguito)
 - **EEG_16**: clustering strutturale su adj pruned (p=0.800 ns vs bAcc)
+- **EEG_16b**: clustering 1830-dim con XAI, permutation test, cross-metric ARI, test-retest ready
 - **EEG_17**: connettività media per cluster semantico (firma individuale, ns vs bAcc)
 - **EEG_18**: clustering funzionale 4D→305D→1041D (tutto ns, ARI=0 vs strutturale)
+- **EEG_19**: test-retest stabilità fenotipi (NMI=0.946, ARI=0.933, concordanza 98.4%)
 
 ### 🎯 Prossimi passi
 
@@ -348,6 +371,8 @@ Vedere `docs/papers_found.md` per la lista completa con abstract e valutazione.
 - Clustering strutturale e funzionale sono ortogonali: ARI≈0
 - Fine-tuning da pretrain non aiuta sistematicamente: Δ≈0 su 13 soggetti
 - Modelli subject-specific migliori arrivano a ~34% bAcc (4 classi, chance=25%)
+- **EEG_16b**: due fenotipi neurali reali (C0 fronto-motor / C1 fronto-occipital), robusti a metrica e temporalmente stabili — ma NON correlati a bAcc
+- **EEG_19**: i fenotipi sono proprietà del soggetto presenti in ogni singola sessione (NMI=0.946, concordanza 98.4%)
 
 ### Cosa significa
 La variabilità inter-soggetto nella decodifica IS non è spiegata da:
@@ -355,13 +380,18 @@ La variabilità inter-soggetto nella decodifica IS non è spiegata da:
 - Pattern di potenza spettrale multi-banda (5 bande × 61 canali)
 - Feature temporali gamma (Li et al. 2025, 12 feature × 61 canali)
 - Combinazioni di tutto quanto sopra
+- Fenotipo strutturale C0/C1 (confermato stabile nel tempo via EEG_19)
+
+**Nota metodologica chiave (EEG_16b)**: analisi robustificata da permutation test N=5000 (anti-circular), cross-metric ARI≈1 (anti-artefatto metrica), signal quality ns (anti-noise). Il risultato negativo bAcc è quindi solido.
 
 ### Implicazione per la tesi
 - Presentare il clustering negativo come "esaurimento sistematico" — più forte di un singolo null result
 - I migliori soggetti (34% bAcc) esistono e sono riproducibili → modelli intra-soggetto hanno senso
 - Il dizionario neurale semantico è realizzabile solo per soggetti ad alta capacità IS
+- EEG_16b + EEG_19 = contributo metodologico in sé: caratterizzazione fenotipi neurali per IS
 
 ### Cosa NON fare
 - Non proporre ulteriore clustering inter-soggetto su feature EEG statiche — già esaurito
 - Non aspettarsi che un modello subject-independent superi chance su questo dataset
 - Non proporre feature engineering manuale come soluzione principale
+- Non concludere che C0/C1 implichi diversa capacità IS — il null result bAcc lo esclude
