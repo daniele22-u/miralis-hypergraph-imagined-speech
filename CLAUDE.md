@@ -351,7 +351,21 @@ Vedere `docs/papers_found.md` per la lista completa con abstract e valutazione.
 
 ---
 
-## 11. Note Operative
+## 11. Convenzioni di Visualizzazione
+
+### Matrici di connettività
+**Regola fissa**: ogni volta che si plotta una matrice di connettività (adj, PCC, wPLI, PLV, ecc.) gli elettrodi vanno **sempre ordinati per regione cerebrale**:
+
+```
+Frontale → Temporale → Centrale → Parietale → Occipitale
+(AF*, F*, FT*, FC*) → (T*, TP*) → (C*, CP*) → (P*, PO*) → (O*)
+```
+
+Questo rende il pattern immediatamente leggibile senza dover cercare gli elettrodi singolarmente.
+
+---
+
+## 12. Note Operative
 
 - **Git worktree attivo**: `.claude/worktrees/elegant-neumann/` — lavora sempre qui
 - **PR aperta**: #8 su GitHub
