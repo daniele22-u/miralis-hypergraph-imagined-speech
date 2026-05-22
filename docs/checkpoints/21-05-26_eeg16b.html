@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EEG_16b — Subject Clustering | Checkpoint 21-05-2026</title>
+<title>EEG_16b — Subject Clustering | Checkpoint 22-05-2026</title>
 <style>
   :root {
     --navy:   #1E2761;
@@ -12,6 +12,7 @@
     --green:  #2ca02c;
     --red:    #d62728;
     --orange: #ff7f0e;
+    --blue:   #1f77b4;
     --gray:   #8892a4;
     --bg:     #111827;
     --card:   #1a2340;
@@ -29,7 +30,6 @@
     font-size: 15px;
   }
 
-  /* ── Header ── */
   header {
     background: linear-gradient(135deg, #0d1533 0%, var(--navy) 60%, #1a3a6e 100%);
     padding: 3rem 2rem 2.5rem;
@@ -47,19 +47,12 @@
     border-radius: 20px;
     margin-bottom: 1rem;
   }
-  header h1 {
-    font-size: 2.2rem;
-    font-weight: 700;
-    color: var(--white);
-    margin-bottom: .4rem;
-  }
+  header h1 { font-size: 2.2rem; font-weight: 700; color: var(--white); margin-bottom: .4rem; }
   header h1 span { color: var(--ice); }
   header p { color: var(--ice); font-size: 14px; opacity: .8; }
 
-  /* ── Layout ── */
   main { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
 
-  /* ── Section headers ── */
   .section-title {
     font-size: 1.05rem;
     font-weight: 700;
@@ -71,7 +64,6 @@
     border-bottom: 1px solid var(--border);
   }
 
-  /* ── Big question box ── */
   .question-box {
     background: var(--card);
     border-left: 4px solid var(--ice);
@@ -84,228 +76,169 @@
   }
   .question-box strong { font-style: normal; color: var(--white); }
 
-  /* ── Answer highlight ── */
-  .answer-box {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin: 1.2rem 0;
-  }
+  .answer-box { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.2rem 0; }
   .answer-card {
     background: var(--card);
     border-radius: 8px;
     padding: 1.2rem 1.4rem;
     border-top: 3px solid;
   }
-  .answer-card.yes  { border-color: var(--green); }
-  .answer-card.no   { border-color: var(--red); }
+  .answer-card.yes { border-color: var(--green); }
+  .answer-card.no  { border-color: var(--red); }
   .answer-card .label {
-    font-size: 11px;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    font-weight: 700;
-    margin-bottom: .4rem;
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    font-weight: 700; margin-bottom: .4rem;
   }
   .answer-card.yes .label { color: var(--green); }
   .answer-card.no  .label { color: var(--red); }
   .answer-card p { font-size: 14px; color: #c5cfe0; }
   .answer-card strong { color: var(--white); }
 
-  /* ── Pipeline box ── */
   .pipeline {
-    display: flex;
-    align-items: center;
-    gap: .8rem;
-    background: var(--card);
-    border-radius: 8px;
-    padding: 1.2rem 1.4rem;
-    margin: 1rem 0;
-    flex-wrap: wrap;
+    display: flex; align-items: center; gap: .8rem;
+    background: var(--card); border-radius: 8px;
+    padding: 1.2rem 1.4rem; margin: 1rem 0; flex-wrap: wrap;
   }
   .pipe-step {
-    background: var(--card2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: .5rem .9rem;
-    font-size: 13px;
-    color: var(--ice);
-    white-space: nowrap;
+    background: var(--card2); border: 1px solid var(--border);
+    border-radius: 6px; padding: .5rem .9rem;
+    font-size: 13px; color: var(--ice); white-space: nowrap;
   }
   .pipe-arrow { color: var(--gray); font-size: 18px; }
 
-  /* ── Sections grid ── */
   .sections-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1rem;
-    margin: 1rem 0;
+    gap: 1rem; margin: 1rem 0;
   }
   .sec-card {
-    background: var(--card);
-    border-radius: 8px;
-    padding: 1rem 1.2rem;
-    border-left: 3px solid var(--border);
+    background: var(--card); border-radius: 8px;
+    padding: 1rem 1.2rem; border-left: 3px solid var(--border);
   }
-  .sec-card .sec-num {
-    font-size: 11px;
-    color: var(--gray);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    margin-bottom: .3rem;
-  }
+  .sec-card .sec-num { font-size: 11px; color: var(--gray); letter-spacing: 1px; text-transform: uppercase; margin-bottom: .3rem; }
   .sec-card h4 { font-size: 14px; color: var(--ice); margin-bottom: .4rem; }
   .sec-card p  { font-size: 13px; color: #9dafc8; }
   .sec-card.server { border-left-color: var(--orange); }
   .sec-card.key    { border-left-color: var(--green); }
   .sec-card.xai    { border-left-color: #9b59b6; }
+  .sec-card.removed { border-left-color: var(--red); opacity: 0.55; }
 
-  /* ── Tables ── */
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 1rem 0;
-    font-size: 13.5px;
-  }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 13.5px; }
   th {
-    background: var(--card2);
-    color: var(--ice);
-    font-weight: 600;
-    padding: .7rem 1rem;
-    text-align: left;
-    border-bottom: 1px solid var(--border);
+    background: var(--card2); color: var(--ice);
+    font-weight: 600; padding: .7rem 1rem;
+    text-align: left; border-bottom: 1px solid var(--border);
   }
-  td {
-    padding: .65rem 1rem;
-    border-bottom: 1px solid #1e2d4a;
-    color: #c5cfe0;
-  }
+  td { padding: .65rem 1rem; border-bottom: 1px solid #1e2d4a; color: #c5cfe0; }
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: rgba(202,220,252,.04); }
-  .tag-green { color: var(--green); font-weight: 700; }
-  .tag-red   { color: var(--red);   font-weight: 700; }
-  .tag-ice   { color: var(--ice);   font-weight: 700; }
-  .tag-orange{ color: var(--orange);font-weight: 700; }
-  .tag-ns    { color: var(--gray);  font-style: italic; }
+  .tag-green  { color: var(--green);  font-weight: 700; }
+  .tag-red    { color: var(--red);    font-weight: 700; }
+  .tag-ice    { color: var(--ice);    font-weight: 700; }
+  .tag-orange { color: var(--orange); font-weight: 700; }
+  .tag-blue   { color: #6baed6;       font-weight: 700; }
+  .tag-ns     { color: var(--gray);   font-style: italic; }
 
-  /* ── Big stat callouts ── */
   .stats-row {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 1rem;
-    margin: 1.2rem 0;
+    gap: 1rem; margin: 1.2rem 0;
   }
   .stat-card {
-    background: var(--card);
-    border-radius: 8px;
-    padding: 1.2rem;
-    text-align: center;
-    border: 1px solid var(--border);
+    background: var(--card); border-radius: 8px;
+    padding: 1.2rem; text-align: center; border: 1px solid var(--border);
   }
-  .stat-card .num {
-    font-size: 2rem;
-    font-weight: 800;
-    line-height: 1.1;
-    margin-bottom: .3rem;
-  }
+  .stat-card .num { font-size: 2rem; font-weight: 800; line-height: 1.1; margin-bottom: .3rem; }
   .stat-card .lbl { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 1px; }
   .stat-card .sub { font-size: 12px; color: #8892a4; margin-top: .2rem; }
 
-  /* ── Cluster cards ── */
-  .cluster-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    margin: 1.2rem 0;
-  }
+  .cluster-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.2rem 0; }
   .cluster-card {
-    background: var(--card);
-    border-radius: 10px;
-    padding: 1.5rem;
-    border-top: 4px solid;
+    background: var(--card); border-radius: 10px;
+    padding: 1.5rem; border-top: 4px solid;
   }
-  .cluster-card.c0 { border-color: #1f77b4; }
+  .cluster-card.c0 { border-color: var(--blue); }
   .cluster-card.c1 { border-color: var(--orange); }
-  .cluster-card .cname {
-    font-size: 1.1rem;
-    font-weight: 800;
-    margin-bottom: .3rem;
-  }
+  .cluster-card .cname { font-size: 1.1rem; font-weight: 800; margin-bottom: .3rem; }
   .cluster-card.c0 .cname { color: #6baed6; }
   .cluster-card.c1 .cname { color: var(--orange); }
-  .cluster-card .ctag {
-    font-size: 11px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: var(--gray);
-    margin-bottom: 1rem;
-  }
+  .cluster-card .ctag { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--gray); margin-bottom: 1rem; }
   .hub-list { list-style: none; margin: .8rem 0; }
-  .hub-list li {
-    font-size: 13px;
-    color: #c5cfe0;
-    padding: .2rem 0;
-  }
+  .hub-list li { font-size: 13px; color: #c5cfe0; padding: .2rem 0; }
   .hub-list li::before { content: "→ "; color: var(--gray); }
   .cluster-card .interp {
-    margin-top: 1rem;
-    font-size: 13px;
+    margin-top: 1rem; font-size: 13px; color: #9dafc8;
+    font-style: italic; border-top: 1px solid var(--border); padding-top: .8rem;
+  }
+  .cluster-card .submodule {
+    margin-top: .8rem; font-size: 12px;
+    background: rgba(255,255,255,.04);
+    border-radius: 6px; padding: .6rem .8rem;
     color: #9dafc8;
-    font-style: italic;
-    border-top: 1px solid var(--border);
-    padding-top: .8rem;
   }
 
-  /* ── Alert boxes ── */
   .alert {
-    border-radius: 8px;
-    padding: 1rem 1.3rem;
-    margin: 1rem 0;
-    font-size: 13.5px;
-    border-left: 4px solid;
+    border-radius: 8px; padding: 1rem 1.3rem; margin: 1rem 0;
+    font-size: 13.5px; border-left: 4px solid;
   }
-  .alert.warn  { background: rgba(214,39,40,.1); border-color: var(--red);    color: #f5a5a5; }
-  .alert.info  { background: rgba(202,220,252,.07); border-color: var(--ice); color: #c5cfe0; }
-  .alert.ok    { background: rgba(44,160,44,.1);  border-color: var(--green); color: #a8d8a8; }
+  .alert.warn { background: rgba(214,39,40,.1);   border-color: var(--red);   color: #f5a5a5; }
+  .alert.info { background: rgba(202,220,252,.07); border-color: var(--ice);  color: #c5cfe0; }
+  .alert.ok   { background: rgba(44,160,44,.1);   border-color: var(--green); color: #a8d8a8; }
+  .alert.note { background: rgba(255,127,14,.08); border-color: var(--orange);color: #ffc87a; }
   .alert strong { color: var(--white); }
 
-  /* ── Code inline ── */
   code {
-    background: #0d1533;
-    color: #86c5f7;
-    padding: 1px 6px;
-    border-radius: 4px;
-    font-family: 'Cascadia Code', 'Fira Code', monospace;
-    font-size: 12.5px;
+    background: #0d1533; color: #86c5f7;
+    padding: 1px 6px; border-radius: 4px;
+    font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 12.5px;
   }
 
-  /* ── Method note ── */
   .method-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 1rem;
-    margin: 1rem 0;
+    gap: 1rem; margin: 1rem 0;
   }
   .method-card {
-    background: var(--card);
-    border-radius: 8px;
-    padding: 1.1rem 1.2rem;
-    border-left: 3px solid #9b59b6;
+    background: var(--card); border-radius: 8px;
+    padding: 1.1rem 1.2rem; border-left: 3px solid #9b59b6;
   }
   .method-card h5 { color: #c39bd3; font-size: 13px; margin-bottom: .4rem; }
   .method-card p  { color: #9dafc8; font-size: 13px; }
 
-  /* ── Footer ── */
+  /* Figure gallery */
+  .fig-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.2rem; margin: 1.2rem 0;
+  }
+  .fig-card {
+    background: var(--card); border-radius: 8px;
+    overflow: hidden; border: 1px solid var(--border);
+  }
+  .fig-card img { width: 100%; display: block; background: #0d1533; }
+  .fig-card .fig-label {
+    padding: .6rem .9rem; font-size: 12px;
+    color: var(--gray); border-top: 1px solid var(--border);
+  }
+  .fig-card .fig-label strong { color: var(--ice); }
+
+  /* Node table */
+  .node-table { font-size: 12.5px; }
+  .node-table th { font-size: 11px; }
+  .node-sx  { color: #6baed6; }
+  .node-dx  { color: var(--orange); }
+  .node-z   { color: #a0a8b8; }
+
+  /* Two-col layout */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1rem 0; }
+
   footer {
-    text-align: center;
-    padding: 2rem;
-    color: var(--gray);
-    font-size: 12px;
-    border-top: 1px solid var(--border);
-    margin-top: 3rem;
+    text-align: center; padding: 2rem; color: var(--gray);
+    font-size: 12px; border-top: 1px solid var(--border); margin-top: 3rem;
   }
 
-  @media (max-width: 640px) {
-    .answer-box, .cluster-grid { grid-template-columns: 1fr; }
+  @media (max-width: 700px) {
+    .answer-box, .cluster-grid, .two-col { grid-template-columns: 1fr; }
     header h1 { font-size: 1.5rem; }
   }
 </style>
@@ -313,373 +246,381 @@
 <body>
 
 <header>
-  <div class="badge">Checkpoint · 21 Maggio 2026</div>
+  <div class="badge">Checkpoint · 22 Maggio 2026 · aggiornato</div>
   <h1>EEG_16b — <span>Subject Clustering</span></h1>
   <p>Politecnico di Milano · DEIB · Tesi Magistrale · Daniele Uras</p>
 </header>
 
 <main>
 
-  <!-- ── DOMANDA ── -->
-  <div class="section-title">La domanda scientifica</div>
+<!-- ── DOMANDA ── -->
+<div class="section-title">La domanda scientifica</div>
 
-  <div class="question-box">
-    I 73 soggetti EEG si raggruppano <strong>naturalmente</strong> in base alla loro
-    struttura di connettività cerebrale durante l'imagined speech?
-    E questi gruppi si <strong>decodificano diversamente</strong> dai modelli GNN?
+<div class="question-box">
+  I 73 soggetti EEG si raggruppano <strong>naturalmente</strong> in base alla loro
+  struttura di connettività cerebrale durante l'imagined speech?
+  E questi gruppi si <strong>decodificano diversamente</strong> dai modelli GNN?
+</div>
+
+<div class="answer-box">
+  <div class="answer-card yes">
+    <div class="label">✓ Sì — i cluster esistono</div>
+    <p>Due fenotipi di connettività stabili, validati contro artefatti e circular analysis.
+    <strong>Silhouette = 0.284.</strong></p>
   </div>
-
-  <div class="answer-box">
-    <div class="answer-card yes">
-      <div class="label">✓ Sì — i cluster esistono</div>
-      <p>Due fenotipi di connettività reali, validati contro artefatti e circular analysis.
-      <strong>Silhouette ipergrafo = 0.284.</strong></p>
-    </div>
-    <div class="answer-card no">
-      <div class="label">✗ No — non predicono bAcc</div>
-      <p>Mann-Whitney bAcc C0 vs C1: <strong>p = 0.800 (ns)</strong>.
-      La struttura topografica non spiega la variabilità inter-soggetto nella decodifica.</p>
-    </div>
+  <div class="answer-card no">
+    <div class="label">✗ No — non predicono bAcc</div>
+    <p>Mann-Whitney bAcc C0 vs C1: <strong>p = 0.800 (ns)</strong>.
+    La connettività strutturale non spiega la variabilità inter-soggetto nella decodifica.</p>
   </div>
+</div>
 
-  <div class="alert info">
-    <strong>Questo è il contributo scientifico.</strong> Il null result è informativo:
-    dimostra che la variabilità inter-soggetto nella decodifica IS non è spiegata dalla
-    topografia strutturale della connettività EEG. Abbiamo esaurito sistematicamente questa spiegazione.
+<div class="alert info">
+  <strong>Questo è il contributo scientifico.</strong> Il null result è informativo:
+  dimostra che la variabilità inter-soggetto nella decodifica IS non è spiegata dalla
+  topografia strutturale della connettività EEG. Abbiamo esaurito sistematicamente questa spiegazione.
+</div>
+
+
+<!-- ── PIPELINE ── -->
+<div class="section-title">Pipeline: da EEG grezzo a cluster</div>
+
+<div class="pipeline">
+  <div class="pipe-step">~550 trial/soggetto<br><small style="color:var(--gray)">110 parole × 5 sessioni</small></div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step">adj 61×61 per trial<br><small style="color:var(--gray)">abs_pcc</small></div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step">media su tutti i trial<br><small style="color:var(--gray)">1 matrice per soggetto</small></div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step">upper triangle 1830-dim<br><small style="color:var(--gray)">FEAT_G per soggetto</small></div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step">StandardScaler → PCA 20<br><small style="color:var(--gray)">→ KMeans k=2</small></div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step" style="border-color:var(--green);color:var(--green)"><strong>C0 / C1</strong><br><small style="color:var(--gray)">~36 / ~37 sogg</small></div>
+</div>
+
+<div class="alert note">
+  <strong>Tutto pairwise.</strong> Il clustering usa feature pairwise (1830 coppie di elettrodi).
+  L'XAI (§17 Cohen's d) è anchesso pairwise sulle stesse feature. I due livelli di analisi
+  sono coerenti tra loro — non c'è mismatch metodologico.
+</div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="num" style="color:var(--ice)">73</div>
+    <div class="lbl">soggetti</div>
+    <div class="sub">P022 escluso (outlier)</div>
   </div>
-
-
-  <!-- ── INPUT ── -->
-  <div class="section-title">Dati di input</div>
-
-  <div class="pipeline">
-    <div class="pipe-step">~550 trial/soggetto<br><small style="color:var(--gray)">110 parole × 5 sessioni</small></div>
-    <div class="pipe-arrow">→</div>
-    <div class="pipe-step">adj 61×61 per trial<br><small style="color:var(--gray)">abs_pcc, pruned</small></div>
-    <div class="pipe-arrow">→</div>
-    <div class="pipe-step">media su tutti i trial<br><small style="color:var(--gray)">1 matrice per soggetto</small></div>
-    <div class="pipe-arrow">→</div>
-    <div class="pipe-step">upper triangle<br><small style="color:var(--gray)">vettore 1830-dim</small></div>
-    <div class="pipe-arrow">→</div>
-    <div class="pipe-step"><strong>FEAT_G / FEAT_H</strong><br><small style="color:var(--gray)">(73 × 1830)</small></div>
+  <div class="stat-card">
+    <div class="num" style="color:var(--ice)">1830</div>
+    <div class="lbl">feature per soggetto</div>
+    <div class="sub">coppie elettrodi 61×61</div>
   </div>
-
-  <div class="stats-row">
-    <div class="stat-card">
-      <div class="num" style="color:var(--ice)">73</div>
-      <div class="lbl">soggetti</div>
-      <div class="sub">P022 escluso (outlier)</div>
-    </div>
-    <div class="stat-card">
-      <div class="num" style="color:var(--ice)">1830</div>
-      <div class="lbl">feature per soggetto</div>
-      <div class="sub">coppie di elettrodi 61×61</div>
-    </div>
-    <div class="stat-card">
-      <div class="num" style="color:var(--ice)">~525</div>
-      <div class="lbl">trial mediati</div>
-      <div class="sub">per soggetto</div>
-    </div>
-    <div class="stat-card">
-      <div class="num" style="color:#2ca02c">0.089</div>
-      <div class="lbl">rel_std media</div>
-      <div class="sub">media stabile (soglia: 0.3)</div>
-    </div>
+  <div class="stat-card">
+    <div class="num" style="color:#2ca02c">0.284</div>
+    <div class="lbl">silhouette score</div>
+    <div class="sub">migliore del grafo (0.240)</div>
   </div>
-
-  <div class="alert ok">
-    <strong>La media è stabile.</strong> rel_std = 0.089 ± 0.020 significa che i ~525 trial di ogni soggetto
-    si discostano solo del 9% dalla loro media H·Hᵀ. Non è rumore mediato: è una firma individuale robusta.
+  <div class="stat-card">
+    <div class="num" style="color:var(--gray)">0.800</div>
+    <div class="lbl">p-value bAcc</div>
+    <div class="sub">ns — null result principale</div>
   </div>
+</div>
 
 
-  <!-- ── STRUTTURA NOTEBOOK ── -->
-  <div class="section-title">Struttura del notebook — sezione per sezione</div>
+<!-- ── FIGURE CHIAVE ── -->
+<div class="section-title">Figure chiave</div>
 
-  <div class="sections-grid">
-    <div class="sec-card">
-      <div class="sec-num">§1</div>
-      <h4>Caricamento feature</h4>
-      <p>Carica cache <code>.npz</code> da EEG_16. Filtra P022. Produce <code>FEAT_G</code> e <code>FEAT_H</code> shape (73, 1830).</p>
+<div class="fig-grid">
+  <div class="fig-card">
+    <img src="../../figures/eeg16b_clustering_hypergraph_k2.png" alt="PCA k=2 ipergrafo">
+    <div class="fig-label"><strong>§3/§4</strong> — PCA k=2 ipergrafo · sil=0.284 · C0 blu, C1 arancio</div>
+  </div>
+  <div class="fig-card">
+    <img src="../../figures/eeg16b_cohens_d_xai_clean.png" alt="Cohen's d pairwise">
+    <div class="fig-label"><strong>§17</strong> — Cohen's d per coppia · top: F3–PO8 d=−5.4 (C1&gt;)</div>
+  </div>
+  <div class="fig-card">
+    <img src="../../figures/eeg16b_electrode_diff_map.png" alt="Mappa differenza C1−C0">
+    <div class="fig-label"><strong>§10</strong> — Differenza C1−C0 per elettrodo · rosso=C1 hub, blu=C0 hub</div>
+  </div>
+  <div class="fig-card">
+    <img src="../../figures/eeg16b_permutation_test.png" alt="Permutation test">
+    <div class="fig-label"><strong>§18</strong> — Permutation test N=5000 · 25/25 coppie p&lt;0.001</div>
+  </div>
+  <div class="fig-card">
+    <img src="../../figures/eeg16b_multimetric_ari.png" alt="Cross-metric ARI">
+    <div class="fig-label"><strong>§12/§13</strong> — Cross-metric ARI · abs_pcc vs PLV=1.00, vs wPLI=0.95</div>
+  </div>
+  <div class="fig-card">
+    <img src="../../figures/eeg16b_brain_connectivity_map.png" alt="Brain connectivity map">
+    <div class="fig-label"><strong>§15</strong> — Brain connectivity map · connessioni C0 (blu) vs C1 (rosso)</div>
+  </div>
+</div>
+
+
+<!-- ── I DUE FENOTIPI ── -->
+<div class="section-title">I due fenotipi di connettività</div>
+
+<div class="alert info">
+  <strong>Come leggere questa sezione.</strong> Le etichette anatomiche ("frontale", "occipitale") indicano
+  la <em>regione approssimativa</em> degli elettrodi nel sistema 10-20 — non localizzazioni di sorgente.
+  EEG a 61 canali non permette localizzazione precisa. Le interpretazioni sono <em>compatibili con</em>
+  le aree indicate, non dimostrative.
+</div>
+
+<div class="cluster-grid">
+  <div class="cluster-card c0">
+    <div class="cname">Tipo Fronto-Motorio</div>
+    <div class="ctag">C0 · ~36 soggetti</div>
+    <ul class="hub-list">
+      <li>Hub pairwise §17: <strong>F2, C2, FC2</strong></li>
+      <li>Top pair C0&gt;: F2–FT7 d=+3.5, F2–F8 d=+3.3</li>
+      <li>Iperedge §19 top (rimosso): E20 — FC4, FC2, FC6, FT8, FCz</li>
+      <li>Cohen's d massimo C0&gt;: +3.5</li>
+    </ul>
+    <div class="submodule">
+      <strong>Regioni coinvolte:</strong> fronto-centrale destra (FC4, FC6, FT8) + centrale
+      (C2, C4, Cz) + temporale (T7 in E22). Entrambi gli emisferi ma dominanza DX.
     </div>
-    <div class="sec-card">
-      <div class="sec-num">§2</div>
-      <h4>Perché P022 è outlier?</h4>
-      <p>Visualizza P022 nello spazio PCA su tutti 74 soggetti. Calcola distanza euclidea dai cluster. Risultato: outlier puro, nessun gruppo lo accoglie.</p>
-    </div>
-    <div class="sec-card key">
-      <div class="sec-num">§3 e §4</div>
-      <h4>Clustering k=2</h4>
-      <p>StandardScaler → PCA 20 comp → KMeans k=2 forzato. Grafo sil=0.240, <strong>Ipergrafo sil=0.284</strong> → ipergrafo usato come top.</p>
-    </div>
-    <div class="sec-card">
-      <div class="sec-num">§4b</div>
-      <h4>Nomi neurali dei cluster</h4>
-      <p>Definisce <code>CLUSTER_NAMES</code>: C0="Fronto-motor", C1="Fronto-occipital". Motivazione anatomica da §17.</p>
-    </div>
-    <div class="sec-card key">
-      <div class="sec-num">§5–§7</div>
-      <h4>Post-hoc: bAcc per cluster</h4>
-      <p>Carica accuracy EEG_12/13b. Mann-Whitney C0 vs C1. <strong>p = 0.800 (ns)</strong> — null result principale.</p>
-    </div>
-    <div class="sec-card">
-      <div class="sec-num">§8</div>
-      <h4>ARI grafo vs ipergrafo</h4>
-      <p>Concordanza tra le due assegnazioni cluster. ARI alto → struttura robusta alla rappresentazione scelta.</p>
-    </div>
-    <div class="sec-card">
-      <div class="sec-num">§9</div>
-      <h4>PCA Loadings</h4>
-      <p>Loadings di PC1 sui 1830 feature → quali coppie di elettrodi guidano la separazione C0/C1.</p>
-    </div>
-    <div class="sec-card key">
-      <div class="sec-num">§10</div>
-      <h4>Mappa differenza C1−C0</h4>
-      <p>Per ogni elettrodo: <code>diff[i] = mean_j(adj_C1 − adj_C0)</code>. C1 più connesso: PO8, F3, F5, Oz. C0: C2, FC2, CP2.</p>
-    </div>
-    <div class="sec-card">
-      <div class="sec-num">§11</div>
-      <h4>Visualizzazione: raw, grafo, HHT</h4>
-      <p>Plot 2×3 per cluster: EEG raw medio + adj media + H·Hᵀ media. Differenza strutturale visiva.</p>
-    </div>
-    <div class="sec-card">
-      <div class="sec-num">§11b</div>
-      <h4>Variabilità intra-cluster</h4>
-      <p>Grid di adj per soggetto vs media cluster. Verifica: il clustering è strutturato o ogni soggetto è diverso?</p>
-    </div>
-    <div class="sec-card">
-      <div class="sec-num">§12–§13</div>
-      <h4>Multi-metrica: abs_pcc, wPLI, PLV</h4>
-      <p>Stesso clustering con tre metriche di connettività diverse. wPLI è immune al volume conduction.</p>
-    </div>
-    <div class="sec-card key">
-      <div class="sec-num">§14</div>
-      <h4>Qualità segnale per cluster</h4>
-      <p>Varianza, kurtosi, gamma (30-60Hz) per C0 vs C1. <strong>Tutti ns</strong> → clustering non driven da artefatti.</p>
-    </div>
-    <div class="sec-card server">
-      <div class="sec-num">§15</div>
-      <h4>Mappa cervello topomap</h4>
-      <p>MNE topomap + grafo su testa schematica. Connessioni colorate per cluster (blu=C0, rosso=C1). Richiede server.</p>
-    </div>
-    <div class="sec-card server">
-      <div class="sec-num">§16, §16b</div>
-      <h4>Grid per-soggetto node strength</h4>
-      <p>Mini brain scatter per ogni soggetto. Scala lineare (§16) e logaritmica (§16b). Fig.A=forza, Fig.B=deviazione da media cluster.</p>
-    </div>
-    <div class="sec-card server">
-      <div class="sec-num">§16c, §16d, §16e</div>
-      <h4>Stabilità della media</h4>
-      <p>CV intra-soggetto, variabilità inter-soggetto FEAT_G, distanza trial→media H·Hᵀ. rel_std=0.089 → media stabile.</p>
-    </div>
-    <div class="sec-card xai">
-      <div class="sec-num">§17</div>
-      <h4>XAI: Cohen's d per coppia</h4>
-      <p>Effect size per ogni delle 1830 coppie. A1/A2 esclusi. F3–PO8 d=−5.4. Top 25 coppie con brain network.</p>
-    </div>
-    <div class="sec-card xai">
-      <div class="sec-num">§18</div>
-      <h4>Permutation test (N=5000)</h4>
-      <p>Shuffle label 5000× per le top 25 coppie. <strong>25/25 p&lt;0.001</strong> → circular analysis escluso.</p>
+    <div class="interp">
+      Compatibile con imagery motorio-articolatorio: pianificazione del movimento di articolazione
+      durante l'imagined speech, loop premotore/motore destro.
     </div>
   </div>
-
-  <div style="display:flex;gap:.8rem;margin:.5rem 0;flex-wrap:wrap;font-size:12px;color:var(--gray)">
-    <span style="border-left:3px solid var(--green);padding-left:.5rem">verde = risultato chiave</span>
-    <span style="border-left:3px solid var(--orange);padding-left:.5rem">arancio = richiede server</span>
-    <span style="border-left:3px solid #9b59b6;padding-left:.5rem">viola = XAI / validazione statistica</span>
-  </div>
-
-
-  <!-- ── I DUE CLUSTER ── -->
-  <div class="section-title">I due fenotipi neurali</div>
-
-  <div class="cluster-grid">
-    <div class="cluster-card c0">
-      <div class="cname">Fronto-motor type</div>
-      <div class="ctag">C0 · ~36 soggetti</div>
-      <ul class="hub-list">
-        <li>Hub: <strong>F2, C2, FC2</strong> (frontale + centrale destra)</li>
-        <li>F2–FT7, F2–F8 (d=+3.3/3.5)</li>
-        <li>Fp1–C2, AF8–C2 (d=+3.0/3.1)</li>
-        <li>Cohen's d massimo: +3.5</li>
-      </ul>
-      <div class="interp">
-        C2 e FC2 coprono la corteccia motoria primaria e l'area motoria supplementare.
-        Questi soggetti durante l'imagined speech sembrano "articolare internamente",
-        attivando un loop di pianificazione motoria.
-      </div>
+  <div class="cluster-card c1">
+    <div class="cname">Tipo Fronto-Occipitale</div>
+    <div class="ctag">C1 · ~37 soggetti</div>
+    <ul class="hub-list">
+      <li>Hub pairwise §17: <strong>F3, PO8</strong> (cross-emisferico)</li>
+      <li>Top pair C1&gt;: F3–PO8 d=−5.4, F3–Oz d=−3.2</li>
+      <li>Iperedge §19 top (rimosso): E09 — PO3, F3, F5, PO5, F1, F7, AF7</li>
+      <li>Cohen's d massimo C1&gt;: −5.4</li>
+    </ul>
+    <div class="submodule">
+      <strong>Regioni coinvolte:</strong> frontale sinistro (F3, F5, F7, AF7) + parieto-occipitale
+      sinistro (PO3, PO5) + link cross-emisferico verso occipitale destro (PO8).
+      Dominanza SX + estensione DX via F3–PO8.
     </div>
-    <div class="cluster-card c1">
-      <div class="cname">Fronto-occipital type</div>
-      <div class="ctag">C1 · ~37 soggetti</div>
-      <ul class="hub-list">
-        <li>Hub: <strong>F3, PO8</strong> (frontale-sin ↔ occipitale-dx)</li>
-        <li>F3–PO8 (d=−5.4), F3–Oz (d=−3.2)</li>
-        <li>F5–PO8, Fp2–F1 (d≈−3.0)</li>
-        <li>rel_std = 0.095 (più dinamico)</li>
-      </ul>
-      <div class="interp">
-        F3 ≈ area di Broca (linguaggio espressivo). PO8/Oz = aree visivo-spaziali.
-        Connessione lunga, asimmetrica, emisferica. Questi soggetti sembrano "visualizzare"
-        le parole — attivano un loop visivo-linguistico durante l'imagery.
-      </div>
+    <div class="interp">
+      Compatibile con imagery visuo-linguistico: rete fronto-occipitale sinistra + link
+      cross-emisferico verso corteccia visiva destra durante l'imagined speech.
     </div>
   </div>
+</div>
 
+<div class="alert note">
+  <strong>Nota su F3–PO8 vs E09.</strong> L'analisi pairwise §17 trova F3↔PO8 (cross-emisferico, SX→DX)
+  come coppia più discriminante per C1. L'analisi per iperedge (§19, rimossa) trovava E09 = modulo
+  fronto-occipitale <em>sinistro</em> (PO3, F3, PO5... tutti SX, PO8 rank #28/61).
+  Non c'è contraddizione: il grafo cattura il <em>singolo link</em> più estremo (F3→PO8 cross-emisferico),
+  l'ipergrafo catturava il <em>modulo co-attivato</em> ipsilaterale sinistro. Sono complementari.
+  §19 è stato rimosso perché H_pruned viene da DHSLP (vedi sezione sotto), non dal segnale grezzo.
+</div>
 
-  <!-- ── RISULTATI NUMERICI ── -->
-  <div class="section-title">Risultati numerici</div>
-
-  <table>
-    <thead><tr><th>Test</th><th>Metrica</th><th>Valore</th><th>Significato</th></tr></thead>
+<!-- Debug table E09 -->
+<details style="margin:1rem 0">
+  <summary style="cursor:pointer;color:var(--ice);font-size:13px;padding:.5rem;background:var(--card);border-radius:6px">
+    🔍 Debug: top-10 nodi di E09 (iperedge C1&gt; rimosso)
+  </summary>
+  <div style="margin-top:.8rem">
+  <table class="node-table">
+    <thead><tr><th>Rank</th><th>Elettrodo</th><th>Peso medio</th><th>Emisfero</th><th>Regione</th></tr></thead>
     <tbody>
-      <tr>
-        <td>Post-hoc bAcc</td>
-        <td>Mann-Whitney C0 vs C1</td>
-        <td class="tag-ns">p = 0.800 (ns)</td>
-        <td>I cluster NON si decodificano diversamente — null result principale</td>
-      </tr>
-      <tr>
-        <td>Qualità segnale — varianza</td>
-        <td>Mann-Whitney C0 vs C1</td>
-        <td class="tag-ns">p = 0.504 (ns)</td>
-        <td>Clustering non guidato da differenze di ampiezza segnale</td>
-      </tr>
-      <tr>
-        <td>Qualità segnale — kurtosi</td>
-        <td>Mann-Whitney C0 vs C1</td>
-        <td class="tag-ns">p = 0.170 (ns)</td>
-        <td>No artefatti impulsivi differenziali</td>
-      </tr>
-      <tr>
-        <td>Qualità segnale — gamma</td>
-        <td>Mann-Whitney C0 vs C1</td>
-        <td class="tag-ns">p = 0.068 (ns)</td>
-        <td>No differenze di potenza muscolare</td>
-      </tr>
-      <tr>
-        <td>Stabilità media</td>
-        <td>rel_std globale</td>
-        <td class="tag-green">0.089 ± 0.020</td>
-        <td>Media stabile — soglia critica è 0.3</td>
-      </tr>
-      <tr>
-        <td>Variabilità relativa C0 vs C1</td>
-        <td>Mann-Whitney rel_std</td>
-        <td class="tag-orange">p = 0.0002</td>
-        <td>C1 (0.095) più variabile di C0 (0.077) — coerente con network a lunga distanza</td>
-      </tr>
-      <tr>
-        <td>XAI top pair</td>
-        <td>Cohen's d F3–PO8</td>
-        <td class="tag-red">d = −5.4</td>
-        <td>Effect size estremo — C1 domina questa connessione</td>
-      </tr>
-      <tr>
-        <td>Permutation test</td>
-        <td>Top 25 coppie, N=5000</td>
-        <td class="tag-green">25/25 p &lt; 0.001</td>
-        <td>Circular analysis escluso — nessun shuffle raggiunge d osservato</td>
-      </tr>
+      <tr><td>1</td><td class="node-sx">PO3</td><td>0.562</td><td class="node-sx">SX</td><td>Parieto-Occipitale</td></tr>
+      <tr><td>2</td><td class="node-sx">F3</td> <td>0.503</td><td class="node-sx">SX</td><td>Frontale</td></tr>
+      <tr><td>3</td><td class="node-sx">F5</td> <td>0.471</td><td class="node-sx">SX</td><td>Frontale</td></tr>
+      <tr><td>4</td><td class="node-sx">PO5</td><td>0.389</td><td class="node-sx">SX</td><td>Parieto-Occipitale</td></tr>
+      <tr><td>5</td><td class="node-sx">F1</td> <td>0.310</td><td class="node-sx">SX</td><td>Frontale</td></tr>
+      <tr><td>6</td><td class="node-sx">F7</td> <td>0.253</td><td class="node-sx">SX</td><td>Frontale</td></tr>
+      <tr><td>7</td><td class="node-sx">AF7</td><td>0.235</td><td class="node-sx">SX</td><td>Frontale</td></tr>
+      <tr><td>8</td><td class="node-sx">FT7</td><td>0.173</td><td class="node-sx">SX</td><td>Fronto-Centrale</td></tr>
+      <tr><td>9</td><td class="node-z">Fz</td>  <td>0.167</td><td class="node-z">Z</td> <td>Frontale</td></tr>
+      <tr><td>10</td><td class="node-sx">FC5</td><td>0.153</td><td class="node-sx">SX</td><td>Fronto-Centrale</td></tr>
+      <tr style="opacity:.5"><td>28</td><td class="node-dx">PO8</td><td>0.044</td><td class="node-dx">DX</td><td>Parieto-Occipitale</td></tr>
     </tbody>
   </table>
-
-
-  <!-- ── NOTE METODOLOGICHE ── -->
-  <div class="section-title">Note metodologiche importanti</div>
-
-  <div class="method-grid">
-    <div class="method-card">
-      <h5>⚠ A1/A2 mastoid</h5>
-      <p>E00 (A1) e E07 (A2) sono reference electrodes, non canali EEG. Le loro "connessioni"
-      sono artefatti di riferimento. Sempre esclusi in §17 e §18 con <code>EXCLUDE_ELEC_D = {0, 7}</code>.</p>
-    </div>
-    <div class="method-card">
-      <h5>⚠ L2 assoluta vs rel_std</h5>
-      <p>Per confrontare variabilità intra-trial tra C0 e C1, usare sempre
-      <code>rel_std = std(L2)/mean(L2)</code>. La L2 assoluta è confusa dalla scala
-      delle medie (che differisce per costruzione tra i cluster).</p>
-    </div>
-    <div class="method-card">
-      <h5>⚠ Circular analysis</h5>
-      <p>KMeans usa le stesse 1830 feature su cui si calcola Cohen's d. Il rischio
-      è reale ma chiuso dal permutation test §18: 25/25 coppie p&lt;0.001 con N=5000 shuffle.</p>
-    </div>
-    <div class="method-card">
-      <h5>ℹ Granularità</h5>
-      <p>Tutto opera a livello di <strong>soggetto</strong>, non trial o sessione.
-      Ogni soggetto = 1 vettore 1830-dim = media di ~525 adj trial. La firma individuale
-      è stabile (rel_std=0.089).</p>
-    </div>
+  <p style="font-size:12px;color:var(--gray);margin-top:.5rem">PO8 è rank #28 con peso 0.044 — non appartiene al modulo E09. La connessione F3–PO8 cross-emisferica è un <em>link pairwise</em>, non un modulo di co-attivazione.</p>
   </div>
+</details>
 
 
-  <!-- ── CIRCULAR ANALYSIS ── -->
-  <div class="section-title">Circular analysis — spiegazione</div>
+<!-- ── GRAFO VS IPERGRAFO ── -->
+<div class="section-title">Chiarimento metodologico: grafo vs ipergrafo</div>
 
-  <div class="alert warn">
-    <strong>Il problema:</strong> hai fatto clustering su FEAT_G (1830 feature, inclusa F3–PO8),
-    poi hai calcolato Cohen's d su F3–PO8. Stai misurando la separazione sugli stessi dati
-    che l'hanno creata. Il reviewer può dire: <em>"ovvio che trovi differenze."</em>
+<div class="two-col">
+  <div style="background:var(--card);border-radius:8px;padding:1.3rem;border-top:3px solid var(--green)">
+    <div style="font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:.6rem">✓ Usato — pairwise (abs_pcc)</div>
+    <ul style="list-style:none;font-size:13px;color:#c5cfe0">
+      <li style="padding:.25rem 0">→ Clustering: KMeans su 1830 feature pairwise</li>
+      <li style="padding:.25rem 0">→ XAI §17: Cohen's d per coppia di elettrodi</li>
+      <li style="padding:.25rem 0">→ Validazione §18: permutation test su coppie</li>
+      <li style="padding:.25rem 0">→ Cross-metric §12/§13: abs_pcc, wPLI, PLV</li>
+    </ul>
+    <p style="font-size:12px;color:var(--gray);margin-top:.8rem">Tutto grounded direttamente sul segnale EEG grezzo preprocessato.</p>
   </div>
-
-  <div class="pipeline" style="margin:1rem 0">
-    <div class="pipe-step">73 valori F3–PO8<br><small style="color:var(--gray)">fissi, non cambiano</small></div>
-    <div class="pipe-arrow">+</div>
-    <div class="pipe-step">Shuffle label C0/C1<br><small style="color:var(--gray)">×5000 volte</small></div>
-    <div class="pipe-arrow">→</div>
-    <div class="pipe-step">d_null per ogni shuffle<br><small style="color:var(--gray)">distribuzione nulla</small></div>
-    <div class="pipe-arrow">→</div>
-    <div class="pipe-step">p = #{|d_null| ≥ 5.4} / 5000<br><small style="color:var(--green)">= 0/5000 → p &lt; 0.001</small></div>
+  <div style="background:var(--card);border-radius:8px;padding:1.3rem;border-top:3px solid var(--red);opacity:.8">
+    <div style="font-size:11px;color:var(--red);text-transform:uppercase;letter-spacing:1px;margin-bottom:.6rem">✗ Rimosso — iperedge (H_pruned)</div>
+    <ul style="list-style:none;font-size:13px;color:#c5cfe0">
+      <li style="padding:.25rem 0">✗ §19: Cohen's d per iperedge (rimosso)</li>
+      <li style="padding:.25rem 0">✗ §20: permutation test su iperedge (rimosso)</li>
+    </ul>
+    <p style="font-size:12px;color:#f5a5a5;margin-top:.8rem">
+      H_pruned viene da DHSLP — un modello addestrato sui dati. Usarlo per XAI
+      significa analizzare le feature interne del modello, non il segnale grezzo.
+      Non coerente con il clustering (che è pairwise su abs_pcc).
+    </p>
   </div>
+</div>
 
-  <div class="alert ok">
-    <strong>Risultato:</strong> in 5000 shuffle casuali delle label, mai si raggiunge d=5.4 su F3–PO8.
-    La separazione non emerge per caso quando dividi i soggetti casualmente — emerge
-    perché la struttura di connettività di C1 è genuinamente diversa da C0.
-    <strong>25/25 coppie top confermano p &lt; 0.001.</strong>
+<div class="alert info">
+  <strong>Perché silhouette ipergrafo &gt; grafo (0.284 vs 0.240)?</strong>
+  Il silhouette score con metrica ipergrafo è usato solo come <em>misura di qualità dei cluster</em>
+  — non per costruirli. Dice: "la struttura C0/C1 è più netta quando guardi la connettività
+  attraverso la lente degli iperedge". Non significa che gli iperedge abbiano trovato cluster diversi:
+  ARI(grafo, ipergrafo) = alto → stessi soggetti, stessa assegnazione.
+</div>
+
+
+<!-- ── VALIDAZIONE ── -->
+<div class="section-title">Validazione: i cluster sono reali?</div>
+
+<div class="sections-grid" style="grid-template-columns: repeat(auto-fill, minmax(240px,1fr))">
+  <div style="background:var(--card);border-radius:8px;padding:1.2rem;border-left:3px solid var(--green)">
+    <div style="font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:.4rem">① Non circular</div>
+    <p style="font-size:13px;color:#c5cfe0">Permutation test §18: 5000 shuffle di C0/C1. In <strong>0/5000</strong> shuffle si raggiunge d=5.4. <strong>25/25 coppie top p&lt;0.001.</strong></p>
   </div>
+  <div style="background:var(--card);border-radius:8px;padding:1.2rem;border-left:3px solid var(--ice)">
+    <div style="font-size:11px;color:var(--ice);text-transform:uppercase;letter-spacing:1px;margin-bottom:.4rem">② Cross-metrica</div>
+    <p style="font-size:13px;color:#c5cfe0">ARI(abs_pcc, PLV) = <strong>1.00</strong>. ARI(abs_pcc, wPLI) = <strong>0.95</strong>. Stessa struttura con metrica immune al volume conduction.</p>
+  </div>
+  <div style="background:var(--card);border-radius:8px;padding:1.2rem;border-left:3px solid var(--orange)">
+    <div style="font-size:11px;color:var(--orange);text-transform:uppercase;letter-spacing:1px;margin-bottom:.4rem">③ Qualità segnale</div>
+    <p style="font-size:13px;color:#c5cfe0">Varianza p=0.504, kurtosi p=0.170, gamma p=0.068 — tutti ns. Il clustering non è guidato da artefatti.</p>
+  </div>
+  <div style="background:var(--card);border-radius:8px;padding:1.2rem;border-left:3px solid var(--red)">
+    <div style="font-size:11px;color:var(--red);text-transform:uppercase;letter-spacing:1px;margin-bottom:.4rem">④ Null result bAcc</div>
+    <p style="font-size:13px;color:#c5cfe0">Mann-Whitney bAcc C0 vs C1: <strong>p = 0.800 (ns)</strong>. Cluster reali ma non predittivi di performance.</p>
+  </div>
+</div>
 
 
-  <!-- ── TODO ── -->
-  <div class="section-title">Todo tutor (stato aggiornato)</div>
+<!-- ── RISULTATI NUMERICI ── -->
+<div class="section-title">Risultati numerici completi</div>
 
-  <table>
-    <thead><tr><th>#</th><th>Task</th><th>Stato</th></tr></thead>
-    <tbody>
-      <tr>
-        <td>1</td>
-        <td>Rimuovere P022 + investigare cluster C0 vs C1</td>
-        <td class="tag-green">✓ Completato (questa sessione)</td>
-      </tr>
-      <tr>
-        <td>2</td>
-        <td>Riarrangiare plot grafo/ipergrafo per regione cerebrale</td>
-        <td class="tag-ice">Prossimo</td>
-      </tr>
-      <tr>
-        <td>3</td>
-        <td>Gamma p=0.07 — investigare per singolo elettrodo</td>
-        <td class="tag-ns">In attesa</td>
-      </tr>
-      <tr>
-        <td>4</td>
-        <td>Allenare modelli 200 epoch, patience 70, log train_val_gap W&amp;B</td>
-        <td class="tag-ns">In attesa</td>
-      </tr>
-      <tr>
-        <td>5</td>
-        <td>Optuna su EEG_13b (50–100 trial)</td>
-        <td class="tag-ns">In attesa</td>
-      </tr>
-    </tbody>
-  </table>
+<table>
+  <thead><tr><th>Test</th><th>Metrica</th><th>Valore</th><th>Significato</th></tr></thead>
+  <tbody>
+    <tr><td>Post-hoc bAcc</td><td>Mann-Whitney C0 vs C1</td><td class="tag-ns">p = 0.800 (ns)</td><td>I cluster NON si decodificano diversamente — null result principale</td></tr>
+    <tr><td>Qualità — varianza</td><td>Mann-Whitney</td><td class="tag-ns">p = 0.504 (ns)</td><td>No differenze di ampiezza segnale</td></tr>
+    <tr><td>Qualità — kurtosi</td><td>Mann-Whitney</td><td class="tag-ns">p = 0.170 (ns)</td><td>No artefatti impulsivi differenziali</td></tr>
+    <tr><td>Qualità — gamma</td><td>Mann-Whitney</td><td class="tag-ns">p = 0.068 (ns)</td><td>No differenze di potenza muscolare</td></tr>
+    <tr><td>Stabilità media</td><td>rel_std globale</td><td class="tag-green">0.089 ± 0.020</td><td>Firma individuale stabile (soglia critica: 0.3)</td></tr>
+    <tr><td>rel_std C0 vs C1</td><td>Mann-Whitney</td><td class="tag-orange">p = 0.0002</td><td>C1 (0.095) più variabile di C0 (0.077) — coerente con network a lunga distanza</td></tr>
+    <tr><td>Silhouette grafo</td><td>KMeans k=2</td><td class="tag-ice">0.240</td><td>Struttura discreta nel grafo pairwise</td></tr>
+    <tr><td>Silhouette ipergrafo</td><td>KMeans k=2</td><td class="tag-green">0.284</td><td>Struttura più netta con metrica ipergrafo</td></tr>
+    <tr><td>Cross-metric ARI</td><td>abs_pcc vs PLV</td><td class="tag-green">1.00</td><td>Identici cluster con PLV</td></tr>
+    <tr><td>Cross-metric ARI</td><td>abs_pcc vs wPLI</td><td class="tag-green">0.95</td><td>Quasi identici con wPLI (immune volume conduction)</td></tr>
+    <tr><td>XAI top pair C1&gt;</td><td>Cohen's d F3–PO8</td><td class="tag-red">d = −5.4</td><td>Effect size estremo — C1 domina questa connessione cross-emisferica</td></tr>
+    <tr><td>XAI top pair C0&gt;</td><td>Cohen's d F2–FT7</td><td class="tag-blue">d = +3.5</td><td>C0 domina connessione fronto-centrale</td></tr>
+    <tr><td>Permutation test</td><td>Top 25 coppie, N=5000</td><td class="tag-green">25/25 p &lt; 0.001</td><td>Circular analysis escluso</td></tr>
+  </tbody>
+</table>
+
+
+<!-- ── STRUTTURA NOTEBOOK ── -->
+<div class="section-title">Struttura del notebook</div>
+
+<div class="sections-grid">
+  <div class="sec-card"><div class="sec-num">§1</div><h4>Caricamento feature</h4><p>Carica cache <code>.npz</code> da EEG_16. Filtra P022. Produce <code>FEAT_G</code> e <code>FEAT_H</code> (73×1830).</p></div>
+  <div class="sec-card"><div class="sec-num">§2</div><h4>Perché P022 è outlier?</h4><p>PCA su tutti 74 soggetti. P022 = singleton isolato da tutti i cluster. Escluso da tutto il resto.</p></div>
+  <div class="sec-card key"><div class="sec-num">§3–§4</div><h4>Clustering k=2</h4><p>StandardScaler → PCA 20 → KMeans k=2. Grafo sil=0.240, <strong>Ipergrafo sil=0.284</strong>. Usato ipergrafo come principale.</p></div>
+  <div class="sec-card"><div class="sec-num">§4b</div><h4>Nomi cluster</h4><p><code>CLUSTER_NAMES</code>: C0="Fronto-motor", C1="Fronto-occipital". Motivazione da §10/§17.</p></div>
+  <div class="sec-card key"><div class="sec-num">§5–§7</div><h4>Post-hoc: bAcc per cluster</h4><p>Accuracy da EEG_12/13b. Mann-Whitney. <strong>p = 0.800 (ns)</strong> — null result principale.</p></div>
+  <div class="sec-card"><div class="sec-num">§8</div><h4>ARI grafo vs ipergrafo</h4><p>Concordanza assegnazioni. ARI alto → struttura robusta alla rappresentazione scelta.</p></div>
+  <div class="sec-card"><div class="sec-num">§9</div><h4>PCA Loadings</h4><p>Loadings PC1 sui 1830 feature → quali coppie guidano la separazione.</p></div>
+  <div class="sec-card key"><div class="sec-num">§10</div><h4>Mappa differenza C1−C0</h4><p>Per elettrodo: <code>diff[i] = mean_j(adj_C1 − adj_C0)</code>. C1 hub: PO8, F3, F5, Oz. C0 hub: C2, FC2, CP2.</p></div>
+  <div class="sec-card"><div class="sec-num">§11–§11b</div><h4>Visualizzazione + variabilità</h4><p>Plot raw, adj, H·Hᵀ per cluster. Grid intra-cluster per soggetto.</p></div>
+  <div class="sec-card key"><div class="sec-num">§12–§13</div><h4>Multi-metrica ARI</h4><p>abs_pcc, wPLI, PLV. ARI=1.00 e 0.95 → struttura robusta alla metrica.</p></div>
+  <div class="sec-card key"><div class="sec-num">§14</div><h4>Qualità segnale</h4><p>Varianza, kurtosi, gamma. <strong>Tutti ns</strong> → clustering non da artefatti.</p></div>
+  <div class="sec-card server"><div class="sec-num">§15–§16e</div><h4>Visualizzazioni avanzate</h4><p>Topomap MNE, brain connectivity map, grid per-soggetto node strength (lineare e log), stabilità media (rel_std=0.089).</p></div>
+  <div class="sec-card xai"><div class="sec-num">§17</div><h4>XAI: Cohen's d pairwise</h4><p>Effect size per 1830 coppie. A1/A2 esclusi. <strong>F3–PO8 d=−5.4</strong>. Brain network top 25 coppie.</p></div>
+  <div class="sec-card xai"><div class="sec-num">§18</div><h4>Permutation test (N=5000)</h4><p>Shuffle label × 5000. <strong>25/25 p &lt; 0.001</strong> → circular analysis escluso.</p></div>
+  <div class="sec-card removed"><div class="sec-num">§19 ✗</div><h4>XAI Ipergrafo (rimosso)</h4><p>Cohen's d per iperedge su H_pruned da DHSLP. Rimosso: H_pruned dipendente dal modello, non dal segnale grezzo. Non coerente con clustering pairwise.</p></div>
+  <div class="sec-card removed"><div class="sec-num">§20 ✗</div><h4>Permutation ipergrafo (rimosso)</h4><p>Permutation test su iperedge. Rimosso insieme a §19.</p></div>
+</div>
+
+<div style="display:flex;gap:.8rem;margin:.5rem 0;flex-wrap:wrap;font-size:12px;color:var(--gray)">
+  <span style="border-left:3px solid var(--green);padding-left:.5rem">verde = risultato chiave</span>
+  <span style="border-left:3px solid var(--orange);padding-left:.5rem">arancio = richiede server</span>
+  <span style="border-left:3px solid #9b59b6;padding-left:.5rem">viola = XAI / validazione</span>
+  <span style="border-left:3px solid var(--red);padding-left:.5rem;opacity:.6">rosso = rimosso</span>
+</div>
+
+
+<!-- ── NOTE METODOLOGICHE ── -->
+<div class="section-title">Note metodologiche importanti</div>
+
+<div class="method-grid">
+  <div class="method-card">
+    <h5>⚠ A1/A2 mastoid reference</h5>
+    <p>E00 (A1) e E07 (A2) sono reference electrodes, non canali EEG reali. Sempre esclusi in §17/§18 con <code>EXCLUDE_ELEC_D = {0, 7}</code>. Le loro "connessioni" sono artefatti di riferimento.</p>
+  </div>
+  <div class="method-card">
+    <h5>⚠ Circular analysis</h5>
+    <p>KMeans usa le stesse 1830 feature su cui si calcola Cohen's d. Rischio reale, chiuso dal permutation test §18: 25/25 coppie p&lt;0.001 con N=5000 shuffle. Nessun shuffle casuale raggiunge d=5.4.</p>
+  </div>
+  <div class="method-card">
+    <h5>⚠ H_pruned ≠ segnale grezzo</h5>
+    <p>H_pruned viene da DHSLP addestrato. Usarlo per XAI è analizzare le rappresentazioni interne del modello. §19/§20 rimossi per questo: non grounded sul segnale, non coerenti con clustering pairwise.</p>
+  </div>
+  <div class="method-card">
+    <h5>ℹ Granularità soggetto</h5>
+    <p>Tutto opera a livello di <strong>soggetto</strong>: 1 vettore 1830-dim = media di ~525 adj trial. La firma è stabile (rel_std=0.089 ± 0.020, soglia critica 0.3).</p>
+  </div>
+  <div class="method-card">
+    <h5>ℹ rel_std vs L2 assoluta</h5>
+    <p>Per confrontare variabilità tra C0 e C1 usare sempre <code>rel_std = std(L2)/mean(L2)</code>. La L2 assoluta è confusa dalla scala delle medie che differisce per costruzione tra cluster.</p>
+  </div>
+  <div class="method-card">
+    <h5>ℹ Interpretazione anatomica</h5>
+    <p>Le etichette ("area di Broca", "corteccia visiva") sono <em>compatibili con</em> le regioni degli elettrodi 10-20, non localizzazioni di sorgente. EEG non ha risoluzione spaziale sufficiente per affermazioni precise.</p>
+  </div>
+</div>
+
+
+<!-- ── FRASE PER TESI ── -->
+<div class="section-title">Frase da usare in tesi</div>
+
+<div class="question-box" style="font-style:normal;font-size:14px;color:#c5cfe0">
+  <em>"Emergono due profili di connettività strutturale stabili e robusti tra le metriche
+  (ARI=0.95–1.00), potenzialmente riconducibili a strategie di imagery differenti
+  (tipo visuo-linguistico vs tipo motorio-articolatorio), ma non differenziati in termini
+  di decodificabilità semantica (Mann-Whitney p=0.800). La connettività strutturale EEG
+  non predice la performance dei modelli di imagined speech su questo dataset."</em>
+</div>
+
+
+<!-- ── TODO ── -->
+<div class="section-title">Todo tutor (stato aggiornato)</div>
+
+<table>
+  <thead><tr><th>#</th><th>Task</th><th>Stato</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Rimuovere P022 + investigare cluster C0 vs C1</td><td class="tag-green">✓ Completato</td></tr>
+    <tr><td>2</td><td>Riarrangiare plot grafo/ipergrafo per regione cerebrale</td><td class="tag-ice">Prossimo</td></tr>
+    <tr><td>3</td><td>Gamma p=0.07 — investigare per singolo elettrodo</td><td class="tag-ns">Saltato (non significativo)</td></tr>
+    <tr><td>4</td><td>Allenare modelli 200 epoch, patience 70, log train_val_gap</td><td class="tag-ns">In attesa Optuna</td></tr>
+    <tr><td>5</td><td>Optuna su EEG_13b (50 trial, 25 soggetti top+mid+bot)</td><td class="tag-orange">In corso</td></tr>
+  </tbody>
+</table>
 
 </main>
 
 <footer>
-  EEG_16b_subject_clustering_v2.ipynb · branch main · commit b0e8a16 →2dbbaf6<br>
+  EEG_16b_subject_clustering_v2.ipynb · branch main · commit 14f0687<br>
+  §19/§20 rimossi 22-05-2026 — H_pruned da DHSLP non coerente con XAI pairwise<br>
   Daniele Uras · DEIB, Politecnico di Milano · Tesi Magistrale 2025–2026
 </footer>
 
