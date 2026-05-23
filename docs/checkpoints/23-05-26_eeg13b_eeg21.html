@@ -111,17 +111,23 @@
 </div>
 
 <!-- Confronto modelli -->
-<h2>Confronto Modelli S-Spec vs S-Indep</h2>
+<h2>Confronto Modelli — S-Spec vs S-Indep</h2>
 <div class="section-box">
   <div class="finding">
-    <div class="finding-label">⚠️ Problema metodologico risolto</div>
-    <div class="finding-text">La tabella precedente mescolava setting incomparabili: EEG_08b/09b/13b sono
-    <strong>subject-specific</strong> (train e test sullo stesso soggetto, split per sessione),
-    mentre EEG_15 è <strong>subject-independent</strong> (train su altri soggetti, test su nuovi).
-    Ora mostrati separatamente.</div>
+    <div class="finding-label">⚠️ Distinzione fondamentale</div>
+    <div class="finding-text">
+      <strong>"Subject-independent" descrive il protocollo di <em>training</em>, non di valutazione.</strong><br><br>
+      <strong>S-Spec</strong>: per ogni soggetto si addestra un modello separato sulle sue sessioni 1–3,
+      testato sulla sessione 5 dello stesso soggetto. Il modello conosce l'EEG di quella persona.<br><br>
+      <strong>S-Indep</strong>: un solo modello addestrato su soggetti 0–49, testato su soggetti 60–73
+      mai visti in training. Si possono riportare score per singolo soggetto di test, ma il modello
+      non è stato personalizzato su di loro.<br><br>
+      ⚠️ I due setting <strong>non sono comparabili</strong>: S-Spec ha un vantaggio strutturale enorme.
+      Li et al. (EEG_15) è S-Indep — va confrontato con EEG_09 / EEG_10 / EEG_11 / EEG_14.
+    </div>
   </div>
 
-  <h3>Subject-Specific (LOSO) — confronto corretto</h3>
+  <h3>Subject-Specific (LOSO) — EEG_08b / EEG_09b / EEG_13b</h3>
   <table>
     <tr><th>Modello</th><th>Mean</th><th>Std</th><th>&gt;Chance</th><th>N</th><th>Note</th></tr>
     <tr>
@@ -140,21 +146,56 @@
       <td>Iperedge learnable · 200 epoch</td>
     </tr>
   </table>
+  <div class="finding">
+    <div class="finding-label">Wilcoxon paired DHSLP vs GCN (S-Spec)</div>
+    <div class="finding-text">p = 0.558 (ns) · Δ mean = −0.0039 · 73 soggetti comuni.
+    La differenza è rumore statistico.</div>
+  </div>
 
+  <h3>Subject-Independent — EEG_09 / EEG_10 / EEG_11 / EEG_14 / EEG_15</h3>
   <table>
-    <tr><th>Modello</th><th>Mean</th><th>Std</th><th>&gt;Chance</th><th>N</th><th>Note</th></tr>
+    <tr><th>Modello</th><th>Mean (best)</th><th>N</th><th>Note</th></tr>
+    <tr>
+      <td><code>W-HGNN (EEG_09)</code></td>
+      <td>0.2543</td><td class="ns">5 varianti</td>
+      <td>best: im_pcc/pruned · per-metric, non per-soggetto</td>
+    </tr>
+    <tr>
+      <td><code>T-HGNN (EEG_10)</code></td>
+      <td>0.2573</td><td class="ns">5 varianti</td>
+      <td>best: pcc/pruned</td>
+    </tr>
+    <tr>
+      <td><code>DHGNN (EEG_11)</code></td>
+      <td>0.2531</td><td class="ns">5 varianti</td>
+      <td>confronto diretto vs EEG_09/10</td>
+    </tr>
+    <tr>
+      <td><code>Pretrain+CAL (EEG_14)</code></td>
+      <td>0.2420</td><td>13 sogg</td>
+      <td>POST-CAL mean · PRE-CAL = 0.2438 · Δ ≈ 0</td>
+    </tr>
     <tr>
       <td><code>Li et al. (EEG_15)</code></td>
-      <td>0.2439</td><td>0.060</td><td>44.8%</td><td>58</td>
-      <td class="warn">Subject-independent — setting diverso</td>
+      <td>0.2439</td><td>58 sogg</td>
+      <td>std=0.061 · max=0.375 · >chance 26/58 (44.8%)</td>
     </tr>
   </table>
+  <div class="finding">
+    <div class="finding-label">Wilcoxon cross-setting — illustrativo (⚠️ setting diversi!)</div>
+    <div class="finding-text">
+      EEG_15 vs GCN S-Spec (58 sogg comuni): p = 0.235 (ns) · Δ mean = −0.013<br>
+      EEG_15 vs DHSLP S-Spec (58 sogg comuni): p = 0.929 (ns) · Δ mean = −0.003<br>
+      <em>Nota: il confronto cross-setting non è valido — S-Spec conosce l'EEG del soggetto testato.
+      Mostrato solo per completezza.</em>
+    </div>
+  </div>
 
   <div class="finding">
-    <div class="finding-label">Conclusione</div>
-    <div class="finding-text">Wilcoxon paired DHSLP vs GCN: <strong>p = 0.558 (ns)</strong>.
-    La differenza di 0.004 tra il modello più semplice (GCN) e il più complesso (DHSLP)
-    è rumore statistico. La scelta dell'architettura non è il fattore limitante.</div>
+    <div class="finding-label">Conclusione trasversale</div>
+    <div class="finding-text">Nessuna architettura batte le altre statisticamente, né dentro lo stesso setting
+    né cross-setting. La scelta dell'architettura non è il fattore limitante in nessun setting.
+    La variabilità inter-soggetto (ε²=0.85) è il muro invalicabile.</div>
   </div>
 </div>
 
@@ -228,19 +269,32 @@
 <h2>Conclusioni Scientifiche (aggiornate)</h2>
 <div class="section-box">
   <div class="finding">
-    <div class="finding-label">Quadro inter-soggetto — esaurito</div>
+    <div class="finding-label">Quadro S-Spec — esaurito</div>
     <div class="finding-text">
-      Tutte le architetture (GCN → W-HGNN → DHSLP → Li et al.) convergono a ~25% di chance.
-      Le differenze non sono statisticamente significative. La variabilità inter-soggetto (ε²=0.85)
-      è il muro invalicabile — non è un problema di architettura.
+      GCN → W-HGNN → DHSLP convergono tutti a ~25%. Wilcoxon DHSLP vs GCN: p=0.558 (ns).
+      La complessità crescente dell'architettura non porta alcun vantaggio misurabile.
+    </div>
+  </div>
+  <div class="finding">
+    <div class="finding-label">Quadro S-Indep — esaurito</div>
+    <div class="finding-text">
+      W-HGNN (EEG_09) → T-HGNN (EEG_10) → DHGNN (EEG_11) → Pretrain+CAL (EEG_14) → Li et al. (EEG_15):
+      tutti tra 0.242 e 0.257. Nessun modello S-Indep supera statisticamente gli altri.
+      Li et al. (EEG_15), il modello di riferimento della letteratura, ottiene mean=0.244 — uguale agli altri.
+    </div>
+  </div>
+  <div class="finding">
+    <div class="finding-label">Conclusione unificata</div>
+    <div class="finding-text">
+      La variabilità inter-soggetto (ε²=0.85) è il muro invalicabile — indipendentemente dal setting
+      (S-Spec o S-Indep) e dall'architettura. Non è un problema di modello.
     </div>
   </div>
   <div class="finding">
     <div class="finding-label">Domanda aperta — EEG_21</div>
     <div class="finding-text">
       11 soggetti superano il 30% di bAcc. P070 arriva al 39.3%. Non sappiamo ancora se questo
-      è un segnale reale e stabile (IS genuinamente decodificabile per quel soggetto) o un artefatto
-      della singola sessione di test. EEG_21 risponderà a questa domanda.
+      è un segnale reale e stabile o un artefatto della singola sessione di test. EEG_21 risponderà.
     </div>
   </div>
 </div>
