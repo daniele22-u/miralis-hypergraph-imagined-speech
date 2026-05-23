@@ -25,3 +25,4 @@ scripts/data_processing/Preprocessing-main
 results/large_outputs/
 utilities/
 figures/*.npz
+checkpoints/*.pt
