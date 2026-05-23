@@ -1,6 +1,6 @@
 # Direzioni Future e Limitazioni Attuali
 
-> Ultimo aggiornamento: 10 maggio 2026
+> Ultimo aggiornamento: 23 maggio 2026
 
 ---
 
@@ -236,35 +236,39 @@
 
 ## 3. Roadmap Suggerita
 
-### Fase 0: Subject Clustering (PROSSIMO PASSO — Francesco)
-0. **EEG_08_subject_clustering.ipynb** — clustering soggetti da feature EEG (§2.0 sopra)
-   - Feature: thresh_density, mean_pcc, spectral_gap, band powers
-   - K-Means k=2,3 + gerarchico Ward
-   - Post-hoc: accuracy overlay da EEG_06
+### ✅ COMPLETATO: Quadro Inter-Soggetto (maggio 2026)
 
-### Fase 1: Correzione Fondamentale (immediato, dopo EEG_08)
-1. **Subject-centering** su tutti i notebook (`X_trial -= X_subject_mean`) — prerequisito per tutto il resto
-2. **Instance Normalization** sostituisce BatchNorm in tutti i modelli DL
-3. **EEGNet end-to-end** su segnale raw (59, 384) — già in `EEG_04_braindecode_raw_baselines.ipynb`
-4. **Completare** training GCN spazio-temporale
-5. **Rieseguire** tutti i baseline sul task a 4-5 categorie semantiche (schemi affidabili: Ward-4, POS-4, Semantico-BCI-5)
+Il quadro sulla variabilità inter-soggetto è esaurito sistematicamente. I null result SONO il contributo.
 
-### Fase 2: Affrontare la Variabilità Inter-Soggetto (breve termine)
-6. **Allineamento Riemanniano** (pyriemann Euclidean Alignment) — preprocessing aggiuntivo
-7. **Cross-subject contrastive learning** (Shen et al. 2022) — sfrutta i 70 soggetti come vantaggio
-8. **DANN** gradient reversal su subject label (Zheng & Lu 2020)
-9. **GAT** (Graph Attention Networks) — `GATConv` di PyG
+| Notebook | Approccio | Risultato |
+|----------|-----------|-----------|
+| EEG_08c | Clustering EEG-first (band power + degree) | KW p=0.939 ns |
+| EEG_13b | DHSLP subject-specific con fix overfitting | ~34% bAcc best, gap 0.04 |
+| EEG_14 | Pretrain S-Indep + calibrazione per soggetto | PRE=26.1%, POST=26.3% (Δ≈0) |
+| EEG_16b | Clustering strutturale 1830-dim abs_pcc | C0/C1 robusti, p=0.800 ns vs bAcc |
+| EEG_17 | Connettività per cluster semantico | firma individuale stabile, ns |
+| EEG_18 | Clustering funzionale 4D→305D→1041D | tutto ns, ARI(strutturale,funzionale)≈0 |
+| EEG_19 | Test-retest fenotipi C0/C1 | NMI=0.946, ARI=0.933, stabile |
+| EEG_20 | DHSLP cluster-specific C0 vs C1 | tutto a chance, 2×2 piatta |
 
-### Fase 3: Hypergraph e Analisi Avanzata (medio termine)
-10. **Neural Prototype Clustering** — confronto EEG vs. semantica con ARI (contributo originale)
-11. **Dynamic Hypergraph (DHSLP-style)** — per-trial PLV/coherence hyperedges
-12. **Allineamento Riemanniano** per domain generalization
+### Fase 1: Immediato (ora attivo)
 
-### Fase 4: Sistema Completo (lungo termine)
-13. Feature tempo-frequenza (wavelet, STFT) — dopo aver stabilito baseline DL
-14. Data augmentation sistematica (Rommel et al. 2022)
-15. Pipeline automatizzata end-to-end
-16. Validazione su dataset esterni (Nieto et al. Inner Speech)
+1. **EEG_13b long run** — MAX_EPOCHS=300, PATIENCE=70 → cerca soffitto reale dei migliori soggetti
+2. **EEG_15** — Li et al. 2025 fedele sui nostri dati (implementato, da eseguire sul server)
+3. **Scrittura tesi** — il quadro sperimentale inter-soggetto è completo:
+   - Cap. variabilità inter-soggetto: EEG_16b + EEG_18 + EEG_20 = esaurimento sistematico
+   - Cap. metodi DHSLP: EEG_13b + EEG_14 + EEG_15
+   - Cap. fenotipi neurali: EEG_16b + EEG_19 = contributo metodologico
+
+### Fase 2: Breve termine
+
+4. **Focus intra-soggetto**: confronto sistematico W-HGNN vs DHSLP vs Li et al. per i migliori soggetti (top-10)
+5. **Dizionario neurale semantico**: embedding per classe semantica dai migliori soggetti, separabilità nello spazio latente
+
+### Fase 3: Medio termine (se tesi lo richiede)
+
+6. Cross-subject contrastive learning (Shen et al. 2022) — da considerare solo se il quadro intra-soggetto mostra risultati interessanti
+7. Allineamento Riemanniano (pyriemann) — preprocessing aggiuntivo da valutare
 
 ---
 

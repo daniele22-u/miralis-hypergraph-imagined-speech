@@ -118,6 +118,7 @@ miralis-hypergraph-imagined-speech/
 │   ├── EEG_17_cluster_connectivity.ipynb     ← connettività media per cluster semantico
 │   ├── EEG_18_functional_clustering.ipynb    ← clustering funzionale 4D→305D→1041D
 │   ├── EEG_19_session_clustering.ipynb       ← test-retest: stabilità fenotipi tra sessioni
+│   ├── EEG_20_dhslp_cluster_specific.ipynb  ← DHSLP cluster-specific C0/C1 (null result)
 │   ├── ...
 │   ├── pathwayB/                      ← PATHWAY B: engineering (augmentation, domain adaptation)
 │   │   ├── README.md
@@ -189,6 +190,16 @@ Vedere `docs/PROGETTO_COMPLETO_IT.md` per il dettaglio completo. Riepilogo:
 - F3-PO8: p<0.05 in 5/5 sessioni → marker C1 stabile temporalmente
 - **Conclusione**: i fenotipi sono caratteristica del soggetto, non artefatto della media; nessun drift temporale
 
+**EEG_20 — DHSLP cluster-specific (C0 vs C1)**
+- Ipotesi: modelli DHSLP addestrati separatamente su C0 e C1 specializzano le iperedge apprese sul fenotipo corrispondente
+- Config potenziata vs EEG_13b: N_EDGES=32, HIDDEN=256, DROPOUT=0.3, WD=3e-3, MAX_EPOCHS=150, PATIENCE=25
+- **Risultato**: tutti a chance — Model_C0 su C0_TEST=0.2510, su C1_TEST=0.2512; Model_C1 su C0_TEST=0.2500, su C1_TEST=0.2500
+- Matrice 2×2 completamente piatta; diagonale NON > off-diagonal → specializzazione non confermata
+- XAI topomaps: aree temporali/centrali (PO7, AF4, C2) — non i pattern fronto-motor/fronto-occipital attesi
+- Solo 15% soggetti sopra chance in entrambi i modelli
+- **Root cause**: ~25 soggetti train per cluster insufficienti per subject-independent learning (EEG_13b usa ~50)
+- **Null result utile per tesi**: "cluster-specific training non migliora su S-Indep — il bottleneck è la scarsità di dati, non l'eterogeneità fenotipica"
+
 **EEG_17 — Connettività media per cluster semantico**
 - DEV[sogg,k] = deviazione individuale dalla grand mean connettività della popolazione
 - Finding: deviazione è firma individuale stabile, non correlata a bAcc
@@ -215,19 +226,17 @@ Vedere `docs/PROGETTO_COMPLETO_IT.md` per il dettaglio completo. Riepilogo:
 - **EEG_17**: connettività media per cluster semantico (firma individuale, ns vs bAcc)
 - **EEG_18**: clustering funzionale 4D→305D→1041D (tutto ns, ARI=0 vs strutturale)
 - **EEG_19**: test-retest stabilità fenotipi (NMI=0.946, ARI=0.933, concordanza 98.4%)
+- **EEG_20**: DHSLP cluster-specific (null result — ~25 sogg/cluster insufficienti per S-Indep)
 
 ### 🎯 Prossimi passi
 
-1. **[IMMEDIATO]** Eseguire EEG_15 sui dati completi — aggiornare risultati
-2. **[IMMEDIATO]** Scrittura tesi — il quadro sperimentale è sostanzialmente completo
-   - Cap. variabilità inter-soggetto: null results SONO il contributo
-   - Cap. metodi: descrivere EEG_13b, EEG_14, EEG_15, EEG_16/17/18
-3. **[BREVE]** Focus intra-soggetto
-   - Ablation freeze encoder in EEG_14 (solo classificatore fine-tunato)
-   - Confronto sistematico W-HGNN vs DHSLP vs Li et al. per soggetto
-4. **[MEDIO]** Dizionario neurale semantico
-   - Embedding per cluster semantico dai migliori soggetti
-   - Separabilità nello spazio latente
+1. **[IMMEDIATO]** EEG_13b long run — MAX_EPOCHS=300, PATIENCE=70; cerca il soffitto reale dei migliori soggetti
+2. **[IMMEDIATO]** Eseguire EEG_15 sui dati completi — Li et al. 2025 fedele
+3. **[BREVE]** Scrittura tesi — il quadro sperimentale inter-soggetto è esaurito
+   - Cap. variabilità inter-soggetto: null results EEG_16b/EEG_18/EEG_20 SONO il contributo
+   - Cap. metodi: EEG_13b, EEG_14, EEG_15, EEG_16b, EEG_19
+4. **[BREVE]** Focus intra-soggetto: confronto sistematico W-HGNN vs DHSLP vs Li et al. per i migliori soggetti
+5. **[MEDIO]** Dizionario neurale semantico dai migliori soggetti
 
 ---
 
@@ -404,8 +413,15 @@ La variabilità inter-soggetto nella decodifica IS non è spiegata da:
 - Il dizionario neurale semantico è realizzabile solo per soggetti ad alta capacità IS
 - EEG_16b + EEG_19 = contributo metodologico in sé: caratterizzazione fenotipi neurali per IS
 
+### EEG_20: ultimo tentativo inter-soggetto
+- Ipotesi testata: modelli DHSLP separati per fenotipo C0/C1 specializzano le iperedge apprese
+- Risultato: tutto a chance (0.2505), matrice 2×2 piatta, XAI topomaps non discriminative
+- Causa: ~25 soggetti train per cluster troppo pochi — il segnale IS non è apprendibile S-Indep con così pochi soggetti
+- **Conferma definitiva**: la variabilità inter-soggetto non si risolve né con clustering strutturale, né con clustering funzionale, né con modelli fenotipo-specifici
+
 ### Cosa NON fare
 - Non proporre ulteriore clustering inter-soggetto su feature EEG statiche — già esaurito
+- Non proporre modelli S-Indep cluster-specific — già testato (EEG_20), null result
 - Non aspettarsi che un modello subject-independent superi chance su questo dataset
 - Non proporre feature engineering manuale come soluzione principale
 - Non concludere che C0/C1 implichi diversa capacità IS — il null result bAcc lo esclude
