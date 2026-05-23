@@ -243,12 +243,42 @@
   <div class="step">
     <div class="step-num">3</div>
     <div class="step-body">
-      <div class="step-title">Per-Session Stability <span class="badge badge-new">training 100ep</span></div>
+      <div class="step-title">Per-Session Stability <span class="badge badge-done">eseguito</span></div>
       <div class="step-desc">
-        5-fold leave-one-session-out su top-10 soggetti (100 epoch, patience 30).<br>
-        Output: boxplot 5 valori/soggetto + heatmap soggetti × sessioni.<br>
-        <strong>Domanda:</strong> P070 (39.3%) è stabile in tutte le sessioni o era fortuna nella sessione test di EEG_13b?
+        5-fold leave-one-session-out su top-10 soggetti (100 epoch, patience 30).
       </div>
+    </div>
+  </div>
+
+  <div class="finding" style="margin: 0 0 16px 40px;">
+    <div class="finding-label">🔴 Risposta: P070 era fortuna</div>
+    <div class="finding-text">
+      P070 aveva 39.3% in EEG_13b perché quella sessione 5 era favorevole.
+      Nel LOSO completo: <strong>mean=0.269, max=0.303</strong>. Non è un soggetto stabilmente decodificabile.
+      Nessun soggetto supera chance in <em>tutte</em> le sessioni.
+    </div>
+  </div>
+
+  <table style="margin-left:40px; width: calc(100% - 40px);">
+    <tr><th>Soggetto</th><th>Mean</th><th>Std</th><th>Min</th><th>Max</th><th>Esito</th></tr>
+    <tr><td>P016</td><td class="good">0.271</td><td>0.036</td><td>0.230</td><td>0.317</td><td class="warn">~ parziale (4 fold)</td></tr>
+    <tr><td>P042</td><td class="good">0.270</td><td>0.025</td><td>0.235</td><td>0.300</td><td class="warn">~ parziale (4 fold)</td></tr>
+    <tr><td>P070</td><td class="good">0.269</td><td>0.020</td><td>0.241</td><td>0.303</td><td class="warn">~ parziale</td></tr>
+    <tr><td>P036</td><td class="good">0.260</td><td>0.013</td><td>0.248</td><td>0.279</td><td class="warn">~ parziale (3 fold)</td></tr>
+    <tr><td>P051</td><td class="good">0.259</td><td>0.037</td><td>0.206</td><td>0.307</td><td class="warn">~ parziale</td></tr>
+    <tr><td>P013</td><td class="good">0.256</td><td>0.024</td><td>0.229</td><td>0.295</td><td class="warn">~ parziale</td></tr>
+    <tr><td>P006</td><td>0.238</td><td>0.034</td><td>0.177</td><td>0.267</td><td class="bad">✗ chance</td></tr>
+    <tr><td>P033</td><td>0.235</td><td>0.029</td><td>0.198</td><td>0.270</td><td class="bad">✗ chance</td></tr>
+    <tr><td>P032</td><td>0.234</td><td>0.032</td><td>0.206</td><td>0.295</td><td class="bad">✗ chance</td></tr>
+    <tr><td>P011</td><td>0.224</td><td>0.025</td><td>0.184</td><td>0.252</td><td class="bad">✗ chance</td></tr>
+  </table>
+
+  <div class="finding" style="margin: 0 0 16px 40px;">
+    <div class="finding-label">Val/test gap persistente</div>
+    <div class="finding-text">
+      Val bAcc ~0.35–0.40, test bAcc ~0.24–0.30 per ogni fold e ogni soggetto.
+      Il modello impara sulla sessione di validazione ma non generalizza alla sessione di test.
+      Stessa firma vista in EEG_13b — non è un problema di durata training.
     </div>
   </div>
 
@@ -291,10 +321,19 @@
     </div>
   </div>
   <div class="finding">
-    <div class="finding-label">Domanda aperta — EEG_21</div>
+    <div class="finding-label">EEG_21 §3 — risposta ottenuta</div>
     <div class="finding-text">
-      11 soggetti superano il 30% di bAcc. P070 arriva al 39.3%. Non sappiamo ancora se questo
-      è un segnale reale e stabile o un artefatto della singola sessione di test. EEG_21 risponderà.
+      P070 (39.3% in EEG_13b) era un artefatto del singolo split sessione 5.
+      Nel LOSO completo: <strong>mean=0.269, max=0.303</strong>.
+      Il segnale IS non è stabile inter-sessione per nessun soggetto.
+      Val/test gap persistente per tutti i fold → il problema non è la durata del training.
+    </div>
+  </div>
+  <div class="finding">
+    <div class="finding-label">Domande ancora aperte</div>
+    <div class="finding-text">
+      §2: C'è una classe semantica sistematicamente più decodificabile? (da eseguire)<br>
+      §4: Dove satura la learning curve? (da eseguire)
     </div>
   </div>
 </div>
