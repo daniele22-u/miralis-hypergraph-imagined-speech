@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checkpoint 23-05-2026 — EEG_13b + EEG_21</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f1117; color: #e0e0e0; padding: 32px; }
+  h1 { font-size: 2rem; color: #CADCFC; margin-bottom: 4px; }
+  .subtitle { color: #8899aa; font-size: 1rem; margin-bottom: 32px; }
+  h2 { font-size: 1.2rem; color: #CADCFC; border-left: 4px solid #CADCFC; padding-left: 12px;
+       margin: 32px 0 14px; }
+  h3 { font-size: 1rem; color: #aabbcc; margin: 18px 0 8px; }
+  p, li { font-size: 0.92rem; line-height: 1.65; color: #cdd5df; }
+  ul { padding-left: 20px; margin-bottom: 10px; }
+  li { margin-bottom: 4px; }
+  code { background: #1e2535; color: #CADCFC; padding: 2px 7px; border-radius: 4px;
+         font-family: 'Consolas', monospace; font-size: 0.85rem; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+  .card { background: #1a2035; border-radius: 10px; padding: 18px 20px; border-left: 4px solid #CADCFC; }
+  .card.green  { border-left-color: #2ca02c; }
+  .card.orange { border-left-color: #FF7F0E; }
+  .card.red    { border-left-color: #d62728; }
+  .card.blue   { border-left-color: #1f77b4; }
+  .card-title  { font-size: 0.78rem; color: #8899aa; text-transform: uppercase;
+                 letter-spacing: 0.08em; margin-bottom: 6px; }
+  .card-value  { font-size: 2rem; font-weight: 700; color: #CADCFC; margin-bottom: 2px; }
+  .card-sub    { font-size: 0.82rem; color: #8899aa; }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 0.88rem; }
+  th { background: #1e2535; color: #CADCFC; padding: 9px 14px; text-align: left; font-weight: 600; }
+  td { padding: 8px 14px; border-bottom: 1px solid #1e2535; color: #cdd5df; }
+  tr:hover td { background: #1a2035; }
+  .ns   { color: #8899aa; font-style: italic; }
+  .good { color: #2ca02c; font-weight: 600; }
+  .bad  { color: #d62728; }
+  .warn { color: #FF7F0E; }
+
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.78rem;
+           font-weight: 600; margin-left: 8px; }
+  .badge-ns   { background: #2a2a3a; color: #8899aa; }
+  .badge-done { background: #1a3a1a; color: #2ca02c; }
+  .badge-new  { background: #1a2a3a; color: #CADCFC; }
+
+  .finding { background: #111827; border: 1px solid #2a3550; border-radius: 8px;
+             padding: 14px 18px; margin: 10px 0; }
+  .finding-label { font-size: 0.75rem; color: #8899aa; text-transform: uppercase;
+                   letter-spacing: 0.08em; margin-bottom: 6px; }
+  .finding-text  { font-size: 0.93rem; color: #e0e0e0; line-height: 1.6; }
+
+  .section-box { background: #141824; border-radius: 10px; padding: 22px 24px; margin-bottom: 20px; }
+
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 0.75rem;
+         font-weight: 600; margin-right: 6px; }
+  .tag-green  { background: #1a3a1a; color: #2ca02c; }
+  .tag-blue   { background: #1a2a3a; color: #CADCFC; }
+  .tag-orange { background: #3a2a1a; color: #FF7F0E; }
+  .tag-red    { background: #3a1a1a; color: #d62728; }
+
+  .step { display: flex; gap: 14px; margin-bottom: 12px; align-items: flex-start; }
+  .step-num { background: #CADCFC; color: #0f1117; border-radius: 50%; width: 26px; height: 26px;
+              display: flex; align-items: center; justify-content: center;
+              font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
+  .step-body { flex: 1; }
+  .step-title { font-weight: 600; color: #CADCFC; font-size: 0.92rem; margin-bottom: 3px; }
+  .step-desc  { font-size: 0.85rem; color: #8899aa; line-height: 1.5; }
+
+  footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #1e2535;
+           font-size: 0.8rem; color: #556677; text-align: center; }
+</style>
+</head>
+<body>
+
+<h1>Checkpoint — EEG_13b Results &amp; EEG_21</h1>
+<div class="subtitle">23 Maggio 2026 · Sessione B · Daniele Uras — DEIB, Politecnico di Milano</div>
+
+<!-- KPI cards -->
+<div class="grid3">
+  <div class="card red">
+    <div class="card-title">DHSLP Mean bAcc</div>
+    <div class="card-value">24.9%</div>
+    <div class="card-sub">sotto chance (25%) · 73 soggetti</div>
+  </div>
+  <div class="card green">
+    <div class="card-title">Best soggetto</div>
+    <div class="card-value">39.3%</div>
+    <div class="card-sub">P070 · 4 classi semantiche</div>
+  </div>
+  <div class="card orange">
+    <div class="card-title">&gt; 30% bAcc</div>
+    <div class="card-value">11/73</div>
+    <div class="card-sub">15.1% dei soggetti · max 39.3%</div>
+  </div>
+</div>
+
+<div class="grid2">
+  <div class="card blue">
+    <div class="card-title">Wilcoxon DHSLP vs GCN</div>
+    <div class="card-value">p = 0.56</div>
+    <div class="card-sub">ns · Δ mean = −0.004 · 73 sogg comuni</div>
+  </div>
+  <div class="card">
+    <div class="card-title">EEG_21 — stato</div>
+    <div class="card-value" style="font-size:1.3rem; padding-top:6px">Notebook creato</div>
+    <div class="card-sub">§2/§3/§4 pronti · da eseguire sul server</div>
+  </div>
+</div>
+
+<!-- Confronto modelli -->
+<h2>Confronto Modelli S-Spec vs S-Indep</h2>
+<div class="section-box">
+  <div class="finding">
+    <div class="finding-label">⚠️ Problema metodologico risolto</div>
+    <div class="finding-text">La tabella precedente mescolava setting incomparabili: EEG_08b/09b/13b sono
+    <strong>subject-specific</strong> (train e test sullo stesso soggetto, split per sessione),
+    mentre EEG_15 è <strong>subject-independent</strong> (train su altri soggetti, test su nuovi).
+    Ora mostrati separatamente.</div>
+  </div>
+
+  <h3>Subject-Specific (LOSO) — confronto corretto</h3>
+  <table>
+    <tr><th>Modello</th><th>Mean</th><th>Std</th><th>&gt;Chance</th><th>N</th><th>Note</th></tr>
+    <tr>
+      <td><code>GCN (EEG_08b)</code></td>
+      <td>0.2528</td><td>0.037</td><td>45.9%</td><td>74</td>
+      <td>Modello più semplice</td>
+    </tr>
+    <tr>
+      <td><code>W-HGNN (EEG_09b)</code></td>
+      <td>0.2495</td><td>0.029</td><td>46.6%</td><td>73</td>
+      <td>H_pruned da PCC</td>
+    </tr>
+    <tr>
+      <td><code>DHSLP (EEG_13b)</code></td>
+      <td>0.2494</td><td>0.045</td><td>43.8%</td><td>73</td>
+      <td>Iperedge learnable · 200 epoch</td>
+    </tr>
+  </table>
+
+  <table>
+    <tr><th>Modello</th><th>Mean</th><th>Std</th><th>&gt;Chance</th><th>N</th><th>Note</th></tr>
+    <tr>
+      <td><code>Li et al. (EEG_15)</code></td>
+      <td>0.2439</td><td>0.060</td><td>44.8%</td><td>58</td>
+      <td class="warn">Subject-independent — setting diverso</td>
+    </tr>
+  </table>
+
+  <div class="finding">
+    <div class="finding-label">Conclusione</div>
+    <div class="finding-text">Wilcoxon paired DHSLP vs GCN: <strong>p = 0.558 (ns)</strong>.
+    La differenza di 0.004 tra il modello più semplice (GCN) e il più complesso (DHSLP)
+    è rumore statistico. La scelta dell'architettura non è il fattore limitante.</div>
+  </div>
+</div>
+
+<!-- XAI updates -->
+<h2>Aggiornamenti XAI — EEG_13b</h2>
+<div class="section-box">
+  <h3>Cosa è cambiato</h3>
+  <ul>
+    <li><span class="tag tag-red">Rimosso</span> XAI da <code>train_subject()</code> — era <code>0.0625</code> uniforme per tutti i soggetti a chance</li>
+    <li><span class="tag tag-green">Aggiornato</span> §9b: LOO iperedge ora su <strong>top-5 + bottom-5</strong> con label <code>[TOP]</code>/<code>[BOT]</code></li>
+    <li><span class="tag tag-green">Aggiunto</span> <code>_run_xai_for_subject()</code>: helper con 3 pannelli (LOO bar · topomap top HE · H_mean heatmap)</li>
+    <li><span class="tag tag-blue">Fix</span> §9c t-SNE: <code>n_iter</code> → <code>max_iter</code> per sklearn ≥ 1.2 (rilevamento dinamico versione)</li>
+    <li><span class="tag tag-green">Aggiunto</span> §12: confronto modelli con boxplot S-Spec / S-Indep separati + Wilcoxon</li>
+  </ul>
+
+  <h3>Risultati t-SNE osservati</h3>
+  <div class="finding">
+    <div class="finding-label">Osservazione</div>
+    <div class="finding-text">Nessuna struttura semantica visibile nello spazio latente nemmeno per i top soggetti (P070 39.3%).
+    Le 4 categorie si sovrappongono completamente. Atteso a questi livelli di bAcc.
+    Il modello discrimina appena sopra chance ma non apprende rappresentazioni semanticamente coerenti.</div>
+  </div>
+</div>
+
+<!-- EEG_21 -->
+<h2>EEG_21 — Analisi Stabilità e Decodificabilità</h2>
+<div class="section-box">
+  <p style="margin-bottom:18px; color:#8899aa;">
+    Tre domande aperte dopo i risultati EEG_13b. Notebook pronto, da eseguire sul server.
+  </p>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Per-Class Analysis <span class="badge badge-done">zero training</span></div>
+      <div class="step-desc">
+        Carica <code>labels</code> e <code>preds</code> dai checkpoint <code>models/eeg13b_200e/</code>.
+        Per ogni soggetto: recall per CONCR / AZIONE / STATO / ASTRATTO.<br>
+        Output: heatmap top-20 × classi + boxplot distribuzione + Kruskal-Wallis.<br>
+        <strong>Domanda:</strong> esiste una classe semantica universalmente più decodificabile?
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">Per-Session Stability <span class="badge badge-new">training 100ep</span></div>
+      <div class="step-desc">
+        5-fold leave-one-session-out su top-10 soggetti (100 epoch, patience 30).<br>
+        Output: boxplot 5 valori/soggetto + heatmap soggetti × sessioni.<br>
+        <strong>Domanda:</strong> P070 (39.3%) è stabile in tutte le sessioni o era fortuna nella sessione test di EEG_13b?
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-title">Learning Curve <span class="badge badge-new">training 3 seed</span></div>
+      <div class="step-desc">
+        Frazioni [10%, 20%, 30%, 50%, 70%, 100%] dei trial di training · top-5 soggetti · 3 seed per punto.<br>
+        Output: curva media ± std per soggetto.<br>
+        <strong>Domanda:</strong> dove satura la bAcc? Più dati aiuterebbero o il bottleneck è il segnale?
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Conclusioni scientifiche -->
+<h2>Conclusioni Scientifiche (aggiornate)</h2>
+<div class="section-box">
+  <div class="finding">
+    <div class="finding-label">Quadro inter-soggetto — esaurito</div>
+    <div class="finding-text">
+      Tutte le architetture (GCN → W-HGNN → DHSLP → Li et al.) convergono a ~25% di chance.
+      Le differenze non sono statisticamente significative. La variabilità inter-soggetto (ε²=0.85)
+      è il muro invalicabile — non è un problema di architettura.
+    </div>
+  </div>
+  <div class="finding">
+    <div class="finding-label">Domanda aperta — EEG_21</div>
+    <div class="finding-text">
+      11 soggetti superano il 30% di bAcc. P070 arriva al 39.3%. Non sappiamo ancora se questo
+      è un segnale reale e stabile (IS genuinamente decodificabile per quel soggetto) o un artefatto
+      della singola sessione di test. EEG_21 risponderà a questa domanda.
+    </div>
+  </div>
+</div>
+
+<!-- Prossimi step -->
+<h2>Prossimi Step</h2>
+<div class="grid3">
+  <div class="card green">
+    <div class="card-title">Immediato</div>
+    <div class="card-value" style="font-size:1rem; padding:6px 0">§2 EEG_21</div>
+    <div class="card-sub">Copia checkpoint dal server → esegui per-class analysis (zero training)</div>
+  </div>
+  <div class="card blue">
+    <div class="card-title">Breve</div>
+    <div class="card-value" style="font-size:1rem; padding:6px 0">§3 + §4 EEG_21</div>
+    <div class="card-sub">Lancia sul server: per-session stability + learning curve</div>
+  </div>
+  <div class="card orange">
+    <div class="card-title">Dopo EEG_21</div>
+    <div class="card-value" style="font-size:1rem; padding:6px 0">Decisione</div>
+    <div class="card-sub">Se P070 è stabile → approfondire. Altrimenti → iniziare tesi</div>
+  </div>
+</div>
+
+<footer>
+  Checkpoint generato il 23 maggio 2026 · EEG_13b run 200e completato · EEG_21 creato
+</footer>
+
+</body>
+</html>

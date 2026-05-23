@@ -15,7 +15,8 @@ tests/
 src/
 # contiene i checkpoints di ogni esperimento graphs (eeg08)
 notebooks/wandb/
-checkpoints/      
+notebooks/checkpoints/
+models/checkpoints/
 
 
 datasets/       
