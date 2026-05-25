@@ -119,6 +119,8 @@ miralis-hypergraph-imagined-speech/
 │   ├── EEG_18_functional_clustering.ipynb    ← clustering funzionale 4D→305D→1041D
 │   ├── EEG_19_session_clustering.ipynb       ← test-retest: stabilità fenotipi tra sessioni
 │   ├── EEG_20_dhslp_cluster_specific.ipynb  ← DHSLP cluster-specific C0/C1 (null result)
+│   ├── EEG_21_subject_stability_analysis.ipynb ← stabilità top soggetti, per-class, learning curve
+│   ├── EEG_22_trial_confidence_analysis.ipynb  ← band power trial-by-trial: firma spettrale C0 vs C1
 │   ├── ...
 │   ├── pathwayB/                      ← PATHWAY B: engineering (augmentation, domain adaptation)
 │   │   ├── README.md
@@ -200,6 +202,18 @@ Vedere `docs/PROGETTO_COMPLETO_IT.md` per il dettaglio completo. Riepilogo:
 - **Root cause**: ~25 soggetti train per cluster insufficienti per subject-independent learning (EEG_13b usa ~50)
 - **Null result utile per tesi**: "cluster-specific training non migliora su S-Indep — il bottleneck è la scarsità di dati, non l'eterogeneità fenotipica"
 
+**EEG_22 — Band power trial-by-trial: firma spettrale C0 vs C1**
+- Per ogni sogg top (10 per cluster), inference DHSLP (checkpoint EEG_13b), Welch PSD per trial × elettrodo
+- Mann-Whitney U + Cohen's d tra trial corretti e sbagliati
+- **C0 (Fronto-motor)**: 1012 trial, 256 corretti (25.3%)
+  - ALPHA dominante: 13/61 sig, max|d|=0.248 (corretti → più alpha frontale = motor preparation)
+  - GAMMA inverso: 11/61 sig, **corretti hanno MENO gamma posteriore** (PO7 d=-0.205, FT7 d=-0.183, F7 d=-0.170) — soppressione rete visuo-spaziale
+- **C1 (Fronto-occipital)**: 1081 trial, 298 corretti (27.6%)
+  - THETA soppresso dominante: 21/61 sig, max|d|=0.225 (corretti hanno meno theta globale = stato cognitivo ottimale)
+  - GAMMA occipitale: 2/61 sig **positivo** (P7 d=+0.135, O1 d=+0.123) — network F3-PO8 attivo
+- **Firma opposta**: C0 sopprime gamma posteriore, C1 lo amplifica → meccanismi neurali distinti per fenotipo
+- Primo notebook con effetto direzionale reale: biologicamente plausibile e topograficamente coerente con EEG_16b
+
 **EEG_17 — Connettività media per cluster semantico**
 - DEV[sogg,k] = deviazione individuale dalla grand mean connettività della popolazione
 - Finding: deviazione è firma individuale stabile, non correlata a bAcc
@@ -227,6 +241,7 @@ Vedere `docs/PROGETTO_COMPLETO_IT.md` per il dettaglio completo. Riepilogo:
 - **EEG_18**: clustering funzionale 4D→305D→1041D (tutto ns, ARI=0 vs strutturale)
 - **EEG_19**: test-retest stabilità fenotipi (NMI=0.946, ARI=0.933, concordanza 98.4%)
 - **EEG_20**: DHSLP cluster-specific (null result — ~25 sogg/cluster insufficienti per S-Indep)
+- **EEG_22**: band power trial-by-trial C0 vs C1 — primo risultato direzionale reale (firme spettrali opposte)
 
 ### 🎯 Prossimi passi
 
@@ -412,6 +427,13 @@ La variabilità inter-soggetto nella decodifica IS non è spiegata da:
 - I migliori soggetti (34% bAcc) esistono e sono riproducibili → modelli intra-soggetto hanno senso
 - Il dizionario neurale semantico è realizzabile solo per soggetti ad alta capacità IS
 - EEG_16b + EEG_19 = contributo metodologico in sé: caratterizzazione fenotipi neurali per IS
+
+### EEG_22: primo risultato positivo — firma spettrale dei trial decodificabili
+- Domanda: i trial che DHSLP classifica correttamente hanno una firma EEG diversa da quelli sbagliati?
+- C0 (Fronto-motor): sì — alpha sync frontale + soppressione gamma occipitale (de-attivazione rete visiva durante IS motorio)
+- C1 (Fronto-occipital): sì — theta soppresso globale (stato cognitivo ottimale) + gamma occipitale amplificato (network F3-PO8 attivo)
+- Le ipotesi strutturali di EEG_16b trovano conferma dinamica in EEG_22: la firma strutturale del fenotipo lascia traccia nei trial
+- **Non è un null result**: è il primo effetto direzionale biologicamente interpretabile dell'intero progetto
 
 ### EEG_20: ultimo tentativo inter-soggetto
 - Ipotesi testata: modelli DHSLP separati per fenotipo C0/C1 specializzano le iperedge apprese
