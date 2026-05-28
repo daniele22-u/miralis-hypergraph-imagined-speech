@@ -389,7 +389,22 @@ Questo rende il pattern immediatamente leggibile senza dover cercare gli elettro
 
 ---
 
-## 12. Note Operative
+## 12. Wiki Knowledge Base (Obsidian)
+
+**Path vault**: `/Users/danieleuras/Documents/Tesi-Wiki`
+
+Quando hai bisogno di contesto non presente in questo progetto:
+1. Leggi `wiki/hot.md` (contesto recente, ~500 parole)
+2. Se non basta, leggi `wiki/index.md`
+3. Per specifiche aree: `wiki/concetti/`, `wiki/esperimenti/`, `wiki/papers/`
+
+**`/save` alla fine di ogni sessione** — la skill analizza la conversazione e archivia insights, decisioni e risultati nel vault come note strutturate. Aggiorna automaticamente `index`, `log` e `hot`.
+
+Non leggere il wiki per domande generiche di coding — solo per contesto specifico della tesi.
+
+---
+
+## 13. Note Operative
 
 - **Git worktree attivo**: `.claude/worktrees/elegant-neumann/` — lavora sempre qui
 - **PR aperta**: #8 su GitHub
