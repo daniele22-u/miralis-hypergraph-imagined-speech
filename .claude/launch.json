@@ -18,6 +18,12 @@
       "runtimeExecutable": "docker",
       "runtimeArgs": ["run", "-it", "--rm", "-p", "8888:8888", "-v", ".:/app", "daniele_dl_thesis"],
       "port": 8888
+    },
+    {
+      "name": "dashboard",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "4178", "--directory", "/Users/danieleuras/Documents/GitHub/smart_hospital_polimi"],
+      "port": 4178
     }
   ]
 }

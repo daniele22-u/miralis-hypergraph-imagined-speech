@@ -704,42 +704,6 @@ Notebook: `EEG_25_bacc_reliability.ipynb` — **completato**
 
 ---
 
-### 4.25 Consistenza Trial per Cluster (EEG_25b — sessione 04/06)
-
-Notebook: `EEG_25b_trial_consistency.ipynb` — **completato**
-
-**Domanda**: C0 (Fronto-motor, dinamico) e C1 (Fronto-occipital, statico) differiscono per tipo di stabilità del segnale EEG, o la differenza è spiegabile dal rumore?
-
-**Misure calcolate** (per soggetto, subsample 250 trial):
-- `cons_alpha`: consistenza inter-trial del profilo di potenza alpha (8–13 Hz) per canale — correlazione media tra vettori da 61 canali
-- `cons_pcc`: consistenza inter-trial della connettività funzionale — correlazione media tra vettori da 1830 coppie canale-canale
-- `cov_alpha`: coefficiente di variazione della potenza alpha (variabilità intra-soggetto)
-
-**Risultati statistici** (Mann-Whitney U + Cohen's d):
-
-```
-Consistency ALPHA:  C0=0.534  C1=0.388  d=-0.80  p=0.001   → C0 > C1
-Consistency PCC:    C0=0.371  C1=0.668  d=+3.21  p=0.000   → C1 >> C0
-CoV ALPHA:          C0=0.471  C1=0.476  d=+0.08  p=0.753   → pari
-```
-
-**Check confound SNR** (da `comprehensive_features_subjects.csv`):
-```
-temp_rms:          C0=5.23  C1=5.12  d=-0.10  p=0.39   → nessuna differenza
-spec_total_power:  C0=28.99 C1=31.33 d=+0.16  p=0.82   → nessuna differenza
-```
-Il confond ampiezza/rumore è **escluso** — i due cluster hanno ampiezza EEG statisticamente identica.
-
-**Interpretazione**:
-- **C1 (Fronto-occipital)** ha topografia di co-attivazione canale-canale molto più stereotipata e ripetibile trial dopo trial (cons_pcc d=3.21 è genuinamente grande, non da rumore)
-- **C0 (Fronto-motor)** ha modulazione alpha leggermente più stabile nel tempo (cons_alpha d=0.80)
-- I due cluster rappresentano **profili neurofisiologici distinti**, non livelli di qualità del segnale
-
-**Implicazione per i modelli**:
-- C1 dovrebbe beneficiare di più da architetture che sfruttano la struttura spaziale (GCN, connettività)
-- C0 potrebbe rispondere meglio a modelli spettrali o temporali (alpha band)
-- Il verdetto C0 vs C1 rimane "misto": dipende dal tipo di consistenza che il modello sfrutta
-
 ---
 
 ## 5. Clustering Semantico

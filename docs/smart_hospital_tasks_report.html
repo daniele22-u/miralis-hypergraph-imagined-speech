@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Hospital – ICU Monitoring: Task Report</title>
+  <style>
+    :root {
+      --blue:    #1a73e8;
+      --green:   #1e8e3e;
+      --orange:  #f29900;
+      --red:     #d93025;
+      --purple:  #7b1fa2;
+      --teal:    #00796b;
+      --bg:      #f8f9fa;
+      --card:    #ffffff;
+      --border:  #dadce0;
+      --text:    #202124;
+      --muted:   #5f6368;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: linear-gradient(135deg, #1a237e 0%, #0d47a1 60%, #1565c0 100%);
+      color: #fff;
+      padding: 48px 40px 40px;
+    }
+    header .tag {
+      display: inline-block;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.35);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    header h1 { font-size: 2rem; font-weight: 700; margin-bottom: 6px; }
+    header h2 { font-size: 1.1rem; font-weight: 400; opacity: 0.85; margin-bottom: 20px; }
+    .header-meta {
+      display: flex; flex-wrap: wrap; gap: 24px;
+      font-size: 0.85rem; opacity: 0.8;
+    }
+    .header-meta span { display: flex; align-items: center; gap: 6px; }
+
+    /* ── LANG TOGGLE ── */
+    .lang-bar {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 40px;
+      display: flex; align-items: center; gap: 12px;
+      font-size: 0.85rem; color: var(--muted);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .lang-btn {
+      padding: 5px 16px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      cursor: pointer;
+      font-size: 0.82rem;
+      transition: all .15s;
+    }
+    .lang-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+    /* ── MAIN LAYOUT ── */
+    main { max-width: 1100px; margin: 0 auto; padding: 36px 24px 80px; }
+
+    /* ── SECTION ── */
+    .section { margin-bottom: 56px; }
+    .section-header {
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border);
+    }
+    .section-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px; border-radius: 50%;
+      font-weight: 700; font-size: 1rem; color: #fff; flex-shrink: 0;
+    }
+    .section-title { font-size: 1.3rem; font-weight: 700; }
+    .section-subtitle { font-size: 0.88rem; color: var(--muted); margin-top: 2px; }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px 28px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .card-title {
+      font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.07em;
+      font-weight: 600; margin-bottom: 8px;
+    }
+
+    /* ── BILINGUAL ── */
+    .lang-it .en { display: none; }
+    .lang-en .it { display: none; }
+
+    /* ── BASELINE BOX ── */
+    .baseline-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+      margin-bottom: 20px;
+    }
+    .metric-box {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px 20px; text-align: center;
+    }
+    .metric-box .val { font-size: 1.8rem; font-weight: 700; color: var(--blue); }
+    .metric-box .lbl { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+    /* ── TABLE ── */
+    .tbl-wrap { overflow-x: auto; margin: 16px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th {
+      background: #f1f3f4; text-align: left; padding: 10px 14px;
+      font-weight: 600; font-size: 0.8rem; border-bottom: 2px solid var(--border);
+    }
+    td { padding: 9px 14px; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafbfc; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; font-family: monospace; }
+    .best { font-weight: 700; color: var(--green); }
+    .warn { color: var(--orange); font-weight: 600; }
+    .bad  { color: var(--red); }
+
+    /* ── SHAP BAR ── */
+    .shap-row { display: flex; align-items: center; gap: 12px; margin: 6px 0; font-size: 0.85rem; }
+    .shap-label { min-width: 160px; font-family: monospace; font-size: 0.82rem; }
+    .shap-bar-wrap { flex: 1; background: #f1f3f4; border-radius: 4px; height: 16px; }
+    .shap-bar { height: 100%; border-radius: 4px; background: var(--blue); transition: width .3s; }
+    .shap-val { min-width: 50px; text-align: right; font-family: monospace; font-size: 0.8rem; color: var(--muted); }
+
+    /* ── HIGHLIGHT / CALLOUT ── */
+    .callout {
+      border-left: 4px solid;
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: 0.88rem;
+    }
+    .callout.info    { border-color: var(--blue);   background: #e8f0fe; }
+    .callout.success { border-color: var(--green);  background: #e6f4ea; }
+    .callout.warning { border-color: var(--orange); background: #fef7e0; }
+    .callout.danger  { border-color: var(--red);    background: #fce8e6; }
+    .callout strong  { display: block; margin-bottom: 4px; }
+
+    /* ── STATUS BADGE ── */
+    .status {
+      display: inline-block; padding: 3px 10px; border-radius: 12px;
+      font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em;
+    }
+    .status.ok   { background: #e6f4ea; color: var(--green); }
+    .status.skip { background: #fef7e0; color: #b06000; }
+
+    /* ── OBSERVATION LIST ── */
+    .obs-list { list-style: none; padding: 0; }
+    .obs-list li {
+      display: flex; gap: 12px; padding: 10px 0;
+      border-bottom: 1px solid var(--border); font-size: 0.9rem;
+    }
+    .obs-list li:last-child { border-bottom: none; }
+    .obs-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center; padding: 24px;
+      font-size: 0.78rem; color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 640px) {
+      header { padding: 28px 20px; }
+      header h1 { font-size: 1.4rem; }
+      .baseline-grid { grid-template-columns: 1fr 1fr; }
+      .lang-bar { padding: 10px 16px; }
+      main { padding: 24px 16px 60px; }
+    }
+  </style>
+</head>
+<body class="lang-it">
+
+<!-- ═══════════════════════════════ HEADER ═══════════════════════════════ -->
+<header>
+  <div class="tag">Smart Hospital – Politecnico di Milano</div>
+  <h1>Project 3: ICU Intelligent Monitoring</h1>
+  <h2>Multimodal Data Analysis and Mortality Prediction in Intensive Care</h2>
+  <div class="header-meta">
+    <span>📊 500 pazienti · 1717 osservazioni</span>
+    <span>🎯 Mortalità ICU: 12.6%</span>
+    <span>🤖 XGBoost + 1D-CNN + Ensemble</span>
+    <span>📅 2025–2026</span>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════ LANG BAR ═══════════════════════════ -->
+<div class="lang-bar">
+  <span>Lingua / Language:</span>
+  <button class="lang-btn active" onclick="setLang('it')">🇮🇹 Italiano</button>
+  <button class="lang-btn"        onclick="setLang('en')">🇬🇧 English</button>
+</div>
+
+<!-- ═══════════════════════════════ MAIN ════════════════════════════════ -->
+<main>
+
+  <!-- ─── DATASET ─── -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-badge" style="background:#455a64;">🗄️</div>
+      <div>
+        <div class="section-title it">Il Dataset: Struttura, Features e Sbilanciamento</div>
+        <div class="section-title en">The Dataset: Structure, Features and Class Imbalance</div>
+        <div class="section-subtitle it">Contesto clinico, organizzazione dei dati e sfide metodologiche</div>
+        <div class="section-subtitle en">Clinical context, data organisation and methodological challenges</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:#455a64"><span class="it">Contesto Clinico</span><span class="en">Clinical Context</span></div>
+      <p class="it">Il dataset è una coorte sintetica ispirata a <strong>MIMIC-III</strong> (Medical Information Mart for Intensive Care), uno dei più grandi database reali di dati clinici in terapia intensiva. Contiene <strong>500 pazienti ICU</strong> con osservazioni longitudinali dei segni vitali e dei valori di laboratorio, l'obiettivo è predire la <strong>mortalità intra-ospedaliera</strong>.</p>
+      <p class="en">The dataset is a synthetic cohort inspired by <strong>MIMIC-III</strong> (Medical Information Mart for Intensive Care), one of the largest real clinical databases from intensive care. It contains <strong>500 ICU patients</strong> with longitudinal vital sign and laboratory value observations, with the goal of predicting <strong>in-hospital mortality</strong>.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:#455a64"><span class="it">Struttura dei Dati</span><span class="en">Data Structure</span></div>
+      <div class="baseline-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+        <div class="metric-box"><div class="val" style="color:#455a64">500</div><div class="lbl">Pazienti / Patients</div></div>
+        <div class="metric-box"><div class="val" style="color:#455a64">1717</div><div class="lbl">Osservazioni totali / Total obs.</div></div>
+        <div class="metric-box"><div class="val" style="color:#455a64">2–5</div><div class="lbl">Timestep per paziente</div></div>
+        <div class="metric-box"><div class="val" style="color:#455a64">10</div><div class="lbl">Diagnosi uniche</div></div>
+      </div>
+      <p class="it" style="font-size:0.88rem;margin-bottom:12px">Ogni paziente ha da 2 a 5 misurazioni sequenziali nel tempo. Il formato è <strong>long-format</strong>: una riga per osservazione. Le misurazioni includono segni vitali continui e valori di laboratorio, più informazioni statiche demografiche e cliniche.</p>
+      <p class="en" style="font-size:0.88rem;margin-bottom:12px">Each patient has 2 to 5 sequential measurements over time. The format is <strong>long-format</strong>: one row per observation. Measurements include continuous vital signs and laboratory values, plus static demographic and clinical information.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr><th><span class="it">Tipo feature</span><span class="en">Feature type</span></th><th><span class="it">Variabili</span><span class="en">Variables</span></th><th class="num">#</th><th><span class="it">Esempio</span><span class="en">Example</span></th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong><span class="it">Statiche</span><span class="en">Static</span></strong></td>
+              <td><span class="it">Demografiche + cliniche</span><span class="en">Demographic + clinical</span></td>
+              <td class="num">10</td>
+              <td style="font-size:0.82rem;font-family:monospace">age, sex, admission_type, diagnosis</td>
+            </tr>
+            <tr>
+              <td><strong><span class="it">Temporali — Segni vitali</span><span class="en">Temporal — Vital signs</span></strong></td>
+              <td><span class="it">Misurate ad ogni timestep</span><span class="en">Measured at each timestep</span></td>
+              <td class="num">7</td>
+              <td style="font-size:0.82rem;font-family:monospace">hr, rr, sbp, spo2, temperature, gcs, lactate</td>
+            </tr>
+            <tr>
+              <td><strong><span class="it">Temporali — Laboratorio</span><span class="en">Temporal — Laboratory</span></strong></td>
+              <td><span class="it">Esami ematochimici</span><span class="en">Blood tests</span></td>
+              <td class="num">6</td>
+              <td style="font-size:0.82rem;font-family:monospace">creatinine, wbc, troponin, potassium, glucose, sodium</td>
+            </tr>
+            <tr>
+              <td><strong><span class="it">Feature ingegnerizzate (baseline)</span><span class="en">Engineered features (baseline)</span></strong></td>
+              <td><span class="it">Per ogni variabile temporale: mean, last, delta, max, min, slope</span><span class="en">Per temporal variable: mean, last, delta, max, min, slope</span></td>
+              <td class="num">78</td>
+              <td style="font-size:0.82rem;font-family:monospace">hr_mean, rr_delta, lactate_slope…</td>
+            </tr>
+            <tr>
+              <td><strong><span class="it">Feature IQR (Task 2)</span><span class="en">IQR features (Task 2)</span></strong></td>
+              <td><span class="it">Variabilità intra-paziente (Q75–Q25)</span><span class="en">Intra-patient variability (Q75–Q25)</span></td>
+              <td class="num">13</td>
+              <td style="font-size:0.82rem;font-family:monospace">wbc_iqr, gcs_iqr, troponin_iqr…</td>
+            </tr>
+            <tr>
+              <td><strong>NEWS2 + Interazioni</strong></td>
+              <td><span class="it">Score clinico validato + features combinate</span><span class="en">Validated clinical score + combined features</span></td>
+              <td class="num">~3</td>
+              <td style="font-size:0.82rem;font-family:monospace">news2_score, lactate×rr, age×gcs</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:var(--red)"><span class="it">⚠️ Sbilanciamento delle Classi (Class Imbalance)</span><span class="en">⚠️ Class Imbalance</span></div>
+      <div class="baseline-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
+        <div class="metric-box"><div class="val" style="color:var(--muted)">437</div><div class="lbl">Sopravvissuti (87.4%)</div></div>
+        <div class="metric-box"><div class="val" style="color:var(--red)">63</div><div class="lbl">Deceduti (12.6%)</div></div>
+        <div class="metric-box"><div class="val" style="color:var(--orange)">6.9:1</div><div class="lbl">Ratio neg:pos</div></div>
+      </div>
+      <p class="it" style="font-size:0.88rem;margin-bottom:12px">Il dataset è <strong>fortemente sbilanciato</strong>: solo 1 paziente su ~8 muore in ICU. Questo è realistico — la mortalità ICU nel mondo reale è tipicamente 10–20%. Lo sbilanciamento crea due problemi principali per i modelli ML:</p>
+      <p class="en" style="font-size:0.88rem;margin-bottom:12px">The dataset is <strong>heavily imbalanced</strong>: only 1 in ~8 patients dies in the ICU. This is realistic — real-world ICU mortality is typically 10–20%. Imbalance creates two main problems for ML models:</p>
+      <ul class="obs-list">
+        <li>
+          <span class="obs-icon">📉</span>
+          <div>
+            <strong class="it">Bias verso la classe maggioritaria</strong>
+            <strong class="en">Majority class bias</strong><br>
+            <span class="it">Un modello che predice "sopravvissuto" per tutti i pazienti ottiene 87.4% di accuracy — un risultato ottimo per la metrica sbagliata. Per questo si usa <strong>AUROC</strong> e <strong>Average Precision</strong> invece della semplice accuracy.</span>
+            <span class="en">A model that predicts "survived" for every patient achieves 87.4% accuracy — an excellent result on the wrong metric. This is why <strong>AUROC</strong> and <strong>Average Precision</strong> are used instead of simple accuracy.</span>
+          </div>
+        </li>
+        <li>
+          <span class="obs-icon">🔧</span>
+          <div>
+            <strong>SMOTE</strong> (Synthetic Minority Over-sampling TEchnique)<br>
+            <span class="it">Per bilanciare le classi durante il training, si usa SMOTE <em>dentro ogni fold</em> di cross-validation: vengono generati pazienti sintetici deceduti interpolando i campioni reali nello spazio delle feature. Da ~51 positivi per fold si arriva a ~349, raggiungendo un bilanciamento 1:1. Applicato <strong>solo al training set</strong>, mai alla validazione, per evitare data leakage.</span>
+            <span class="en">To balance classes during training, SMOTE is applied <em>inside each fold</em> of cross-validation: synthetic deceased patients are generated by interpolating real samples in feature space. From ~51 positives per fold we reach ~349, achieving 1:1 balance. Applied <strong>only to the training set</strong>, never to validation, to avoid data leakage.</span>
+          </div>
+        </li>
+        <li>
+          <span class="obs-icon">📊</span>
+          <div>
+            <strong class="it">Stratified K-Fold</strong><br>
+            <span class="it">La divisione in fold è stratificata per mantenere la stessa proporzione di casi positivi (~12.6%) in ogni fold di validazione — fondamentale con pochi positivi (63 totali).</span>
+            <span class="en">Fold splitting is stratified to maintain the same proportion of positive cases (~12.6%) in each validation fold — essential with few positives (63 total).</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:#455a64"><span class="it">Distribuzione per Diagnosi</span><span class="en">Distribution by Diagnosis</span></div>
+      <p class="it" style="font-size:0.88rem;margin-bottom:14px">I 500 pazienti coprono 10 diagnosi ICU. La mortalità varia molto tra gruppi (3.3% per Hypertensive Crisis vs 24.4% per ARDS), rendendo l'analisi per sottogruppo (Task 4) fondamentale.</p>
+      <p class="en" style="font-size:0.88rem;margin-bottom:14px">The 500 patients span 10 ICU diagnoses. Mortality varies widely across groups (3.3% for Hypertensive Crisis vs 24.4% for ARDS), making subgroup analysis (Task 4) essential.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr><th>Diagnosi</th><th class="num">n</th><th class="num">Deceduti</th><th class="num">Mortalità</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>ARDS</td><td class="num">45</td><td class="num">11</td><td class="num warn">24.4%</td></tr>
+            <tr><td>Sepsis</td><td class="num">82</td><td class="num">14</td><td class="num warn">17.1%</td></tr>
+            <tr><td>Liver Failure</td><td class="num">27</td><td class="num">4</td><td class="num">14.8%</td></tr>
+            <tr><td>Stroke</td><td class="num">44</td><td class="num">6</td><td class="num">13.6%</td></tr>
+            <tr><td>AKI</td><td class="num">63</td><td class="num">7</td><td class="num">11.1%</td></tr>
+            <tr><td>Heart Failure</td><td class="num">76</td><td class="num">8</td><td class="num">10.5%</td></tr>
+            <tr><td>Trauma</td><td class="num">39</td><td class="num">4</td><td class="num">10.3%</td></tr>
+            <tr><td>Pneumonia</td><td class="num">58</td><td class="num">5</td><td class="num">8.6%</td></tr>
+            <tr><td>Diabetes</td><td class="num">36</td><td class="num">3</td><td class="num">8.3%</td></tr>
+            <tr><td>Hypertensive Crisis</td><td class="num">30</td><td class="num">1</td><td class="num best">3.3%</td></tr>
+            <tr style="background:#f8f9fa"><td><strong>Totale</strong></td><td class="num"><strong>500</strong></td><td class="num"><strong>63</strong></td><td class="num"><strong>12.6%</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── OVERVIEW ─── -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-badge" style="background:#455a64;">📋</div>
+      <div>
+        <div class="section-title it">Panoramica del Progetto</div>
+        <div class="section-title en">Project Overview</div>
+        <div class="section-subtitle it">Dataset, modelli baseline, metriche di partenza</div>
+        <div class="section-subtitle en">Dataset, baseline models, starting metrics</div>
+      </div>
+    </div>
+
+    <div class="baseline-grid">
+      <div class="metric-box">
+        <div class="val">0.8646</div>
+        <div class="lbl">XGBoost OOF AUROC</div>
+      </div>
+      <div class="metric-box">
+        <div class="val">0.7916</div>
+        <div class="lbl">1D-CNN OOF AUROC</div>
+      </div>
+      <div class="metric-box">
+        <div class="val">0.8377</div>
+        <div class="lbl">Ensemble OOF AUROC</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:var(--blue)">Baseline — <span class="it">Riepilogo Modelli</span><span class="en">Model Summary</span></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Modello / Model</th>
+              <th class="num">OOF AUROC</th>
+              <th class="num">OOF AP</th>
+              <th class="num">Weight (ensemble)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>XGBoost</td><td class="num best">0.8646</td><td class="num">0.5096</td><td class="num">0.52</td></tr>
+            <tr><td>1D-CNN</td><td class="num">0.7916</td><td class="num">0.3900</td><td class="num">0.48</td></tr>
+            <tr><td><strong>Ensemble</strong></td><td class="num">0.8377</td><td class="num best">0.5342</td><td class="num">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout info">
+        <strong class="it">Nota metodologica</strong>
+        <strong class="en">Methodological note</strong>
+        <span class="it">Entrambi i modelli sono addestrati con 5-fold Stratified CV + SMOTE <em>inside the fold</em> (nessun data leakage). Il threshold di default è 0.41 (cost-ottimizzato con FN_COST=5), che produce Sensitivity=0.714, Specificity=0.890, F1=0.577.</span>
+        <span class="en">Both models are trained with 5-fold Stratified CV + SMOTE <em>inside the fold</em> (no data leakage). The default threshold is 0.41 (cost-optimised with FN_COST=5), yielding Sensitivity=0.714, Specificity=0.890, F1=0.577.</span>
+      </div>
+      <div class="card-title" style="color:var(--blue);margin-top:16px">Top 5 SHAP Features (XGBoost baseline)</div>
+      <div class="shap-row"><span class="shap-label">rr_delta</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:100%"></div></div><span class="shap-val">0.8234</span></div>
+      <div class="shap-row"><span class="shap-label">spo2_last</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:77%"></div></div><span class="shap-val">0.6347</span></div>
+      <div class="shap-row"><span class="shap-label">lactate_delta</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:61%"></div></div><span class="shap-val">0.5019</span></div>
+      <div class="shap-row"><span class="shap-label">spo2_min</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:38%"></div></div><span class="shap-val">0.3113</span></div>
+      <div class="shap-row"><span class="shap-label">age</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:32%"></div></div><span class="shap-val">0.2628</span></div>
+    </div>
+  </section>
+
+  <!-- ─── TASK 1 ─── -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-badge" style="background:var(--blue);">1</div>
+      <div>
+        <div class="section-title">Task 1 — <span class="it">Calibrazione della Soglia</span><span class="en">Threshold Calibration</span>
+          &nbsp;<span class="status ok">✔ Eseguita / Executed</span>
+        </div>
+        <div class="section-subtitle it">Variazione di FN_COST (3, 8, 12) e impatto su sensitivity / specificity</div>
+        <div class="section-subtitle en">Varying FN_COST (3, 8, 12) and its impact on sensitivity / specificity</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:var(--blue)"><span class="it">Obiettivo</span><span class="en">Objective</span></div>
+      <p class="it">La funzione di costo <code>cost = FN_COST × FN + FP_COST × FP</code> governa la scelta del threshold ottimale. Aumentando FN_COST si penalizza maggiormente i falsi negativi (pazienti critici non identificati), forzando il modello ad abbassare il threshold di allerta per catturarne di più.</p>
+      <p class="en">The cost function <code>cost = FN_COST × FN + FP_COST × FP</code> governs optimal threshold selection. Raising FN_COST penalises missed critical patients more heavily, forcing the model to lower the alert threshold to catch more of them.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:var(--blue)"><span class="it">Risultati Numerici</span><span class="en">Numerical Results</span></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>FN_COST</th>
+              <th class="num">Threshold</th>
+              <th class="num">Sensitivity</th>
+              <th class="num">Specificity</th>
+              <th class="num">Precision</th>
+              <th class="num">F1</th>
+              <th class="num">FN</th>
+              <th class="num">FP</th>
+              <th class="num">Costo totale</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>3</strong></td>
+              <td class="num">0.41</td>
+              <td class="num">0.714</td>
+              <td class="num best">0.890</td>
+              <td class="num best">0.484</td>
+              <td class="num best">0.577</td>
+              <td class="num warn">18</td>
+              <td class="num best">48</td>
+              <td class="num">102</td>
+            </tr>
+            <tr>
+              <td><strong>8</strong></td>
+              <td class="num">0.36</td>
+              <td class="num">0.762</td>
+              <td class="num">0.840</td>
+              <td class="num">0.407</td>
+              <td class="num">0.530</td>
+              <td class="num best">15</td>
+              <td class="num warn">70</td>
+              <td class="num">190</td>
+            </tr>
+            <tr>
+              <td><strong>12</strong></td>
+              <td class="num">0.32</td>
+              <td class="num best">0.794</td>
+              <td class="num bad">0.785</td>
+              <td class="num bad">0.347</td>
+              <td class="num bad">0.483</td>
+              <td class="num best">13</td>
+              <td class="num bad">94</td>
+              <td class="num">250</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:0.78rem;color:var(--muted);margin-top:8px"><span class="it">FP_COST = 1 fisso in tutti i casi. Il baseline di sistema usa FN_COST = 5.</span><span class="en">FP_COST = 1 fixed in all cases. System baseline uses FN_COST = 5.</span></p>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:var(--blue)"><span class="it">Interpretazione Clinica</span><span class="en">Clinical Interpretation</span></div>
+      <ul class="obs-list">
+        <li>
+          <span class="obs-icon">📉</span>
+          <span class="it">Aumentare FN_COST abbassa il threshold (0.41 → 0.32): il modello diventa più "paranoico" e allerta prima. La <strong>sensitivity sale da 0.714 a 0.794</strong>, ma la specificity cala da 0.890 a 0.785.</span>
+          <span class="en">Raising FN_COST lowers the threshold (0.41 → 0.32): the model becomes more "paranoid" and alerts earlier. <strong>Sensitivity rises from 0.714 to 0.794</strong>, but specificity falls from 0.890 to 0.785.</span>
+        </li>
+        <li>
+          <span class="obs-icon">⚕️</span>
+          <span class="it">Un FN_COST alto (8–12) è <strong>clinicamente giustificato in ICU</strong>: un falso negativo (paziente critico non allertato) può portare alla morte. Un falso positivo genera solo un esame aggiuntivo.</span>
+          <span class="en">A high FN_COST (8–12) is <strong>clinically justified in the ICU</strong>: a false negative (missed critical patient) can lead to death. A false positive only triggers an additional examination.</span>
+        </li>
+        <li>
+          <span class="obs-icon">🚨</span>
+          <span class="it"><strong>Alarm fatigue</strong>: con FN_COST=12 si generano 94 FP su 500 pazienti (~19%). Il personale medico potrebbe iniziare a ignorare gli alert, vanificando il sistema. Il punto di equilibrio ottimale dipende dal carico del reparto.</span>
+          <span class="en"><strong>Alarm fatigue</strong>: at FN_COST=12, 94 FP are generated out of 500 patients (~19%). Clinical staff may begin ignoring alerts, undermining the system. The optimal balance depends on ward workload.</span>
+        </li>
+        <li>
+          <span class="obs-icon">💡</span>
+          <span class="it">Il costo totale <em>aumenta</em> con FN_COST alto non perché il modello sia peggiore, ma perché la scala dei costi stessa cresce: si accettano molti più FP costosi per ridurre i FN.</span>
+          <span class="en">Total cost <em>increases</em> with high FN_COST not because the model is worse, but because the cost scale itself grows: many more costly FPs are accepted to reduce FNs.</span>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ─── TASK 2 ─── -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-badge" style="background:var(--green);">2</div>
+      <div>
+        <div class="section-title">Task 2 — <span class="it">Nuova Feature Temporale (_iqr)</span><span class="en">New Temporal Feature (_iqr)</span>
+          &nbsp;<span class="status ok">✔ Eseguita / Executed</span>
+        </div>
+        <div class="section-subtitle it">Aggiunta dell'IQR (Q75–Q25) come misura di variabilità intra-paziente</div>
+        <div class="section-subtitle en">Adding IQR (Q75–Q25) as a measure of intra-patient variability</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:var(--green)"><span class="it">Obiettivo</span><span class="en">Objective</span></div>
+      <p class="it">La funzione <code>extract_temporal_features</code> è stata estesa aggiungendo, per ogni segno vitale, la feature <code>_iqr = Q75 − Q25</code>. L'IQR cattura la <strong>variabilità interna</strong> del parametro durante il ricovero, un'informazione diversa dalla media, dal delta (trend lineare) o dai valori estremi.</p>
+      <p class="en">The <code>extract_temporal_features</code> function was extended by adding, for each vital sign, the feature <code>_iqr = Q75 − Q25</code>. The IQR captures the <strong>internal variability</strong> of the parameter during the hospital stay — information distinct from the mean, delta (linear trend), or extreme values.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:var(--green)"><span class="it">Dimensione della Feature Matrix</span><span class="en">Feature Matrix Size</span></div>
+      <div class="baseline-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="metric-box">
+          <div class="val" style="color:var(--muted)">78</div>
+          <div class="lbl">Temporal features (prima / before)</div>
+        </div>
+        <div class="metric-box">
+          <div class="val" style="color:var(--green)">91</div>
+          <div class="lbl">Temporal features (dopo / after)</div>
+        </div>
+        <div class="metric-box">
+          <div class="val" style="color:var(--green)">+13</div>
+          <div class="lbl">Nuove features IQR</div>
+        </div>
+        <div class="metric-box">
+          <div class="val" style="color:var(--green)">101</div>
+          <div class="lbl">Feature totali (88 → 101)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:var(--green)"><span class="it">Impatto sulle Performance</span><span class="en">Performance Impact</span></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Configurazione / Configuration</th>
+              <th class="num">OOF AUROC</th>
+              <th class="num">Δ AUROC</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>XGBoost baseline (78 temporal features)</td><td class="num">0.8646</td><td class="num">—</td></tr>
+            <tr><td>XGBoost + IQR (91 temporal features)</td><td class="num best">0.8655</td><td class="num best">+0.0008</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout success" style="margin-top:16px">
+        <strong class="it">Miglioramento marginale ma consistente</strong>
+        <strong class="en">Marginal but consistent improvement</strong>
+        <span class="it">+0.0008 su 5-fold CV. Piccolo in valore assoluto, ma l'IQR non peggiora il modello e porta segnale utile identificato da SHAP.</span>
+        <span class="en">+0.0008 over 5-fold CV. Small in absolute value, but IQR does not hurt the model and carries useful signal identified by SHAP.</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:var(--green)">SHAP — <span class="it">Importanza delle Feature IQR</span><span class="en">IQR Feature Importance</span></div>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:14px">
+        <span class="it">3 feature IQR sono entrate nella top-20 SHAP globale: <strong>wbc_iqr</strong>, <strong>gcs_iqr</strong>, <strong>troponin_iqr</strong>.</span>
+        <span class="en">3 IQR features entered the global SHAP top-20: <strong>wbc_iqr</strong>, <strong>gcs_iqr</strong>, <strong>troponin_iqr</strong>.</span>
+      </p>
+      <div class="shap-row"><span class="shap-label">wbc_iqr</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:100%;background:var(--green)"></div></div><span class="shap-val">0.2243</span></div>
+      <div class="shap-row"><span class="shap-label">gcs_iqr</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:89%;background:var(--green)"></div></div><span class="shap-val">0.1998</span></div>
+      <div class="shap-row"><span class="shap-label">troponin_iqr</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:67%;background:var(--green)"></div></div><span class="shap-val">0.1512</span></div>
+      <div class="shap-row"><span class="shap-label">hr_iqr</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:49%;background:#81c784"></div></div><span class="shap-val">0.1106</span></div>
+      <div class="shap-row"><span class="shap-label">rr_iqr</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:29%;background:#a5d6a7"></div></div><span class="shap-val">0.0648</span></div>
+      <div class="shap-row"><span class="shap-label">spo2_iqr</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:27%;background:#a5d6a7"></div></div><span class="shap-val">0.0598</span></div>
+      <div class="shap-row"><span class="shap-label">creatinine_iqr</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:22%;background:#c8e6c9"></div></div><span class="shap-val">0.0489</span></div>
+      <div class="shap-row"><span class="shap-label">lactate_iqr</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:12%;background:#c8e6c9"></div></div><span class="shap-val">0.0277</span></div>
+      <div class="shap-row"><span class="shap-label">temperature_iqr</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:11%;background:#c8e6c9"></div></div><span class="shap-val">0.0246</span></div>
+      <div class="shap-row"><span class="shap-label">sbp_iqr</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:11%;background:#c8e6c9"></div></div><span class="shap-val">0.0246</span></div>
+      <div class="shap-row"><span class="shap-label">potassium_iqr</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:7%;background:#e8f5e9"></div></div><span class="shap-val">0.0165</span></div>
+      <div class="shap-row"><span class="shap-label">glucose_iqr</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:5%;background:#e8f5e9"></div></div><span class="shap-val">0.0122</span></div>
+      <div class="shap-row"><span class="shap-label">sodium_iqr</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:3%;background:#e8f5e9"></div></div><span class="shap-val">0.0077</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:var(--green)"><span class="it">Interpretazione Clinica delle Top 3 IQR</span><span class="en">Clinical Interpretation of Top 3 IQR Features</span></div>
+      <ul class="obs-list">
+        <li>
+          <span class="obs-icon">🩸</span>
+          <div>
+            <strong>wbc_iqr</strong> —
+            <span class="it">Variabilità dei globuli bianchi. Un WBC che oscilla indica una <strong>risposta infiammatoria dinamica</strong> (sepsi attiva, infezione in evoluzione). Un WBC stabile, anche se alto, è meno preoccupante di uno che fluttua: il sistema immunitario è in disequilibrio.</span>
+            <span class="en">White blood cell variability. Oscillating WBC signals an <strong>active inflammatory response</strong> (active sepsis, evolving infection). A stable WBC, even if elevated, is less concerning than one that fluctuates: the immune system is in disequilibrium.</span>
+          </div>
+        </li>
+        <li>
+          <span class="obs-icon">🧠</span>
+          <div>
+            <strong>gcs_iqr</strong> —
+            <span class="it">Variabilità del Glasgow Coma Scale. Probabilmente la più importante clinicamente: un GCS che cambia tra misurazioni indica <strong>instabilità neurologica</strong>. Un GCS basso ma stabile è diverso da uno che scende e risale — il secondo è un segnale di allarme critico.</span>
+            <span class="en">Glasgow Coma Scale variability. Likely the most clinically important: a changing GCS signals <strong>neurological instability</strong>. A low but stable GCS differs from one that drops and rebounds — the latter is a critical warning sign.</span>
+          </div>
+        </li>
+        <li>
+          <span class="obs-icon">❤️</span>
+          <div>
+            <strong>troponin_iqr</strong> —
+            <span class="it">Variabilità della troponina (marker di danno miocardico). La feature <code>_delta</code> cattura il trend lineare, ma l'IQR cattura le <strong>oscillazioni non monotone</strong>: rilascio intermittente da danno miocardico ricorrente o lesione instabile.</span>
+            <span class="en">Troponin variability (myocardial damage marker). The <code>_delta</code> feature captures linear trends, but IQR captures <strong>non-monotonic oscillations</strong>: intermittent release from recurrent myocardial injury or unstable lesion.</span>
+          </div>
+        </li>
+      </ul>
+      <div class="callout warning" style="margin-top:16px">
+        <strong class="it">Perché gli elettroliti (sodium, glucose, potassium) hanno IQR basso?</strong>
+        <strong class="en">Why do electrolytes (sodium, glucose, potassium) have low IQR importance?</strong>
+        <span class="it">In ICU gli elettroliti sono strettamente controllati tramite infusioni e correzioni mediche. La loro variabilità è spesso <em>iatrogena</em> (effetto del trattamento), non patologica. Il modello li ignora correttamente.</span>
+        <span class="en">In the ICU, electrolytes are tightly controlled via infusions and medical corrections. Their variability is often <em>iatrogenic</em> (a treatment effect), not pathological. The model correctly ignores them.</span>
+      </div>
+      <div class="callout info" style="margin-top:12px">
+        <strong class="it">Perché il guadagno AUC è così piccolo (+0.0008)?</strong>
+        <strong class="en">Why is the AUC gain so small (+0.0008)?</strong>
+        <span class="it">Con solo 2–5 timesteps per paziente, <code>IQR ≈ (max − min) / 2</code> in molti casi: è quasi ridondante con le feature <code>_min</code> e <code>_max</code> già presenti. Su dati reali come MIMIC-III (10–50 timesteps), l'IQR avrebbe molto più potere discriminativo.</span>
+        <span class="en">With only 2–5 timesteps per patient, <code>IQR ≈ (max − min) / 2</code> in many cases: it is nearly redundant with the existing <code>_min</code> and <code>_max</code> features. On real data like MIMIC-III (10–50 timesteps), IQR would have far greater discriminative power.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── TASK 3 ─── -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-badge" style="background:var(--purple);">3</div>
+      <div>
+        <div class="section-title">Task 3 — <span class="it">Modifica Architettura 1D-CNN</span><span class="en">1D-CNN Architecture Modification</span>
+          &nbsp;<span class="status ok">✔ Eseguita / Executed</span>
+        </div>
+        <div class="section-subtitle it">Aggiunta di un terzo layer Conv1D, filtri 32→64, BatchNormalization</div>
+        <div class="section-subtitle en">Adding a third Conv1D layer, filters 32→64, BatchNormalization</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:var(--purple)"><span class="it">Modifiche Apportate</span><span class="en">Modifications Applied</span></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr><th>Componente</th><th>Originale</th><th>Modificata</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Layer Conv1D</td><td>2</td><td><strong>3</strong></td></tr>
+            <tr><td>Filtri per layer</td><td>32</td><td><strong>64</strong></td></tr>
+            <tr><td>BatchNormalization</td><td>Assente</td><td><strong>Dopo il 1° Conv1D</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:var(--purple)"><span class="it">Risultati</span><span class="en">Results</span></div>
+      <div class="baseline-grid">
+        <div class="metric-box">
+          <div class="val" style="color:var(--purple)">0.7776</div>
+          <div class="lbl">Original CNN AUROC</div>
+        </div>
+        <div class="metric-box">
+          <div class="val" style="color:var(--red)">0.7661</div>
+          <div class="lbl">Modified CNN AUROC</div>
+        </div>
+        <div class="metric-box">
+          <div class="val" style="color:var(--red)">−0.0115</div>
+          <div class="lbl">Δ AUROC</div>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Modello</th>
+              <th class="num">OOF AUROC</th>
+              <th class="num">OOF AP</th>
+              <th class="num">Fold range</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Original CNN (32 filtri, 2 layer)</td>
+              <td class="num best">0.7776</td>
+              <td class="num best">0.3573</td>
+              <td class="num">0.7277 – 0.8718</td>
+            </tr>
+            <tr>
+              <td>Modified CNN (64 filtri, 3 layer + BN)</td>
+              <td class="num bad">0.7661</td>
+              <td class="num bad">0.3210</td>
+              <td class="num">0.7462 – 0.8497</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout danger" style="margin-top:16px">
+        <strong class="it">Il modello più profondo performa peggio: risultato atteso e didatticamente importante</strong>
+        <strong class="en">The deeper model performs worse: an expected and didactically important result</strong>
+        <span class="it">Questo è esattamente la lezione chiave della task.</span>
+        <span class="en">This is precisely the key lesson of the task.</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:var(--purple)"><span class="it">Perché il Modello Modificato è Peggiore?</span><span class="en">Why Does the Modified Model Perform Worse?</span></div>
+      <ul class="obs-list">
+        <li>
+          <span class="obs-icon">📏</span>
+          <div>
+            <strong class="it">Overparametrizzazione per dati così brevi</strong>
+            <strong class="en">Over-parameterisation for such short sequences</strong><br>
+            <span class="it">Con 2–5 timesteps per paziente, una CNN a 3 layer e 64 filtri ha <em>troppe</em> capacità per un segnale così corto. Non c'è abbastanza struttura temporale da apprendere.</span>
+            <span class="en">With 2–5 timesteps per patient, a 3-layer CNN with 64 filters has <em>too much</em> capacity for such a short signal. There is not enough temporal structure to learn.</span>
+          </div>
+        </li>
+        <li>
+          <span class="obs-icon">📊</span>
+          <div>
+            <strong>BatchNormalization</strong> —
+            <span class="it">Con batch piccoli (training fold ~320 pazienti) la stima di media e varianza per il BatchNorm è rumorosa, introducendo instabilità durante il training invece di migliorarlo.</span>
+            <span class="en">With small batches (training fold ~320 patients), BatchNorm's mean and variance estimates are noisy, introducing training instability rather than improvement.</span>
+          </div>
+        </li>
+        <li>
+          <span class="obs-icon">⏱️</span>
+          <div>
+            <strong class="it">Early stopping precoce</strong>
+            <strong class="en">Earlier early stopping</strong><br>
+            <span class="it">Il modello modificato converge a epoch 6 in media (vs 11–13 per l'originale). La maggiore capacità della rete porta a un plateau subito, senza il tempo di affinare le rappresentazioni.</span>
+            <span class="en">The modified model converges at epoch 6 on average (vs 11–13 for the original). The greater network capacity leads to an immediate plateau, without time to refine representations.</span>
+          </div>
+        </li>
+        <li>
+          <span class="obs-icon">💡</span>
+          <div>
+            <strong class="it">Lezione generale</strong>
+            <strong class="en">General lesson</strong><br>
+            <span class="it">"Più profondo" non significa "migliore". La complessità del modello deve essere <em>proporzionata</em> alla lunghezza e ricchezza del segnale. Per serie temporali ICU brevi, XGBoost su feature aggregate rimane superiore.</span>
+            <span class="en">"Deeper" does not mean "better". Model complexity must be <em>proportional</em> to the length and richness of the signal. For short ICU time series, XGBoost on aggregate features remains superior.</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ─── TASK 4 ─── -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-badge" style="background:var(--teal);">4</div>
+      <div>
+        <div class="section-title">Task 4 — <span class="it">Analisi per Sottogruppo Diagnostico</span><span class="en">Diagnosis-Specific Subgroup Analysis</span>
+          &nbsp;<span class="status ok">✔ Eseguita / Executed</span>
+        </div>
+        <div class="section-subtitle it">Disaggregazione dell'AUC ensemble per diagnosi — identificazione dei sottogruppi problematici</div>
+        <div class="section-subtitle en">Disaggregating ensemble AUC by diagnosis — identifying underperforming subgroups</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:var(--teal)"><span class="it">Obiettivo</span><span class="en">Objective</span></div>
+      <p class="it">Un AUC globale unico può nascondere <strong>grandi differenze di performance</strong> tra sottogruppi di pazienti. Disaggregare per diagnosi permette di identificare le patologie in cui il modello funziona bene e quelle problematiche — un'analisi di <em>fairness clinica</em> fondamentale prima del deployment in ICU.</p>
+      <p class="en">A single global AUC can mask <strong>large performance gaps</strong> across patient subgroups. Disaggregating by diagnosis reveals which pathologies the model handles well and which are problematic — a fundamental <em>clinical fairness</em> analysis before ICU deployment.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:var(--teal)"><span class="it">Risultati Numerici — AUC per Diagnosi</span><span class="en">Numerical Results — AUC by Diagnosis</span></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Diagnosi</th>
+              <th class="num">AUC</th>
+              <th class="num">vs Global</th>
+              <th class="num">n pazienti</th>
+              <th class="num">n deceduti</th>
+              <th class="num">Mortalità</th>
+              <th><span class="it">Valutazione</span><span class="en">Rating</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Trauma</strong></td><td class="num best">0.957</td><td class="num best">+0.094</td><td class="num">39</td><td class="num">4</td><td class="num">10.3%</td><td><span style="color:var(--green);font-weight:600">★ Best</span></td></tr>
+            <tr><td>Pneumonia</td><td class="num">0.898</td><td class="num best">+0.035</td><td class="num">58</td><td class="num">5</td><td class="num">8.6%</td><td><span style="color:var(--green)">▲ Above</span></td></tr>
+            <tr><td>ARDS</td><td class="num">0.890</td><td class="num best">+0.027</td><td class="num">45</td><td class="num">11</td><td class="num warn">24.4%</td><td><span style="color:var(--green)">▲ Above</span></td></tr>
+            <tr><td>Liver Failure</td><td class="num">0.870</td><td class="num">+0.007</td><td class="num">27</td><td class="num">4</td><td class="num">14.8%</td><td><span style="color:var(--blue)">≈ Global</span></td></tr>
+            <tr><td>Heart Failure</td><td class="num">0.869</td><td class="num">+0.006</td><td class="num">76</td><td class="num">8</td><td class="num">10.5%</td><td><span style="color:var(--blue)">≈ Global</span></td></tr>
+            <tr><td>Sepsis</td><td class="num">0.854</td><td class="num">−0.009</td><td class="num">82</td><td class="num">14</td><td class="num warn">17.1%</td><td><span style="color:var(--blue)">≈ Global</span></td></tr>
+            <tr><td>Stroke</td><td class="num warn">0.807</td><td class="num warn">−0.056</td><td class="num">44</td><td class="num">6</td><td class="num">13.6%</td><td><span style="color:var(--orange)">▼ Below</span></td></tr>
+            <tr><td>AKI</td><td class="num warn">0.770</td><td class="num warn">−0.093</td><td class="num">63</td><td class="num">7</td><td class="num">11.1%</td><td><span style="color:var(--orange)">▼ Below</span></td></tr>
+            <tr><td><strong>Diabetes</strong></td><td class="num bad">0.758</td><td class="num bad">−0.105</td><td class="num">36</td><td class="num">3</td><td class="num">8.3%</td><td><span style="color:var(--red);font-weight:600">★ Worst</span></td></tr>
+            <tr><td>Hypertensive Crisis</td><td class="num" style="color:var(--muted)">n/a</td><td class="num" style="color:var(--muted)">—</td><td class="num">30</td><td class="num">1</td><td class="num best">3.3%</td><td><span style="color:var(--muted)">— 1 pos.</span></td></tr>
+            <tr style="background:#f8f9fa"><td><strong>Global Ensemble OOF</strong></td><td class="num"><strong>0.8627</strong></td><td class="num">—</td><td class="num">500</td><td class="num">63</td><td class="num">12.6%</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:0.78rem;color:var(--muted);margin-top:8px"><span class="it">Hypertensive Crisis: AUC non calcolabile con un solo caso positivo (1 deceduto su 30 pazienti).</span><span class="en">Hypertensive Crisis: AUC not computable with only one positive case (1 death out of 30 patients).</span></p>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:var(--teal)"><span class="it">Visualizzazione — AUC e Mortalità per Diagnosi</span><span class="en">Visualisation — AUC and Mortality Rate by Diagnosis</span></div>
+      <p style="font-size:0.85rem;margin-bottom:16px">
+        <span class="it">Il grafico a barre sinistro mostra l'AUC per diagnosi rispetto alla linea globale (0.8627); il grafico destro mostra la mortalità per diagnosi rispetto alla media globale (12.6%). Le barre sono colorate: <span style="color:var(--green);font-weight:600">verde</span> = AUC &gt; global+0.05, <span style="color:var(--blue)">blu</span> = near global, <span style="color:var(--red)">rosso</span> = AUC &lt; global−0.05.</span>
+        <span class="en">The left bar chart shows AUC per diagnosis relative to the global line (0.8627); the right shows mortality rate per diagnosis relative to the global average (12.6%). Bars are coloured: <span style="color:var(--green);font-weight:600">green</span> = AUC &gt; global+0.05, <span style="color:var(--blue)">blue</span> = near global, <span style="color:var(--red)">red</span> = AUC &lt; global−0.05.</span>
+      </p>
+      <!-- AUC bar chart (SVG inline) -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:8px">
+        <!-- AUC chart -->
+        <div>
+          <div class="card-title" style="margin-bottom:10px">AUC per Diagnosis</div>
+          <div id="auc-bars">
+            <div class="shap-row" style="gap:8px"><span class="shap-label" style="min-width:140px;font-family:sans-serif;font-size:0.82rem">Trauma</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:91%;background:var(--green)"></div></div><span class="shap-val">0.957</span></div>
+            <div class="shap-row" style="gap:8px"><span class="shap-label" style="min-width:140px;font-family:sans-serif;font-size:0.82rem">Pneumonia</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:85%;background:var(--blue)"></div></div><span class="shap-val">0.898</span></div>
+            <div class="shap-row" style="gap:8px"><span class="shap-label" style="min-width:140px;font-family:sans-serif;font-size:0.82rem">ARDS</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:84%;background:var(--blue)"></div></div><span class="shap-val">0.890</span></div>
+            <div class="shap-row" style="gap:8px"><span class="shap-label" style="min-width:140px;font-family:sans-serif;font-size:0.82rem">Liver Failure</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:82%;background:var(--blue)"></div></div><span class="shap-val">0.870</span></div>
+            <div class="shap-row" style="gap:8px"><span class="shap-label" style="min-width:140px;font-family:sans-serif;font-size:0.82rem">Heart Failure</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:82%;background:var(--blue)"></div></div><span class="shap-val">0.869</span></div>
+            <div class="shap-row" style="gap:8px"><span class="shap-label" style="min-width:140px;font-family:sans-serif;font-size:0.82rem">Sepsis</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:81%;background:var(--blue)"></div></div><span class="shap-val">0.854</span></div>
+            <div class="shap-row" style="gap:8px"><span class="shap-label" style="min-width:140px;font-family:sans-serif;font-size:0.82rem">Stroke</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:76%;background:var(--red)"></div></div><span class="shap-val">0.807</span></div>
+            <div class="shap-row" style="gap:8px"><span class="shap-label" style="min-width:140px;font-family:sans-serif;font-size:0.82rem">AKI</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:73%;background:var(--red)"></div></div><span class="shap-val">0.770</span></div>
+            <div class="shap-row" style="gap:8px"><span class="shap-label" style="min-width:140px;font-family:sans-serif;font-size:0.82rem">Diabetes</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:72%;background:var(--red)"></div></div><span class="shap-val">0.758</span></div>
+          </div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-top:6px;padding-left:148px"><span class="it">— linea globale: 0.8627</span><span class="en">— global line: 0.8627</span></div>
+        </div>
+        <!-- Mortality chart -->
+        <div>
+          <div class="card-title" style="margin-bottom:10px"><span class="it">Mortalità per Diagnosi</span><span class="en">Mortality Rate per Diagnosis</span></div>
+          <div class="shap-row" style="gap:8px"><span class="shap-label" style="min-width:140px;font-family:sans-serif;font-size:0.82rem">ARDS</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:97%;background:#78909c"></div></div><span class="shap-val">24.4%</span></div>
+          <div class="shap-row" style="gap:8px"><span class="shap-label" style="min-width:140px;font-family:sans-serif;font-size:0.82rem">Sepsis</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:68%;background:#78909c"></div></div><span class="shap-val">17.1%</span></div>
+          <div class="shap-row" style="gap:8px"><span class="shap-label" style="min-width:140px;font-family:sans-serif;font-size:0.82rem">Liver Failure</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:59%;background:#78909c"></div></div><span class="shap-val">14.8%</span></div>
+          <div class="shap-row" style="gap:8px"><span class="shap-label" style="min-width:140px;font-family:sans-serif;font-size:0.82rem">Stroke</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:54%;background:#78909c"></div></div><span class="shap-val">13.6%</span></div>
+          <div class="shap-row" style="gap:8px"><span class="shap-label" style="min-width:140px;font-family:sans-serif;font-size:0.82rem">AKI</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:44%;background:#78909c"></div></div><span class="shap-val">11.1%</span></div>
+          <div class="shap-row" style="gap:8px"><span class="shap-label" style="min-width:140px;font-family:sans-serif;font-size:0.82rem">Heart Failure</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:42%;background:#78909c"></div></div><span class="shap-val">10.5%</span></div>
+          <div class="shap-row" style="gap:8px"><span class="shap-label" style="min-width:140px;font-family:sans-serif;font-size:0.82rem">Trauma</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:41%;background:#78909c"></div></div><span class="shap-val">10.3%</span></div>
+          <div class="shap-row" style="gap:8px"><span class="shap-label" style="min-width:140px;font-family:sans-serif;font-size:0.82rem">Pneumonia</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:34%;background:#78909c"></div></div><span class="shap-val">8.6%</span></div>
+          <div class="shap-row" style="gap:8px"><span class="shap-label" style="min-width:140px;font-family:sans-serif;font-size:0.82rem">Diabetes</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:33%;background:#78909c"></div></div><span class="shap-val">8.3%</span></div>
+          <div class="shap-row" style="gap:8px"><span class="shap-label" style="min-width:140px;font-family:sans-serif;font-size:0.82rem">Hypert. Crisis</span><div class="shap-bar-wrap"><div class="shap-bar" style="width:13%;background:#b0bec5"></div></div><span class="shap-val">3.3%</span></div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-top:6px;padding-left:148px"><span class="it">— media globale: 12.6%</span><span class="en">— global mean: 12.6%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:var(--teal)"><span class="it">Interpretazione Clinica — Caso per Caso</span><span class="en">Clinical Interpretation — Case by Case</span></div>
+      <ul class="obs-list">
+        <li>
+          <span class="obs-icon">🏆</span>
+          <div>
+            <strong>Trauma — AUC 0.957 (best)</strong><br>
+            <span class="it">Il modello eccelle sul trauma perché i pazienti critici hanno segnali vitali <em>acuti e chiaramente anormali</em> (pressione bassa, frequenza cardiaca alta, saturazione ridotta) ben distinti dai sopravvissuti. La relazione tra segni vitali e mortalità è lineare e robusta — esattamente il tipo di pattern che XGBoost e CNN colgono meglio.</span>
+            <span class="en">The model excels on trauma because critically ill patients have <em>acute, clearly abnormal</em> vital signs (low BP, high HR, low SpO₂) sharply distinct from survivors. The relationship between vitals and mortality is linear and robust — exactly the type of pattern XGBoost and CNNs capture best.</span>
+          </div>
+        </li>
+        <li>
+          <span class="obs-icon">📈</span>
+          <div>
+            <strong>ARDS — AUC 0.890, mortalità 24.4%</strong><br>
+            <span class="it">Alta mortalità (la più alta nel dataset) combinata con un segnale forte: i pazienti ARDS che muoiono presentano SpO₂ bassa, frequenza respiratoria elevata e lattato alto — feature che sono tra le più importanti nel modello (rr_delta, spo2_last, lactate_delta).</span>
+            <span class="en">High mortality (highest in the dataset) combined with a strong signal: ARDS patients who die present low SpO₂, high respiratory rate, and elevated lactate — features among the model's top predictors (rr_delta, spo2_last, lactate_delta).</span>
+          </div>
+        </li>
+        <li>
+          <span class="obs-icon">⚠️</span>
+          <div>
+            <strong>Stroke — AUC 0.807 (below global)</strong><br>
+            <span class="it">La mortalità da stroke è mediata da meccanismi <em>neurologici</em> (edema cerebrale, erniazione) che non si riflettono immediatamente nei segni vitali cardiovascolari. Il GCS è un proxy parziale, ma i parametri ematochimici e vitali classici sono meno discriminativi rispetto a diagnosi come ARDS o trauma.</span>
+            <span class="en">Stroke mortality is driven by <em>neurological</em> mechanisms (cerebral oedema, herniation) not immediately reflected in cardiovascular vital signs. GCS is a partial proxy, but standard lab and vital parameters are less discriminative than for diagnoses like ARDS or trauma.</span>
+          </div>
+        </li>
+        <li>
+          <span class="obs-icon">❌</span>
+          <div>
+            <strong>Diabetes — AUC 0.758 (worst), AKI — AUC 0.770</strong><br>
+            <span class="it">Queste patologie hanno mortalità bassa (8.3% e 11.1%) e meccanismi di morte atipici. Il diabetico in ICU ha <em>cronicamente</em> valori alterati di glucosio, creatinina e potassio: il modello fatica a distinguere il "normale cronico" dal "critico acuto". Stesso problema per l'AKI: la creatinina alta è quasi sempre presente, riducendo il suo valore predittivo per la mortalità specifica.</span>
+            <span class="en">These pathologies have low mortality (8.3% and 11.1%) and atypical death mechanisms. A diabetic ICU patient has <em>chronically</em> abnormal glucose, creatinine, and potassium values: the model struggles to distinguish "chronic normal" from "acute critical". Same problem for AKI: elevated creatinine is almost always present, reducing its predictive value for mortality.</span>
+          </div>
+        </li>
+        <li>
+          <span class="obs-icon">🚫</span>
+          <div>
+            <strong>Hypertensive Crisis — AUC n/a</strong><br>
+            <span class="it">Solo 1 deceduto su 30 pazienti: impossibile stimare una curva ROC affidabile. Questo è il limite statistico dell'analisi per sottogruppo con dataset piccoli — la Hypertensive Crisis ha mortalità reale bassa (3.3%) e semplicemente non ha abbastanza eventi per valutare il modello.</span>
+            <span class="en">Only 1 death out of 30 patients: impossible to estimate a reliable ROC curve. This is the statistical limit of subgroup analysis with small datasets — Hypertensive Crisis has genuinely low mortality (3.3%) and simply lacks sufficient events to evaluate the model.</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:var(--teal)"><span class="it">Il Paradosso Trauma: Alta Performance, Bassa Mortalità</span><span class="en">The Trauma Paradox: High Performance, Low Mortality</span></div>
+      <div class="callout info">
+        <strong class="it">Osservazione chiave dai dati</strong>
+        <strong class="en">Key observation from the data</strong>
+        <span class="it">Trauma ha l'<strong>AUC più alto (0.957)</strong> pur avendo una mortalità relativamente bassa (10.3%) — molto inferiore ad ARDS (24.4%) o Sepsis (17.1%). Questo apparente paradosso si spiega così: una mortalità bassa significa che i <em>sopravvissuti sono molti e ben separati</em> dai pochi deceduti. I pazienti traumatici che muoiono hanno profili fisiologici estremi e chiaramente anomali; quelli che sopravvivono si stabilizzano rapidamente. La separazione nel feature space è netta, anche se i casi positivi sono pochi.</span>
+        <span class="en">Trauma has the <strong>highest AUC (0.957)</strong> despite relatively low mortality (10.3%) — much lower than ARDS (24.4%) or Sepsis (17.1%). This apparent paradox is explained as follows: low mortality means <em>survivors are plentiful and well-separated</em> from the few deceased. Trauma patients who die have extreme, clearly abnormal physiological profiles; those who survive stabilise quickly. The separation in feature space is sharp, even with few positive cases.</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="color:var(--teal)"><span class="it">Implicazioni per il Deployment</span><span class="en">Deployment Implications</span></div>
+      <ul class="obs-list">
+        <li>
+          <span class="obs-icon">✅</span>
+          <span class="it">Il modello è <strong>affidabile per Trauma, ARDS, Pneumonia, Liver Failure, Heart Failure</strong> (AUC ≥ 0.87): può essere usato con fiducia per il triage di questi pazienti.</span>
+          <span class="en">The model is <strong>reliable for Trauma, ARDS, Pneumonia, Liver Failure, Heart Failure</strong> (AUC ≥ 0.87): it can be trusted for triage of these patients.</span>
+        </li>
+        <li>
+          <span class="obs-icon">⚠️</span>
+          <span class="it">Per <strong>Stroke, AKI, Diabetes</strong> (AUC 0.76–0.81) il modello va affiancato da regole cliniche esplicite o da un modello specifico per quella diagnosi. L'alert automatico da solo non basta.</span>
+          <span class="en">For <strong>Stroke, AKI, Diabetes</strong> (AUC 0.76–0.81) the model should be supplemented with explicit clinical rules or a diagnosis-specific model. The automatic alert alone is insufficient.</span>
+        </li>
+        <li>
+          <span class="obs-icon">🚫</span>
+          <span class="it">Per <strong>Hypertensive Crisis</strong> il modello non può essere valutato con questi dati. Richiede un dataset più grande con più eventi o un approccio rule-based.</span>
+          <span class="en">For <strong>Hypertensive Crisis</strong> the model cannot be evaluated on this data. It requires a larger dataset with more events or a rule-based approach.</span>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ─── OSSERVAZIONI GENERALI ─── -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-badge" style="background:#37474f;">💬</div>
+      <div>
+        <div class="section-title it">Osservazioni Generali e Conclusioni</div>
+        <div class="section-title en">General Observations and Conclusions</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Task</th>
+              <th><span class="it">Stato</span><span class="en">Status</span></th>
+              <th><span class="it">Risultato chiave</span><span class="en">Key finding</span></th>
+              <th><span class="it">Lezione</span><span class="en">Lesson</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1 — Threshold</strong></td>
+              <td><span class="status ok">✔</span></td>
+              <td class="it">FN_COST↑ → soglia↓ → sensitivity↑, specificity↓, alarm fatigue</td>
+              <td class="it">Il threshold è una scelta clinica, non statistica</td>
+              <td class="en" style="display:none">FN_COST↑ → threshold↓ → sensitivity↑, specificity↓, alarm fatigue</td>
+              <td class="en" style="display:none">Threshold is a clinical choice, not a statistical one</td>
+            </tr>
+            <tr>
+              <td><strong>2 — IQR</strong></td>
+              <td><span class="status ok">✔</span></td>
+              <td class="it">+0.0008 AUC; wbc_iqr, gcs_iqr, troponin_iqr più importanti</td>
+              <td class="it">La variabilità temporale è informativa; serve più storia clinica per sfruttarla</td>
+              <td class="en" style="display:none">+0.0008 AUC; wbc_iqr, gcs_iqr, troponin_iqr most important</td>
+              <td class="en" style="display:none">Temporal variability is informative; more clinical history is needed to exploit it</td>
+            </tr>
+            <tr>
+              <td><strong>3 — CNN arch.</strong></td>
+              <td><span class="status ok">✔</span></td>
+              <td class="it">−0.0115 AUC; modello più profondo peggiora</td>
+              <td class="it">Complessità del modello deve matchare la lunghezza del segnale</td>
+              <td class="en" style="display:none">−0.0115 AUC; deeper model performs worse</td>
+              <td class="en" style="display:none">Model complexity must match signal length</td>
+            </tr>
+            <tr>
+              <td><strong>4 — Subgroup</strong></td>
+              <td><span class="status ok">✔</span></td>
+              <td class="it">Trauma best (0.957), Diabetes worst (0.758); Hypert. Crisis n/a</td>
+              <td class="it">Un AUC globale non basta per validare un sistema clinico</td>
+              <td class="en" style="display:none">Trauma best (0.957), Diabetes worst (0.758); Hypert. Crisis n/a</td>
+              <td class="en" style="display:none">A single global AUC is insufficient to validate a clinical system</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="it">Riflessione sul Sistema nel Suo Complesso</span><span class="en">Reflection on the System as a Whole</span></div>
+      <ul class="obs-list">
+        <li>
+          <span class="obs-icon">🏆</span>
+          <span class="it"><strong>XGBoost domina</strong> il task: AUROC 0.8646 vs 0.7916 della CNN. Per dati tabellari con feature aggregate, i modelli gradient boosting rimangono superiori ai modelli deep anche nel 2025.</span>
+          <span class="en"><strong>XGBoost dominates</strong> the task: AUROC 0.8646 vs 0.7916 for the CNN. For tabular data with aggregate features, gradient boosting models remain superior to deep models even in 2025.</span>
+        </li>
+        <li>
+          <span class="obs-icon">⚖️</span>
+          <span class="it"><strong>L'ensemble non batte XGBoost standalone</strong> (0.8377 vs 0.8646). Questo succede quando un modello è molto più forte dell'altro: la media pesata diluisce il modello forte anziché combinarne i punti di forza.</span>
+          <span class="en"><strong>The ensemble does not beat standalone XGBoost</strong> (0.8377 vs 0.8646). This happens when one model is much stronger than the other: the weighted average dilutes the strong model rather than combining complementary strengths.</span>
+        </li>
+        <li>
+          <span class="obs-icon">🔬</span>
+          <span class="it"><strong>Dataset sintetico vs reale</strong>: i risultati (IQR +0.0008, CNN −0.0115) sarebbero probabilmente amplificati su MIMIC-III con 10–50 timesteps. Il dataset sintetico è ottimo per imparare i concetti, ma limita il potenziale del deep learning e delle feature temporali avanzate.</span>
+          <span class="en"><strong>Synthetic vs real dataset</strong>: the results (IQR +0.0008, CNN −0.0115) would likely be amplified on MIMIC-III with 10–50 timesteps. The synthetic dataset is excellent for learning concepts, but limits the potential of deep learning and advanced temporal features.</span>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Smart Hospital – Politecnico di Milano &nbsp;·&nbsp; ICU Mortality Prediction &nbsp;·&nbsp; 2025–2026
+</footer>
+
+<script>
+  function setLang(lang) {
+    document.body.className = 'lang-' + lang;
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.lang-btn[onclick="setLang(\'' + lang + '\')"]').classList.add('active');
+
+    // Fix the summary table which has duplicate td cells
+    document.querySelectorAll('table td.it, table td.en').forEach(td => {
+      if (td.classList.contains(lang)) {
+        td.style.display = 'table-cell';
+      } else {
+        td.style.display = 'none';
+      }
+    });
+  }
+
+  // Init table cell visibility
+  setLang('it');
+</script>
+</body>
+</html>
