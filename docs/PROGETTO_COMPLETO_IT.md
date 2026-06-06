@@ -2,7 +2,7 @@
 
 > Tesi Magistrale - Politecnico di Milano, DEIB
 > Autore: Daniele Uras
-> Ultimo aggiornamento: 23 maggio 2026
+> Ultimo aggiornamento: 04 giugno 2026
 
 ---
 
@@ -691,6 +691,54 @@ Notebook: `EEG_20_dhslp_cluster_specific.ipynb` — **completato (null result)**
 > "La specializzazione per fenotipo di connettività non migliora la decodifica S-Indep. Il bottleneck non è l'eterogeneità dei soggetti ma la quantità di dati di training. Con ~70 soggetti totali, dividere per fenotipo porta a scarsità di dati che non permette nemmeno l'apprendimento di rappresentazioni generalizzabili."
 
 **Valore scientifico**: terzo null result inter-soggetto robusto (dopo EEG_16b e EEG_18). L'esaurimento sistematico di tutte le strategie clustering è il contributo della tesi.
+
+---
+
+### 4.24 Affidabilità del BAcc per Soggetto (EEG_25 — sessione 04/06)
+
+Notebook: `EEG_25_bacc_reliability.ipynb` — **completato**
+
+**Domanda**: il balanced accuracy per soggetto è abbastanza stabile da usare come segnale per distinguere soggetti "buoni" da soggetti "difficili"?
+
+**Risultati**: analisi di affidabilità del BAcc soggetto-per-soggetto nel contesto subject-independent.
+
+---
+
+### 4.25 Consistenza Trial per Cluster (EEG_25b — sessione 04/06)
+
+Notebook: `EEG_25b_trial_consistency.ipynb` — **completato**
+
+**Domanda**: C0 (Fronto-motor, dinamico) e C1 (Fronto-occipital, statico) differiscono per tipo di stabilità del segnale EEG, o la differenza è spiegabile dal rumore?
+
+**Misure calcolate** (per soggetto, subsample 250 trial):
+- `cons_alpha`: consistenza inter-trial del profilo di potenza alpha (8–13 Hz) per canale — correlazione media tra vettori da 61 canali
+- `cons_pcc`: consistenza inter-trial della connettività funzionale — correlazione media tra vettori da 1830 coppie canale-canale
+- `cov_alpha`: coefficiente di variazione della potenza alpha (variabilità intra-soggetto)
+
+**Risultati statistici** (Mann-Whitney U + Cohen's d):
+
+```
+Consistency ALPHA:  C0=0.534  C1=0.388  d=-0.80  p=0.001   → C0 > C1
+Consistency PCC:    C0=0.371  C1=0.668  d=+3.21  p=0.000   → C1 >> C0
+CoV ALPHA:          C0=0.471  C1=0.476  d=+0.08  p=0.753   → pari
+```
+
+**Check confound SNR** (da `comprehensive_features_subjects.csv`):
+```
+temp_rms:          C0=5.23  C1=5.12  d=-0.10  p=0.39   → nessuna differenza
+spec_total_power:  C0=28.99 C1=31.33 d=+0.16  p=0.82   → nessuna differenza
+```
+Il confond ampiezza/rumore è **escluso** — i due cluster hanno ampiezza EEG statisticamente identica.
+
+**Interpretazione**:
+- **C1 (Fronto-occipital)** ha topografia di co-attivazione canale-canale molto più stereotipata e ripetibile trial dopo trial (cons_pcc d=3.21 è genuinamente grande, non da rumore)
+- **C0 (Fronto-motor)** ha modulazione alpha leggermente più stabile nel tempo (cons_alpha d=0.80)
+- I due cluster rappresentano **profili neurofisiologici distinti**, non livelli di qualità del segnale
+
+**Implicazione per i modelli**:
+- C1 dovrebbe beneficiare di più da architetture che sfruttano la struttura spaziale (GCN, connettività)
+- C0 potrebbe rispondere meglio a modelli spettrali o temporali (alpha band)
+- Il verdetto C0 vs C1 rimane "misto": dipende dal tipo di consistenza che il modello sfrutta
 
 ---
 
