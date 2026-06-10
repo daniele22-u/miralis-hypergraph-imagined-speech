@@ -2,7 +2,7 @@
 
 > Tesi Magistrale - Politecnico di Milano, DEIB
 > Autore: Daniele Uras
-> Ultimo aggiornamento: 04 giugno 2026
+> Ultimo aggiornamento: 10 giugno 2026
 
 ---
 
@@ -515,194 +515,249 @@ Notebook: `EEG_12_whgnn_subject_specific.ipynb` — **completato**
 
 ---
 
-### 4.16 DHSLP Subject-Specific con Fix Overfitting (EEG_13b — sessione 10–19/05)
+### 4.16 DHSLP — Dynamic Hypergraph Spectral Learning (EEG_13/13b — maggio 2026)
 
-Notebook: `EEG_13b_dhslp_subject_specific.ipynb` — **completato**
+Notebook: `EEG_13_dhslp.ipynb`, `EEG_13b_dhslp_subject_specific.ipynb` — **completato**
 
-**Motivazione**: EEG_12 (W-HGNN LOSO) raggiunge ~34% bAcc sui migliori soggetti ma con gap train/val =0.67 — grave overfitting. EEG_13b introduce DHSLP (Li et al. 2025) con iperedge apprese + regolarizzazione aggressiva.
+**Obiettivo**: replicare Li et al. 2025 (Journal of Neural Engineering) — DHSLP raggiunge ~78% su imagined speech con iperedge imparate end-to-end, non costruite da metriche di connettività.
 
 **Architettura DHSLP**:
-- `H_k = softmax(feat_k @ E^T / sqrt(d))` — matrice incidenza soft, E learnable (n_edges × d)
-- K=8 finestre temporali → K ipergrafi → aggregazione mean
-- Differenza chiave da EEG_09–12: iperedge NON costruite da PCC ma parametri della rete
+- K_WINDOWS=8 finestre temporali, N_EDGES=16 iperedge apprese
+- Incidenza dinamica: `H = softmax(X @ E^T)` — E è una matrice di embedding (N_EDGES × D_MODEL) learnable
+- Spettrale ipergraph su H dinamico + concatenazione finestre + classificatore
+- D_MODEL=64, HIDDEN=128, MAX_EPOCHS=100, PATIENCE=15
 
-**Fix overfitting (EEG_13b vs EEG_12)**:
+**Input**: `data/hypergraphs_pruned_abs_pcc/PXXX_SYYY/trial_*.pt` — shape `(61, 384)`
 
-| Iperparametro | EEG_12 | EEG_13b |
-|---------------|--------|---------|
-| Hidden | 128 | 64 |
-| Dropout | 0.3 | 0.6 |
-| Weight Decay | 1e-3 | 5e-3 |
-| Label smoothing | 0.1 | 0.2 |
-| Mixup α | — | 0.4 |
+**EEG_13b — Subject-Specific LOSO:**
+
+| Soggetto top | Test bAcc |
+|-------------|-----------|
+| Mediana | ~25% |
+| Top-5 (≥30%) | P070=**0.393**, P007=0.344 |
+| % sopra chance | ~50% |
+
+**Insight chiave**: P070 (0.393) è il miglior soggetto assoluto in tutta la storia degli esperimenti — primo soggetto che supera 0.39 bAcc. È C1 (fronto-occipital), confermando la bimodalità C1.
+
+**Riepilogo comparativo aggiornato (4.6):**
+
+| Modello | Setting | Test bAcc top |
+|---------|---------|--------------|
+| DHSLP (EEG_13b) | S-Spec LOSO | **0.393 (P070)** |
+| W-HGNN (EEG_12) | S-Spec LOSO | 0.344 (P007) |
+| HGNN (EEG_09b) | S-Spec LOSO | 0.318 (P031) |
+
+---
+
+### 4.17 DHSLP Pretrain + Calibrazione (EEG_14 — maggio–giugno 2026)
+
+Notebook: `EEG_14_dhslp_pretrain_finetune.ipynb` — **completato e aggiornato**
+
+**Schema**: pretrain su SUBJ_TRAIN 0–59 (S-Indep), poi calibrazione per ogni soggetto test (60–73) con pochi trial.
+
+- Pre-train: tutti i soggetti 0–59, split casuale 90/10 train/val
+- Calibrazione: per ogni soggetto test, fine-tune su 1 sessione, test su le restanti
+- Metriche: PRE-CAL bAcc (frozen encoder) vs POST-CAL bAcc (dopo fine-tune)
+
+**Risultati**: calibrazione marginalmente utile per alcuni soggetti, ma guadagno medio contenuto. Soffitto pre-train ~26% (S-Indep). Il gap con Li et al. 2025 dipende principalmente dalla variabilità inter-soggetto, non dall'architettura.
+
+---
+
+### 4.18 Li et al. 2025 Algorithm 1 — Implementazione Fedele (EEG_15 — maggio 2026)
+
+Notebook: `EEG_15_li2025_algorithm1.ipynb` — **completato**
+
+Implementazione fedele dell'Algorithm 1 di Li et al. 2025, con grid search su f ∈ {10,20,...,90} (N_CONFIGS=3087). Label propagation su ipergrafo trial-level. Risultati paragonabili a EEG_13b — gap con paper attribuito a differenze dataset (soggetti, lingua, sessioni).
+
+---
+
+### 4.19 Scoperta Fenotipi Neurali C0/C1 (EEG_16/16b — maggio 2026)
+
+Notebook: `EEG_16_subject_clustering.ipynb`, `EEG_16b` — **completato, risultato tesi**
+
+**Svolta concettuale della tesi**: invece di cercare segnale lessicale, cluster i soggetti per connettività EEG media → emergono 2 fenotipi stabili.
+
+**Metodo**:
+- Feature: upper triangle abs_pcc (1830 dim), media su ~2750 trial per soggetto
+- PCA 20 componenti → KMeans(k=2)
+- P022 escluso come outlier singleton
 
 **Risultati**:
-- Gap train/val: **0.67 → 0.04** (overfitting risolto)
-- Migliori soggetti: ~34% bAcc (4 classi, chance=25%)
-- Best: P007 = 0.344
-- ~50% soggetti sopra chance, ~50% sotto (BCI illiteracy confermata)
 
-**Conclusione**: DHSLP con iperedge apprese raggiunge lo stesso soffitto di W-HGNN (~34%) ma con gap train/val quasi nullo — modello ben regolarizzato. Il soffitto è limitato dai dati (LOSO con 3 sessioni train) non dall'architettura.
+| Test | Risultato |
+|------|-----------|
+| Silhouette ipergrafo | **0.284** > 0.240 grafo |
+| XAI F3-PO8 Cohen's d | **d=−5.4** |
+| Permutation test N=5000 | **p<0.001** |
+| Cross-metric ARI (abs_pcc vs PLV) | **1.00** |
+| Cross-metric ARI (abs_pcc vs wPLI) | **0.95** |
+| Signal quality test | p=0.504 ns |
 
----
+| Fenotipo | n | Hub | Interpretazione |
+|----------|---|-----|----------------|
+| **C0 Fronto-motor** | 36 | F2-FT7, FC4-C2 | Imagery articolatoria/motoria |
+| **C1 Fronto-occipital** | 37 | F3-PO8 cross-emisf. | Imagery visuo-linguistica |
 
-### 4.17 DHSLP Pretrain + Calibrazione per Soggetto (EEG_14 — sessione 19/05)
-
-Notebook: `EEG_14_dhslp_pretrain_finetune.ipynb` — **completato**
-
-**Schema**: pretrain su tutti i soggetti (S-Indep), poi calibrazione per soggetto (fine-tune su sess. 1–4, test sess. 5). Obiettivo: sfruttare la popolazione per imparare rappresentazioni generalizzabili, poi adattarle per-soggetto.
-
-**Risultati**:
-- PRE-CAL: 26.1% mean bAcc (modello pretrained valutato direttamente su soggetto)
-- POST-CAL: 26.3% mean bAcc — Δ≈0, 7/13 soggetti migliorati
-- Spread: alcuni soggetti migliorano (+3–5%), altri peggiorano (−2–4%)
-
-**Conclusione**: pretrain generalizza appena sopra chance; fine-tuning non aiuta sistematicamente. L'adattamento per-soggetto non riesce a sfruttare la rappresentazione pretrainata. Causa probabile: le rappresentazioni S-Indep non sono informative per il soggetto specifico — il segnale IS è soggetto-dipendente a un livello troppo profondo.
+**Output**: `configs/eeg16b_cluster_labels.json` — 73 soggetti, label 0/1 per C0/C1.
 
 ---
 
-### 4.18 Li et al. 2025 Fedele sui Nostri Dati (EEG_15 — non ancora eseguito)
-
-Notebook: `EEG_15_li_trial_hypergraph.ipynb` — **implementato, da eseguire**
-
-**Obiettivo**: replicare esattamente la pipeline di Li et al. 2025 (DHSLP/DHSLF) sui nostri dati.
-
-**Specifiche**:
-- Split: 300 trial train / 200 trial val / 50 trial test (usa tutti i 550 trial per sessione)
-- Grid 3087 configurazioni iperparametriche
-- Pipeline identica al paper: feature extraction, hypergraph construction, training
-
-⚠️ **Non ancora eseguito** — risultati da aggiornare dopo run sul server.
-
----
-
-### 4.19 Clustering Soggetti per Connettività Strutturale (EEG_16 / EEG_16b — sessione 19–21/05)
-
-**EEG_16** (v1 — adj pruned 61×61):
-- Feature: adj pruned (PCC > soglia) → upper triangle = 1830 dim
-- PCA → KMeans(k=2): 52+22 soggetti
-- Mann-Whitney U vs bAcc: p=0.800 (ns)
-- **Null result**: struttura topografica del grafo pruned NON predice decodificabilità
-
-**EEG_16b** (v2 — upper triangle completo 1830-dim, notebook principale):
-- Feature: upper triangle abs_pcc completo (non thresholded), media su tutti i trial (~550 × 5 sessioni)
-- P022 escluso come outlier singleton (confermato da PCA)
-- KMeans(k=2) su PCA 20 componenti → **C0 ~36 sogg** / **C1 ~37 sogg**
-
-**Fenotipi neurali**:
-- **C0 (Fronto-motor)**: hub F2-FT7, F2-F8, FC4-C2 — connettività fronto-centrale destra; imagery articolatoria/motoria
-- **C1 (Fronto-occipital)**: hub F3-PO8 (cross-emisferici), modulo ipsilaterale sx fronto-occipitale; imagery visuo-linguistica
-
-**Validazione robusta**:
-- Silhouette ipergrafo=0.284 > silhouette grafo=0.240 → ipergrafo superiore
-- XAI Cohen's d: F3-PO8 d=−5.4; regione più discriminante frontale (mean|d|=0.861)
-- Permutation test N=5000: 0/5000 shuffle raggiunge d osservato → **non circolare**
-- Cross-metric ARI: ARI(abs_pcc, PLV)=1.00 · ARI(abs_pcc, wPLI)=0.95 → struttura robusta a metrica
-- Signal quality: varianza p=0.504 ns · kurtosi p=0.170 ns · gamma p=0.068 ns (borderline) → non noise-driven
-- **Null result bAcc**: Mann-Whitney p=0.800 (ns) — connettività strutturale ≠ performance IS
-
-**Note metodologiche**:
-- §19/§20 (XAI su H_pruned del modello DHSLP) rimossi: H_pruned viene da modello appreso, non dal segnale grezzo → non coerente con clustering abs_pcc. XAI valido è §17 (Cohen's d pairwise).
-- Cluster labels esportate in `configs/eeg16b_cluster_labels.json`
-
----
-
-### 4.20 Connettività Media per Cluster Semantico (EEG_17 — sessione 19/05)
+### 4.20 Connettività per Cluster (EEG_17 — maggio 2026)
 
 Notebook: `EEG_17_cluster_connectivity.ipynb` — **completato**
 
-**Approccio**: DEV[sogg, k] = deviazione della connettività individuale dalla grand mean della popolazione, calcolata per ciascuna delle 4 classi semantiche (concr4).
-
-**Finding**: la deviazione individuale è una firma stabile del soggetto, non correlata a bAcc. I soggetti con alta deviazione non decodificano meglio o peggio.
-
-**Conclusione**: il profilo di connettività semantico-specifico non predice decodificabilità — altra conferma empirica della robustezza del null result inter-soggetto.
+Visualizzazione e analisi della connettività media per cluster C0/C1: topomaps, matrici di connettività, hub identification. Conferma visiva che F3-PO8 è il link cross-emisferico discriminante per C1.
 
 ---
 
-### 4.21 Clustering Funzionale (EEG_18 — sessione 19/05)
+### 4.21 Stabilità Fenotipi — Sessione e Trial Level (EEG_19 — maggio 2026)
 
-Notebook: `EEG_18_functional_clustering.ipynb` — **completato, esteso a 1041D**
+Notebook: `EEG_19_phenotype_stability.ipynb` — **completato**
 
-**Feature testate progressivamente**:
+Due test di stabilità indipendenti:
 
-| Feature | Dim | Silhouette | KW p | Note |
-|---------|-----|-----------|------|------|
-| 4 scalari (§1–§4) | 4 | 0.18 | 0.93 (ns) | — |
-| Band power multi-banda | 305 | 0.32 | 0.074 (ns) | 5 bande × 61 canali |
-| Li gamma-temporal (§10 B) | 732 | 0.624 | 0.023★ | cluster 70+3 = outlier |
-| Combined (§10 C) | 1041 | 0.589 | 0.023★ | stessa struttura outlier |
+**§1–8 — Stabilità inter-sessione:**
+- Per ogni soggetto, clustering da singola sessione → confronto con etichetta EEG_16b
+- ARI=**0.933**, NMI=**0.946**, concordanza label 98.4%, F3-PO8 sig. in 5/5 sessioni
 
-**Risultati chiave**:
-- ARI strutturale (EEG_16b) vs funzionale ≈ 0 → i due clustering sono ortogonali
-- I cluster "significativi" (732D, 1041D) sono in realtà 70+3 soggetti → outlier detection, non clustering semantico
-- **Risultato negativo robusto**: 1041D di feature esaurite, nessuna predice bAcc in modo generalizzabile
+**§9–13 — Stabilità trial-level (28 maggio):**
+- 38.333 trial singoli (1.5s), clustering per-trial → confronto con etichetta soggetto
+- ARI=**0.796**, NMI=0.706, Silhouette=**0.421**
+- ARI vs sessione=0.000 (nessun drift temporale)
+- **Conclusione**: un singolo trial basta per classificare il fenotipo. I fenotipi sono proprietà anatomiche fondamentali, non artefatti statistici.
 
 ---
 
-### 4.22 Test-Retest: Stabilità Fenotipi tra Sessioni (EEG_19 — sessione 21/05)
+### 4.22 Firme Spettrali Dinamiche (EEG_22 — maggio 2026)
 
-Notebook: `EEG_19_session_clustering.ipynb` — **completato**
+Notebook: `EEG_22_spectral_signatures.ipynb` — **completato**
 
-**Domanda**: i fenotipi C0/C1 di EEG_16b esistono in ogni singola sessione, o sono un artefatto della media su 5 sessioni?
+PSD trial-level per trial corretti vs errati, separatamente per C0 e C1 (§11).
 
-**Approccio**: 73 soggetti × 5 sessioni = 365 vettori 1830-dim → stessa pipeline EEG_16b ma per-sessione.
+| | C0 (fronto-motor) | C1 (fronto-occipital) |
+|--|-------------------|----------------------|
+| Banda dominante | **Alpha↑ (d=0.248)** F6/FT8/C3/CP2 | Quasi nulla (2 el. delta) |
+| Gamma posteriore | ↓ soppresso | — |
+| TOP-10 (sig el.) | 9/61 (firma pulita) | 2/61 (silenzio) |
+| BOTTOM-10 (sig el.) | 34/61 (caotico) | 20/61 (caotico) |
 
-**Risultati**:
-
-| Metrica | Valore | Interpretazione |
-|---------|--------|----------------|
-| Ratio intra/inter soggetto | 0.425 | Sessioni stesso soggetto molto più simili tra loro |
-| NMI subject recovery (k=73) | 0.946 | 94.6% identità recuperata (vs random=0.618) |
-| Soggetti con 5/5 sessioni corrette | 56/73 (77%) | Alta purezza per-soggetto |
-| ARI fenotipo C0/C1 (k=2) | 0.933 | Quasi perfetta concordanza con EEG_16b |
-| Concordanza label C0/C1 | 98.4% | 1 sessione discordante ogni ~60 |
-| F3-PO8 significativa | 5/5 sessioni | Marker C1 stabile in ogni acquisizione |
-
-**Conclusione**: i fenotipi sono proprietà stabili del soggetto, presenti in ogni sessione senza drift temporale. Non sono un artefatto della media.
+**Lezione**: C1 opera fuori dallo spazio PSD — la sua firma è in fase (vedi EEG_23). PSD era lo strumento sbagliato per C1.
 
 ---
 
-### 4.23 DHSLP Cluster-Specific C0 vs C1 (EEG_20 — sessione 23/05)
+### 4.23 Validazione con PLV Indipendente (EEG_23 — maggio 2026)
 
-Notebook: `EEG_20_dhslp_cluster_specific.ipynb` — **completato (null result)**
+Notebook: `EEG_23_plv_phenotype_validation.ipynb` — **completato**
 
-**Ipotesi**: modelli DHSLP addestrati separatamente su C0 e C1 specializzano le iperedge apprese sul fenotipo corrispondente (fronto-motor per C0, fronto-occipital per C1), producendo migliore decodifica dei soggetti del proprio cluster.
+Test di validazione: se i fenotipi fossero artefatti di abs_pcc, il PLV (ortogonale) non dovrebbe differenziarli.
 
-**Config** (più capace di EEG_13b per compensare meno dati):
-- N_EDGES=32, HIDDEN=256, DROPOUT=0.3, WD=3e-3, MAX_EPOCHS=150, PATIENCE=25
+**Risultato (C0 vs C1, tutti i trial):**
 
-**Risultati — Matrice 2×2**:
+| Banda | Coppie sig. / 1830 |
+|-------|-------------------|
+| Alpha | **1818/1830** |
+| Beta | **1816/1830** |
+| Gamma | **1822/1830** |
 
-| | C0_TEST | C1_TEST |
-|--|---------|---------|
-| **Model_C0** | 0.2510 | 0.2512 |
-| **Model_C1** | 0.2500 | 0.2500 |
+Quasi ogni coppia di elettrodi è significativamente diversa tra C0 e C1 nel PLV. **Validazione indipendente più forte**: due metriche ortogonali → stessa distinzione.
 
-- Tutti a chance (1.00x chance)
-- Diagonale NON > off-diagonal → specializzazione non confermata
-- Solo 15% soggetti sopra chance in entrambi i modelli
-- XAI topomaps: PO7/AF4/T7 (Model_C0), C2/FC6/C3 (Model_C1) → non le aree fenotipospecifiche attese
+**Analisi aggiuntiva** — hub gamma trial corretti vs errati:
 
-**W&B**: log con heatmap 2×2, top-10 elettrodi per iperedge (bar chart interattivo), scatter H_mean.
-
-**Root cause**: ~25 soggetti train per cluster insufficienti per apprendere rappresentazioni subject-independent generalizzabili. EEG_13b usa ~50 soggetti e raggiunge solo 26% in S-Indep.
-
-**Conclusione (null result utile per tesi)**:
-> "La specializzazione per fenotipo di connettività non migliora la decodifica S-Indep. Il bottleneck non è l'eterogeneità dei soggetti ma la quantità di dati di training. Con ~70 soggetti totali, dividere per fenotipo porta a scarsità di dati che non permette nemmeno l'apprendimento di rappresentazioni generalizzabili."
-
-**Valore scientifico**: terzo null result inter-soggetto robusto (dopo EEG_16b e EEG_18). L'esaurimento sistematico di tutte le strategie clustering è il contributo della tesi.
+| | C0 | C1 |
+|--|----|----|
+| Hub gamma | C1,C4,CP1,FCz (motorio) | TP7,CP5,P7,T7 (TPJ sinistro) |
+| Meccanismo | Encodage motorio-articolatorio | Encodage fonetico-semantico |
 
 ---
 
-### 4.24 Affidabilità del BAcc per Soggetto (EEG_25 — sessione 04/06)
+### 4.24 Predittori Within-Cluster (EEG_24 — maggio 2026)
 
-Notebook: `EEG_25_bacc_reliability.ipynb` — **completato**
+Notebook: `EEG_24_within_cluster_predictors.ipynb` — **completato**
 
-**Domanda**: il balanced accuracy per soggetto è abbastanza stabile da usare come segnale per distinguere soggetti "buoni" da soggetti "difficili"?
+Spearman rho tra feature soggetto e bAcc DHSLP (EEG_13b), separatamente dentro C0 e C1.
 
-**Risultati**: analisi di affidabilità del BAcc soggetto-per-soggetto nel contesto subject-independent.
+**C1 — quasi-finding (underpowered):**
+- 130/1830 PCC coppie sig. a p<0.05 (attese ~91 per caso)
+- Fz come hub: A2-Fz (rho=+0.535), F2-Fz (+0.529)
+- PLV c0hub_beta: rho=−0.487, p=0.0022 — i buoni C1 sopprimono la rete motoria in beta
+- 0 feature FDR (servirebbero ~80-100 soggetti C1 per conferma)
+
+**C0 — null strutturale:**
+- 11/1830 sig — sotto il caso. Nessuna narrativa biologica.
+- Ma: TOP-10 C0 ha 9/61 el. sig., BOTTOM-10 C0 ha 34/61 el. sig. → discriminatore dinamico
+
+**Implicazione**: il null C0 è coerente con EEG_25 (C0=stato, non tratto da predire).
 
 ---
+
+### 4.25 Reliability Split-Half: Tratto vs Stato (EEG_25 — giugno 2026)
+
+Notebook: `EEG_25_reliability_proficiency.ipynb` — **completato, risultato tesi**
+
+Split-half reliability sulla bAcc DHSLP separatamente per C0 e C1.
+
+| | C0 (motorio) | C1 (linguistico) |
+|--|--------------|-----------------|
+| Reliability Spearman-Brown | **−0.36 ≈ 0** | **+0.45** |
+| CI 95% | [−0.40, +0.12] include zero | [+0.09, +0.51] esclude zero |
+| Proficiency è... | uno **stato** (non stabile) | un **tratto** (debolmente stabile) |
+
+**Conclusione**: i due fenotipi differiscono nella *natura* della proficiency. Spiega il null EEG_24 su C0 (non c'è tratto da predire). Conferma retroattivamente il discriminatore dinamico C0 di EEG_22.
+
+---
+
+### 4.26 cVAE Condizionale + Mixup Augmentation (EEG_28 — giugno 2026)
+
+Notebook: `EEG_28_cvae_augmentation.ipynb` — **completato**
+
+**Obiettivo**: aumentare i trial tramite generazione sintetica (cVAE) e mixup, per ridurre overfitting nel setting subject-specific.
+
+**cVAE condizionale:**
+- Encoder: CNN 1D (61→latent 64) condizionato sul label semantico
+- Decoder: CNN trasposta latent+label → (61, 384)
+- Bug risolti: posterior collapse (KL annealing, free bits, conditioning asimmetrico)
+- Encoder stride=1 per preservare banda beta
+- Early stopping su val/recon invece di val/loss totale
+
+**Mixup augmentation:**
+- `X_mix = λ*X_i + (1-λ)*X_j` dove i,j hanno stesso label semantico
+- Test rapido: with vs without mixup su subset soggetti
+
+**§10**: visualizzazione reale vs mixup (waveform + PSD) — controllo qualità generazione
+**§11**: rimosso ERP condizionato al fenotipo (non informativo — refactored fuori)
+
+**Conclusioni**: cVAE genera trial plausibili (PSD simile), ma il guadagno in classificazione è marginale. Il bottleneck è variabilità inter-soggetto, non dimensione del dataset.
+
+---
+
+### 4.27 Nuovi Esperimenti Proposti (EEG_30–34 — giugno 2026)
+
+Cinque nuovi notebook creati in questa sessione per esplorare direzioni alternative:
+
+#### EEG_30 — Trial-Level Decodability Prediction
+Notebook: `EEG_30_trial_decodability.ipynb`
+
+Predire *quali* trial saranno decodificati correttamente (prima di vedere le label). Feature dinamiche per-trial: permutation entropy, alpha power fronto-central, intra-trial phase coherence su hub pairs (TP7-CP5, F3-PO8), variance spettrale per banda. Nested CV StratifiedGroupKFold per soggetto + twin con label shuffled. Fallback: DHSLP out-of-fold se checkpoint disponibile.
+
+#### EEG_31 — Riemannian Alignment
+Notebook: `EEG_31_riemannian_alignment.ipynb`
+
+pyriemann OAS covariances → mean_riemann → whitening `R_s^{-1/2} C R_s^{-1/2}`. (A) tangent-space + LogReg decodability aligned vs raw, (B) KMeans k=2 re-phenotyping in tangent space → ARI vs EEG_16b (riferimento: silhouette 0.284).
+
+#### EEG_32 — CSD Rephenotyping
+Notebook: `EEG_32_csd_rephenotyping.ipynb`
+
+Current Source Density (Laplaciano spaziale) su montage ebneuro.locs (61 ch). Ricalcola abs_pcc su dati CSD → re-fenotyping → ARI vs EEG_16b. Risponde a: i fenotipi resistono alla re-referencing con CSD (che riduce volume conduction)?
+
+#### EEG_33 — Phenotype Switch Decodability
+Notebook: `EEG_33_phenotype_switch_decodability.ipynb`
+
+Assegna fenotipo per-trial (distanza dal centroide in PCA space). Cohen's d come metrica primaria (non p-value — a 38k trial i p-value saturano). Confound control: varianza/SNR tra gruppi di trial. Domanda: i trial classificati C0 vs C1 differiscono in decodificabilità?
+
+#### EEG_34 — Information Ceiling Estimation
+Notebook: `EEG_34_information_ceiling.ipynb`
+
+Due stimatori: (1) mutual_info_classif kNN-Kraskov, (2) MINE (Donsker-Varadhan lower bound, PyTorch, EMA gradient bias correction). Fano inequality → max accuracy teorica per 4 classi → bar plot vs chance 25% e empirico 34% (P070). Risponde a: quanto margine teorico rimane?
 
 ---
 
