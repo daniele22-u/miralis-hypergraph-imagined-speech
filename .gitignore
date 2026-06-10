@@ -21,6 +21,7 @@ models/checkpoints/
 
 datasets/       
 scripts/data_processing/eeglab2025.1.0
+.claude/worktrees/
 scripts/data_processing/Preprocessing-main
 results/large_outputs/
 utilities/
