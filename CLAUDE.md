@@ -18,6 +18,14 @@
 
 - `docs/PROGETTO_COMPLETO_IT.md` — tutto ciò che è stato fatto finora
 - `docs/DIREZIONI_E_LIMITAZIONI.md` — roadmap, limitazioni, prossimi passi
+
+### Vault del collega (stesso dataset)
+
+Un collega lavora sullo **stesso identico dataset** (74 soggetti × 110 parole) da un angolo diverso: word-length decoding cross-subject. Il suo vault è in `/Users/danieleuras/Documents/ClaudeBrain-main` (symlinkato in Tesi-Wiki come `wiki/claudebrain-vault/`).
+
+**REGOLA: quando Daniele fa una domanda di ricerca, confronta sempre i due approcci** — come l'ha affrontato lui (Tesi-Wiki) e come l'ha affrontato il collega (ClaudeBrain). Cerca punti di convergenza, divergenza, e metodologie riusabili. L'hub di tutti i collegamenti è `Tesi-Wiki/wiki/bridge/claudebrain.md`.
+
+Note chiave del collega: `imagined-speech-ceiling-thesis` (8 linee per il data ceiling), `methodology-lessons-imagined-speech` (9 lezioni), `per-subject-vs-group-decoding-gap`, `subject-identification-brainid` (100% ID), `data-quality-headline-findings` (beta ucciso 98.86%), `hypergraph-eeg-exploration` (7 varianti NULL).
 - `docs/papers_found.md` — letteratura di riferimento
 
 ---

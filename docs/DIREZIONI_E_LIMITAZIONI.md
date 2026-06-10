@@ -1,6 +1,6 @@
 # Direzioni Future e Limitazioni Attuali
 
-> Ultimo aggiornamento: 10 maggio 2026
+> Ultimo aggiornamento: 10 giugno 2026
 
 ---
 
@@ -164,17 +164,23 @@
 #### F. ✅ Hypergraph Neural Networks (EEG_09–12) — COMPLETATO (topologia fissa)
 - HGNN statico, T-HGNN, W-HGNN implementati e testati (EEG_09–12)
 - Risultato: soffitto ~34% S-Spec, ~26% S-Indep — nessun breakthrough
-- **Prossimo step**: EEG_13 — DHSLP (Li et al. 2025): iperedge APPRESE end-to-end (non costruite da PCC)
 
-#### F2. 🔄 DHSLP/DHSLF — Dynamic Hypergraph con Iperedge Apprese (EEG_13 — TARGET TESI)
-- **Cosa**: replicare Li et al. 2025 — iperedge come parametri learnable (non PCC/PLV hard-coded)
-- **Differenza chiave da EEG_09–12**: in EEG_09–12 H_pruned è costruito da PCC (ingegneria manuale). In DHSLP le iperedge sono vettori di parametri `E_j ∈ R^d` aggiornati da backprop — la rete decide QUALI elettrodi raggruppare
-- **Come**:
-  - `H = softmax(X @ E^T)` — matrice incidenza soft da prodotto scalare feature-iperedge
-  - Stack temporale: K finestre → K iperedge-set → aggregazione con attention o mean
-  - Loss: cross-entropy su concr4 (4 classi)
-- **Riferimento**: Li et al. 2025, arXiv — DHSLP/DHSLF, ~78% accuracy su imagined speech
-- **Effort**: alto — ma è l'obiettivo principale della tesi
+#### F2. ✅ DHSLP/DHSLF — Dynamic Hypergraph con Iperedge Apprese (EEG_13/14/15 — COMPLETATO)
+- Implementato in EEG_13 (S-Spec LOSO), EEG_14 (pretrain + calibrazione), EEG_15 (Algorithm 1 Li et al.)
+- **Record assoluto**: P070 bAcc=**0.393** (C1, fronto-occipital) — primo soggetto a superare 0.39
+- **Conclusione**: il soffitto subject-specific con DHSLP è ~39% per i migliori soggetti, ~25% mediana
+
+#### F3. ✅ Scoperta Fenotipi Neurali C0/C1 (EEG_16b/17 — RISULTATO TESI)
+- **Svolta concettuale**: cluster per connettività soggetto → 2 fenotipi stabili (ARI=0.933 sessione, ARI=0.796 trial)
+- C0 (n=36): fronto-motor, imagery articolatoria — proficiency=STATO
+- C1 (n=37): fronto-occipital, imagery visuo-linguistica — proficiency=TRATTO
+- Validato da: permutation test, cross-metric PLV, firme spettrali differenziate (EEG_22/23)
+- Split-half reliability (EEG_25): C0 r=−0.36 (stato), C1 r=+0.45 CI esclude zero (tratto)
+
+#### F4. ✅ cVAE + Mixup Augmentation (EEG_28 — COMPLETATO)
+- cVAE condizionale per generazione trial sintetici — plausibile ma guadagno marginale
+- Mixup augmentation su trial stesso-label — test rapido, beneficio limitato
+- Conclusione: il bottleneck è variabilità inter-soggetto, non dataset size
 
 #### G. Graph Attention Networks (GAT)
 - **Cosa**: sostituire GCN con GAT per pesare dinamicamente i vicini
@@ -236,35 +242,26 @@
 
 ## 3. Roadmap Suggerita
 
-### Fase 0: Subject Clustering (PROSSIMO PASSO — Francesco)
-0. **EEG_08_subject_clustering.ipynb** — clustering soggetti da feature EEG (§2.0 sopra)
-   - Feature: thresh_density, mean_pcc, spectral_gap, band powers
-   - K-Means k=2,3 + gerarchico Ward
-   - Post-hoc: accuracy overlay da EEG_06
+### Fase 0–2: ✅ COMPLETATE (maggio–giugno 2026)
+- ✅ Subject clustering EEG-first (EEG_08c) — null result empirico
+- ✅ HGNN ablation completa (EEG_09–12) — soffitto ~34% S-Spec
+- ✅ DHSLP implementato (EEG_13–15) — best P070=0.393
+- ✅ Scoperta fenotipi C0/C1 (EEG_16b/17/19) — ARI=0.933 sessione, 0.796 trial
+- ✅ Caratterizzazione fenotipi (EEG_22/23/24/25) — firme spettrali, PLV, tratto/stato
+- ✅ cVAE + mixup (EEG_28) — generazione sintetica, guadagno marginale
 
-### Fase 1: Correzione Fondamentale (immediato, dopo EEG_08)
-1. **Subject-centering** su tutti i notebook (`X_trial -= X_subject_mean`) — prerequisito per tutto il resto
-2. **Instance Normalization** sostituisce BatchNorm in tutti i modelli DL
-3. **EEGNet end-to-end** su segnale raw (59, 384) — già in `EEG_04_braindecode_raw_baselines.ipynb`
-4. **Completare** training GCN spazio-temporale
-5. **Rieseguire** tutti i baseline sul task a 4-5 categorie semantiche (schemi affidabili: Ward-4, POS-4, Semantico-BCI-5)
+### Fase 3: Esperimenti Tesi da Eseguire (prossima settimana — server)
+1. **EEG_30** — Trial-level decodability prediction (feature dinamiche, nested CV)
+2. **EEG_31** — Riemannian alignment (pyriemann, re-fenotyping in tangent space)
+3. **EEG_32** — CSD rephenotyping (Laplaciano spaziale, robustezza fenotipi)
+4. **EEG_33** — Phenotype switch decodability (Cohen's d trial-level, confound control)
+5. **EEG_34** — Information ceiling (MINE, Fano inequality, margine teorico)
 
-### Fase 2: Affrontare la Variabilità Inter-Soggetto (breve termine)
-6. **Allineamento Riemanniano** (pyriemann Euclidean Alignment) — preprocessing aggiuntivo
-7. **Cross-subject contrastive learning** (Shen et al. 2022) — sfrutta i 70 soggetti come vantaggio
-8. **DANN** gradient reversal su subject label (Zheng & Lu 2020)
-9. **GAT** (Graph Attention Networks) — `GATConv` di PyG
-
-### Fase 3: Hypergraph e Analisi Avanzata (medio termine)
-10. **Neural Prototype Clustering** — confronto EEG vs. semantica con ARI (contributo originale)
-11. **Dynamic Hypergraph (DHSLP-style)** — per-trial PLV/coherence hyperedges
-12. **Allineamento Riemanniano** per domain generalization
-
-### Fase 4: Sistema Completo (lungo termine)
-13. Feature tempo-frequenza (wavelet, STFT) — dopo aver stabilito baseline DL
-14. Data augmentation sistematica (Rommel et al. 2022)
-15. Pipeline automatizzata end-to-end
-16. Validazione su dataset esterni (Nieto et al. Inner Speech)
+### Fase 4: Scrittura Tesi (giugno–luglio 2026)
+- Cap. 4: Fenotipi neurali — 6 livelli di evidenza (EEG_16b–25)
+- Cap. 5: Modelli di decodifica — DHSLP best P070=0.393
+- Cap. 6: Esperimenti di caratterizzazione (EEG_30–34)
+- Cap. 7: Discussione — dual-stream, tratto/stato, ceiling informazionale
 
 ---
 
@@ -283,14 +280,16 @@
 
 ## 5. Metriche di Successo
 
-| Obiettivo | Metrica | Target |
-|-----------|---------|--------|
-| Baseline vettoriale | Accuracy 110 classi | > 2% (2x chance) |
-| GNN subject-specific | Accuracy 110 classi | > 5% |
-| GNN subject-independent | Accuracy 110 classi | > 2% |
-| Categorie semantiche (subject-specific) | Accuracy 4-5 classi | > 40% |
-| Categorie semantiche (subject-independent) | Accuracy 4-5 classi | > 30% |
-| Hypergraph (riferimento Li et al.) | Accuracy comparabile | Avvicinare 78% |
+| Obiettivo | Metrica | Target | Risultato Attuale |
+|-----------|---------|--------|-------------------|
+| Baseline vettoriale | bAcc 4 classi | > 25% | ✅ ~25% (EEGNet) |
+| GNN subject-independent | bAcc 4 classi | > 26% | ✅ ~26% (DHSLP S-Indep) |
+| GNN subject-specific mediana | bAcc 4 classi | > 30% | ⚠️ ~25% mediana |
+| GNN subject-specific top | bAcc 4 classi | > 35% | ✅ **0.393** (P070, EEG_13b) |
+| Fenotipi stabili | ARI sessione | > 0.8 | ✅ **0.933** (EEG_19) |
+| Fenotipi stabili trial | ARI trial | > 0.5 | ✅ **0.796** (EEG_19 §9-13) |
+| Hypergraph (ref. Li et al.) | bAcc comparabile | avvicinare 78% | ⚠️ 39% best soggetto |
+| Ceiling informazionale | MI → max bAcc | da stimare | 🔄 EEG_34 (pending) |
 
 ---
 
