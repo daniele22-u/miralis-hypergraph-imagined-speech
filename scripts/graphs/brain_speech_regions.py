@@ -28,6 +28,9 @@ NOTE
 """
 
 import os
+# render OFFSCREEN: salva il PNG senza aprire finestre/widget interattivi.
+# DEVE stare prima di import mne/pyvista.
+os.environ.setdefault("PYVISTA_OFF_SCREEN", "true")
 from pathlib import Path
 
 import mne
@@ -75,8 +78,9 @@ def main():
 
     print(f">> rendering brain ({SURF}, {HEMI})...")
     Brain = mne.viz.get_brain_class()
+    # show=False: niente display interattivo (evita il crash ipywidgets/trame da terminale)
     brain = Brain(subject, hemi=HEMI, surf=SURF, subjects_dir=subjects_dir,
-                  background=BG, cortex=CORTEX, size=SIZE)
+                  background=BG, cortex=CORTEX, size=SIZE, show=False)
 
     labels = mne.read_labels_from_annot(subject, parc="aparc", hemi=HEMI,
                                         subjects_dir=subjects_dir, verbose=False)
