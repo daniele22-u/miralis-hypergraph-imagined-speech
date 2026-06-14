@@ -1,209 +1,225 @@
 """
-Genera figura tesi: grafo elettrodico sovrapposto alla mappa del cranio.
+Genera le 3 figure illustrative per il capitolo Background della tesi (§2.4, §2.5).
 
-Pannello sinistro  : matrice di adiacenza A (abs. PCC, pruned, media su N trial)
-Pannello destro    : grafo sul cranio — archi pesati per coupling, nodi per grado
+Figure schematiche (NON dati reali) che mostrano la corrispondenza grafo <-> matrice
+di adiacenza e l'astrazione a ipergrafo, usando le posizioni reali degli elettrodi
+(proiezione polare EEGLAB, identica a mne.plot_topomap).
 
-Sorgente dati (in ordine di priorità):
-  1. data/hypergraphs_pruned_abs_pcc/  → .pt files (adj già calcolata + prunata)
-  2. data/raw_csv/training_set/        → CSV raw   → calcola abs_pcc + prune
+  thesis_graph.pdf       -> §2.4  grafo sul cranio (5 regioni anatomiche, archi pesati)
+  thesis_adj_matrix.pdf  -> §2.4  matrice di adiacenza binaria 15x15 (blocchi 0/1)
+  thesis_hypergraph.pdf  -> §2.5  ipergrafo (5 iper-archi = regioni)
 
-Output:
-  figures/scalp_graph_thesis.pdf   (vettoriale, per LaTeX)
-  figures/scalp_graph_thesis.png   (300 dpi, per preview)
+Tutto il testo nelle figure e' in INGLESE (convenzione tesi).
+Output: figures/{thesis_graph,thesis_adj_matrix,thesis_hypergraph}.{pdf,png}
+Le figure vanno poi copiate in thesislatex/Images/ (graphicspath = ./Images/).
 """
 
 from pathlib import Path
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-from matplotlib.colors import Normalize
-import torch
+import matplotlib.patches as mpatches
+from matplotlib.patches import Rectangle
+from scipy.spatial import ConvexHull
 
-# ── CONFIG ────────────────────────────────────────────────────────────────────
+plt.rcParams.update({'font.family': 'serif', 'font.size': 10})
+
 project_root = next(
     (p for p in [Path(__file__).resolve()] + list(Path(__file__).resolve().parents)
      if (p / '.git').exists()),
     Path(__file__).resolve().parent.parent,
 )
+ELOC_FILE = project_root / 'src' / 'io' / 'ebneuro.locs'
+FIG_DIR   = project_root / 'figures'
+FIG_DIR.mkdir(exist_ok=True)
 
-ELOC_FILE     = project_root / 'src' / 'io' / 'ebneuro.locs'
-HG_DIR        = project_root / 'data' / 'hypergraphs_pruned_abs_pcc'
-CSV_DIR       = project_root / 'data' / 'raw_csv' / 'training_set'
-FIG_OUT       = project_root / 'figures' / 'scalp_graph_thesis'
-
-SUBJ          = 0       # soggetto da usare (cambia se P000 non disponibile)
-SESS          = 1       # sessione
-MAX_TRIALS    = 30      # media su questi trial per una adj più stabile
-EDGE_THR_PCT  = 95      # top 5% archi (coerente con EEG_07f)
-N_CH          = 61      # canali EEG (escluse reference A1, A2)
-
-BLUEPOLI      = '#005F9E'
-BAD_CHANNELS  = {'A1', 'A2'}   # reference — escludi dalla visualizzazione
-
-# ── 1. POSIZIONI 2D DAGLI ELETTRODI (.locs EEGLAB) ───────────────────────────
-# Formato colonne: index  angle_deg  radius  name
-# Convenzione EEGLAB: angle=0 → naso (y>0), angle=±90 → orecchie (x=±)
-# 2D Cartesiane: x = radius * sin(angle_rad)  (dx, ±=right/left)
-#                y = radius * cos(angle_rad)  (dy, + = front/nose)
-
-locs_data = []
-with open(ELOC_FILE) as f:
-    for line in f:
+# ── 1. Posizioni 2D elettrodi (proiezione polare EEGLAB) ──────────────────────
+# Formato .locs: index angle_deg radius name. +y = naso, +x = destra.
+BAD_CH = {'A1', 'A2'}   # reference, radius 0
+locs   = []
+with open(ELOC_FILE) as fh:
+    for line in fh:
         parts = line.split()
         if len(parts) < 4:
             continue
         try:
-            _, angle, radius, name = parts[0], float(parts[1]), float(parts[2]), parts[3]
+            angle, radius, name = float(parts[1]), float(parts[2]), parts[3]
         except ValueError:
             continue
-        if name in BAD_CHANNELS or radius == 0.0:
+        if name in BAD_CH or radius == 0:
             continue
         rad = np.radians(angle)
-        x   = radius * np.sin(rad)
-        y   = radius * np.cos(rad)
-        locs_data.append({'name': name, 'x': x, 'y': y, 'radius': radius})
+        locs.append({'name': name, 'x': radius * np.sin(rad), 'y': radius * np.cos(rad)})
 
-locs_data = locs_data[:N_CH]   # prendi solo i primi N_CH
-ch_names  = [d['name'] for d in locs_data]
-pos_xy    = np.array([[d['x'], d['y']] for d in locs_data])   # (N_CH, 2)
+locs     = locs[:61]
+ch_names = [d['name'] for d in locs]
+pos      = np.array([[d['x'], d['y']] for d in locs])
+pos     /= np.sqrt((pos ** 2).sum(axis=1)).max()   # periferici -> cerchio unitario
+N        = len(pos)
 
-# Normalizza al cerchio: in EEGLAB il raggio 0.5 ≈ bordo orecchie
-# Nota: il massimo raggio nel file è ~0.535, scalalo a 1.0
-max_r     = max(d['radius'] for d in locs_data)
-pos_norm  = pos_xy / max_r     # elettrodi periferici toccano ~cerchio unitario
+# ── 2. Regioni anatomiche (unica sorgente di verita' per le 3 figure) ─────────
+def nearest(center, n):
+    return list(np.argsort(np.linalg.norm(pos - center, axis=1))[:n])
 
-print(f'Elettrodi caricati: {len(ch_names)}')
+regions = [
+    (nearest(np.array([ 0.0,  0.80]), 7), '#4A90D9', 'Frontal'),
+    (nearest(np.array([-0.60, 0.0 ]), 6), '#E67E22', 'Left Temporal'),
+    (nearest(np.array([ 0.60, 0.0 ]), 6), '#27AE60', 'Right Temporal'),
+    (nearest(np.array([ 0.0, -0.40]), 6), '#8E44AD', 'Parietal'),
+    (nearest(np.array([ 0.0, -0.90]), 5), '#C0392B', 'Occipital'),
+]
 
-# ── 2. MATRICE DI ADIACENZA (media su trial) ─────────────────────────────────
-adj_accum = np.zeros((N_CH, N_CH), dtype=np.float32)
-n_loaded  = 0
+node_region, node_col = {}, {}
+for ri, (members, color, _) in enumerate(regions):
+    for m in members:
+        node_region[m] = ri
+        node_col[m]    = color
 
-# Opzione A: carica da .pt precomputati
-pt_dir = HG_DIR / f'P{SUBJ:03d}_S{SESS:03d}'
-if pt_dir.exists():
-    pts = sorted(pt_dir.glob('trial_*.pt'))[:MAX_TRIALS]
-    for pt_path in pts:
-        d   = torch.load(pt_path, map_location='cpu')
-        adj = d.get('adj')
-        if adj is not None:
-            a = adj.numpy().astype(np.float32)
-            if a.shape == (N_CH, N_CH):
-                adj_accum += a
-                n_loaded  += 1
-    if n_loaded:
-        print(f'Caricati {n_loaded} .pt da {pt_dir}')
+# ── 3. Sottoinsieme per la matrice: 3 elettrodi per regione = 15 nodi ─────────
+sel_nodes, region_slices = [], []
+for node_ids, color, name in regions:
+    s = len(sel_nodes)
+    sel_nodes += node_ids[:3]
+    region_slices.append((s, s + 3, color, name))
+n_s          = len(sel_nodes)
+sel_labels   = [ch_names[i] for i in sel_nodes]
+sel_col_list = [node_col[i] for i in sel_nodes]
 
-# Opzione B: calcola abs_pcc da CSV raw
-if n_loaded == 0:
-    sess_dir = CSV_DIR / f'P{SUBJ:03d}_S{SESS:03d}'
-    csvs     = sorted(sess_dir.glob('*_img.csv'))[:MAX_TRIALS] if sess_dir.exists() else []
-    for csv_path in csvs:
-        x = pd.read_csv(csv_path, header=None).values[:N_CH].astype(np.float32)
-        if x.shape[0] < N_CH:
+# ── 4. Archi DETERMINISTICI (no seed) — ogni "1" della matrice = arco nel grafo
+# within-region: triangolo completo tra i 3 sel-nodi; cross-region: 3 link sparsi.
+edge_w = {}
+for s, e, _, _ in region_slices:
+    sn = sel_nodes[s:e]
+    for a in range(len(sn)):
+        for b in range(a + 1, len(sn)):
+            edge_w[(min(sn[a], sn[b]), max(sn[a], sn[b]))] = 0.78
+for i, j in [(sel_nodes[1], sel_nodes[4]),
+             (sel_nodes[7], sel_nodes[9]),
+             (sel_nodes[10], sel_nodes[13])]:
+    edge_w[(min(i, j), max(i, j))] = 0.38
+
+A_sub = np.zeros((n_s, n_s), dtype=int)
+for ki, i in enumerate(sel_nodes):
+    for kj, j in enumerate(sel_nodes):
+        if ki != kj and (min(i, j), max(i, j)) in edge_w:
+            A_sub[ki, kj] = 1
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+def draw_head(ax, r=1.06, col='#555', lw=1.6):
+    th = np.linspace(0, 2 * np.pi, 360)
+    ax.plot(np.cos(th) * r, np.sin(th) * r, color=col, lw=lw, zorder=0)
+    ax.plot([-0.09, 0, 0.09], [r, r * 1.17, r], color=col, lw=lw, zorder=0)
+    for s in (-1, 1):
+        t = np.linspace(np.radians(92), np.radians(268), 40)
+        ax.plot(s * (r + 0.09 * np.cos(t)), 0.14 * np.sin(t), color=col, lw=lw, zorder=0)
+
+def inflated_hull(pts, pad=0.13):
+    if len(pts) < 3:
+        return None
+    hull = ConvexHull(pts)
+    v    = pts[hull.vertices]
+    d    = v - v.mean(axis=0)
+    v2   = v + d / np.linalg.norm(d, axis=1, keepdims=True).clip(1e-9) * pad
+    return np.vstack([v2, v2[0]])
+
+KEY = {'Cz', 'C3', 'C4', 'Fz', 'Pz', 'Oz', 'T3', 'T4', 'FCz', 'CPz'}
+
+def label_key(ax):
+    for i, ch in enumerate(ch_names):
+        if ch in KEY:
+            ax.annotate(ch, pos[i], fontsize=7, ha='center', va='bottom',
+                        xytext=(0, 5), textcoords='offset points',
+                        color='#111', fontweight='bold')
+
+def add_legend(ax):
+    patches = [mpatches.Patch(facecolor=c, edgecolor='none', label=n)
+               for _, c, n in regions]
+    ax.legend(handles=patches, loc='lower center', bbox_to_anchor=(0.5, -0.04),
+              ncol=5, fontsize=8, frameon=True, framealpha=0.95, edgecolor='#ccc',
+              handlelength=1.2, handletextpad=0.4, columnspacing=0.7)
+
+def scalp_ax(ax):
+    ax.set_aspect('equal'); ax.axis('off')
+    ax.set_xlim(-1.35, 1.35); ax.set_ylim(-1.28, 1.42)
+
+def save(fig, name):
+    for ext in ('pdf', 'png'):
+        fig.savefig(FIG_DIR / f'{name}.{ext}', dpi=300, bbox_inches='tight')
+    print(f'Saved: figures/{name}.*')
+
+# ── FIGURA 1 — GRAFO (§2.4) ───────────────────────────────────────────────────
+fig1, ax1 = plt.subplots(figsize=(5.5, 6.2))
+scalp_ax(ax1); draw_head(ax1)
+ax1.scatter(pos[:, 0], pos[:, 1], c='#DDDDDD', s=22, zorder=2,
+            edgecolors='#AAAAAA', linewidths=0.3)
+for ki, i in enumerate(sel_nodes):
+    for kj, j in enumerate(sel_nodes):
+        if ki >= kj or A_sub[ki, kj] == 0:
             continue
-        a_raw = np.abs(np.corrcoef(x)).astype(np.float32)
-        np.fill_diagonal(a_raw, 0.0)
-        thr = np.percentile(a_raw[a_raw > 0], EDGE_THR_PCT)
-        a_raw[a_raw < thr] = 0.0
-        adj_accum += a_raw
-        n_loaded  += 1
-    if n_loaded:
-        print(f'Calcolato abs_pcc da {n_loaded} CSV in {sess_dir}')
+        ri, rj = node_region.get(i), node_region.get(j)
+        col = regions[ri][1] if ri == rj else '#2C3E50'
+        lw  = 2.5 if ri == rj else 1.2
+        ax1.plot([pos[i, 0], pos[j, 0]], [pos[i, 1], pos[j, 1]],
+                 color=col, alpha=0.75, linewidth=lw, zorder=3, solid_capstyle='round')
+ax1.scatter(pos[sel_nodes, 0], pos[sel_nodes, 1], c=sel_col_list, s=70, zorder=4,
+            edgecolors='white', linewidths=1.2)
+label_key(ax1); add_legend(ax1)
+fig1.tight_layout(pad=0.3)
+save(fig1, 'thesis_graph')
 
-if n_loaded == 0:
-    raise FileNotFoundError(
-        f'Nessun dato trovato per P{SUBJ:03d}_S{SESS:03d}.\n'
-        f'Controlla HG_DIR={HG_DIR} o CSV_DIR={CSV_DIR}.\n'
-        f'Cambia SUBJ/SESS nella config.'
-    )
+# ── FIGURA 2 — MATRICE DI ADIACENZA (§2.4) ────────────────────────────────────
+fig2, ax2 = plt.subplots(figsize=(7.0, 6.8))
+ax2.set_aspect('equal'); ax2.axis('off')
+ax2.set_xlim(-2.5, n_s + 2.2); ax2.set_ylim(n_s + 0.2, -2.0)
+for ki in range(n_s):
+    for kj in range(n_s):
+        val = A_sub[ki, kj]
+        if ki == kj:
+            bg, fg, fw = '#EFEFEF', '#BBBBBB', 'normal'
+        elif val == 1:
+            ri_r = next((ri for ri, (s, e, c, _) in enumerate(region_slices) if s <= ki < e), None)
+            ri_c = next((ri for ri, (s, e, c, _) in enumerate(region_slices) if s <= kj < e), None)
+            bg, fg, fw = (regions[ri_r][1] if ri_r == ri_c else '#2C3E50'), 'white', 'bold'
+        else:
+            bg, fg, fw = '#FAFAFA', '#CCCCCC', 'normal'
+        ax2.add_patch(Rectangle([kj - 0.5, ki - 0.5], 1, 1,
+                                facecolor=bg, edgecolor='#DDDDDD', lw=0.5))
+        if ki != kj:
+            ax2.text(kj, ki, str(val), ha='center', va='center',
+                     fontsize=9, color=fg, fontweight=fw, family='monospace')
+for s, e, c, _ in region_slices[:-1]:
+    ax2.axhline(e - 0.5, color='#888', lw=0.8, ls=':', zorder=6)
+    ax2.axvline(e - 0.5, color='#888', lw=0.8, ls=':', zorder=6)
+for s, e, c, _ in region_slices:
+    ax2.add_patch(Rectangle([s - 0.5, s - 0.5], e - s, e - s,
+                            facecolor='none', edgecolor=c, lw=2.5, zorder=7))
+for kj, label in enumerate(sel_labels):
+    rc = next((c for s, e, c, _ in region_slices if s <= kj < e), '#333')
+    ax2.text(kj, -0.65, label, ha='center', va='bottom', fontsize=7,
+             color=rc, fontweight='bold', rotation=90)
+for ki, label in enumerate(sel_labels):
+    rc = next((c for s, e, c, _ in region_slices if s <= ki < e), '#333')
+    ax2.text(-0.65, ki, label, ha='right', va='center', fontsize=7.5,
+             color=rc, fontweight='bold')
+for s, e, c, name in region_slices:
+    ax2.text(n_s + 0.3, (s + e - 1) / 2.0, name, ha='left', va='center',
+             fontsize=7.5, color=c, fontweight='bold')
+fig2.tight_layout(pad=0.3)
+save(fig2, 'thesis_adj_matrix')
 
-adj_mean = adj_accum / n_loaded   # (N_CH, N_CH) — media su trial
+# ── FIGURA 3 — IPERGRAFO (§2.5) ───────────────────────────────────────────────
+fig3, ax3 = plt.subplots(figsize=(5.5, 6.2))
+scalp_ax(ax3); draw_head(ax3)
+for node_ids, color, name in regions:
+    hv = inflated_hull(pos[node_ids], pad=0.13)
+    if hv is not None:
+        ax3.fill(hv[:, 0], hv[:, 1], color=color, alpha=0.18, zorder=1)
+        ax3.plot(hv[:, 0], hv[:, 1], color=color, lw=2.0, ls='--', zorder=2, alpha=0.80)
+ax3.scatter(pos[:, 0], pos[:, 1], c='#DDDDDD', s=22, zorder=3,
+            edgecolors='#AAAAAA', linewidths=0.3)
+ax3.scatter(pos[sel_nodes, 0], pos[sel_nodes, 1], c=sel_col_list, s=70, zorder=5,
+            edgecolors='white', linewidths=1.2)
+label_key(ax3); add_legend(ax3)
+fig3.tight_layout(pad=0.3)
+save(fig3, 'thesis_hypergraph')
 
-# ── 3. STATISTICHE ───────────────────────────────────────────────────────────
-degree   = (adj_mean > 0).sum(axis=1).astype(float)
-w_max    = adj_mean.max()
-
-# ── 4. PLOT ───────────────────────────────────────────────────────────────────
-fig = plt.figure(figsize=(13, 5.8))
-gs  = gridspec.GridSpec(1, 2, width_ratios=[1, 1.1], figure=fig, wspace=0.12)
-
-# ── 4a. Matrice di adiacenza ─────────────────────────────────────────────────
-ax0 = fig.add_subplot(gs[0])
-im  = ax0.imshow(adj_mean, cmap='Blues', aspect='auto',
-                 origin='upper', interpolation='nearest')
-cb0 = fig.colorbar(im, ax=ax0, fraction=0.046, pad=0.04)
-cb0.set_label('avg. abs. PCC (pruned)', fontsize=10)
-ax0.set_xlabel('Electrode index', fontsize=10)
-ax0.set_ylabel('Electrode index', fontsize=10)
-ax0.set_title(r'Adjacency matrix $\mathbf{A}$  '
-              f'(mean over {n_loaded} trials)', fontsize=11)
-ax0.tick_params(labelsize=8)
-
-# ── 4b. Grafo sul cranio ─────────────────────────────────────────────────────
-ax1 = fig.add_subplot(gs[1])
-ax1.set_aspect('equal')
-ax1.axis('off')
-
-# Testa (cerchio + naso + orecchie)
-head = plt.Circle((0, 0), 1.06, color='#888888', fill=False,
-                  linewidth=1.8, zorder=0)
-ax1.add_patch(head)
-
-nose_x = np.array([-0.10, 0, 0.10])
-nose_y = np.array([1.06, 1.26, 1.06])
-ax1.plot(nose_x, nose_y, color='#888888', linewidth=1.8, zorder=0)
-
-for sign in (-1, 1):
-    theta = np.linspace(np.radians(92), np.radians(268), 60)
-    ax1.plot(sign * (1.06 + 0.10 * np.cos(theta)),
-             0.10 * np.sin(theta),
-             color='#888888', linewidth=1.8, zorder=0)
-
-# Archi (linewidth e alpha proporzionali al peso medio)
-for i in range(N_CH):
-    for j in range(i + 1, N_CH):
-        w = adj_mean[i, j] / w_max
-        if w <= 0:
-            continue
-        ax1.plot([pos_norm[i, 0], pos_norm[j, 0]],
-                 [pos_norm[i, 1], pos_norm[j, 1]],
-                 color=BLUEPOLI,
-                 alpha=0.20 + 0.70 * w,
-                 linewidth=0.25 + 2.20 * w,
-                 zorder=1)
-
-# Nodi (colore = grado)
-sc = ax1.scatter(pos_norm[:, 0], pos_norm[:, 1],
-                 c=degree, cmap='Blues',
-                 vmin=degree.min(), vmax=degree.max(),
-                 s=60, zorder=3,
-                 edgecolors='#222222', linewidths=0.55)
-
-# Etichette elettrodi principali
-KEY_LABELS = {'Cz', 'C3', 'C4', 'Fz', 'Pz', 'T3', 'T4',
-              'Oz', 'F3', 'F4', 'P3', 'P4'}
-for i, ch in enumerate(ch_names):
-    if ch in KEY_LABELS:
-        ax1.annotate(ch, pos_norm[i],
-                     fontsize=7.5, ha='center', va='bottom',
-                     xytext=(0, 6), textcoords='offset points',
-                     color='#111111', fontweight='normal')
-
-cb1 = fig.colorbar(sc, ax=ax1, fraction=0.038, pad=0.02, shrink=0.78)
-cb1.set_label('Degree', fontsize=10)
-
-ax1.set_title(r'Electrode graph $\mathcal{G} = (\mathcal{V}, \mathcal{E}, \mathbf{A})$  '
-              '(abs. PCC, pruned)', fontsize=11)
-ax1.set_xlim(-1.38, 1.38)
-ax1.set_ylim(-1.38, 1.48)
-
-# ── 5. SALVA ──────────────────────────────────────────────────────────────────
-(project_root / 'figures').mkdir(exist_ok=True)
-for ext in ('pdf', 'png'):
-    out = f'{FIG_OUT}.{ext}'
-    plt.savefig(out, dpi=300, bbox_inches='tight')
-    print(f'Salvato: {out}')
-
-plt.show()
+print('\nDone. Copia i PDF in thesislatex/Images/ per la tesi.')
