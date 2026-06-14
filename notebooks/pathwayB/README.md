@@ -5,6 +5,7 @@ Obiettivo: migliorare la generalizzazione dei modelli baseline senza cambiare ar
 
 ## Roadmap
 
+
 | Notebook | Contenuto | Stato |
 |----------|-----------|-------|
 | `B01_data_augmentation.ipynb` | Jittering temporale, crop random, channel dropout su SS | 🔲 |
