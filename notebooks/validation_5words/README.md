@@ -9,10 +9,14 @@ su una coorte indipendente.
 - Path: `~/Library/CloudStorage/OneDrive-PolitecnicodiMilano/File di Francesco Iacomi - 5words`
 - 41 soggetti (`sub-P000` … `sub-P0040`), 5 sessioni, 5 parole: **acqua, aiuto, mangiare, no, si**
 - Condizioni: **img** (imagined) + **read**
-- **17/41** hanno epoche già pronte (`Epoche_selezionate_in_automatico/{parola}/S{n}_epoca_{parola}_{img|read}.set`, EEGLAB)
-- Le epoche sono **già preprocessate** (band-pass 1–100, notch 50/100, resample 256 Hz, avg ref,
-  `pop_clean_rawdata`) — equivalente al pipeline della tesi. **Niente ri-filtraggio** (sarebbe doppio).
-  Shape epoca: **(61, 384) @ 256 Hz, 1.5 s** = formato canonico della tesi.
+- **17/41** hanno epoche già pronte (`Epoche_selezionate_in_automatico/...set`, pipeline di Iacomi + ASR)
+- **40/41** hanno il raw **XDF** (`sub-PXXXX/.../*.xdf`) + marker (`{WORD}_img`, `{WORD}_read`, `n_trials_110`)
+
+**Scelta:** per una validazione confrontabile con la tesi, NON si usano le .set di Iacomi (preprocessing
+diverso: +notch 100, +ASR, +selezione auto). Si **riparte dal raw XDF** applicando lo *stesso* pipeline
+della tesi (EEG_39) a **tutti** i soggetti → trattamento uniforme. Le .set sono un *cross-check*.
+Pipeline tesi: band-pass 1–100 IIR, notch 50, resample 512→256, avg ref, µV, epoca `[marker, +1.5s]`
+→ **(61, 384) @ 256 Hz**.
 
 ## Isolamento dei dati (IMPORTANTE)
 La numerazione 5words (P000–P040) **collide** con i soggetti della tesi (P000–P090).
@@ -30,7 +34,7 @@ Decoding **diretto delle 5 parole** (chance = **20%**). Niente concr4/gram4.
 ## Stadi
 | # | Notebook | Cosa fa | Input → Output |
 |---|----------|---------|----------------|
-| 1 | `V5W_01_preprocessing.ipynb` | ingest .set → CSV canonici | OneDrive .set → `data/5words_subjects/P.._S../*.csv` |
+| 1 | `V5W_01_preprocessing.ipynb` | **XDF → epoche** (pipeline tesi, tutti i soggetti) | OneDrive XDF → `data/5words_subjects/P.._S../*.csv` |
 | 2 | `V5W_02_graph_build.ipynb` | connettività + consensus → grafi/ipergrafi pruned (per-trial) | CSV → `data/5words_subjects/graphs/...` |
 | 3 | `V5W_03_dhslp_subject_specific.ipynb` | DHSLP per-soggetto (5 classi) | grafi → bAcc per soggetto (chance 20%) |
 | 4 | `V5W_04_dhslp_subject_independent.ipynb` | DHSLP cross-subject (5 classi) | grafi → test del ceiling |
@@ -39,7 +43,7 @@ Decoding **diretto delle 5 parole** (chance = **20%**). Niente concr4/gram4.
 Env: **`daniele_311`** (serve MNE per leggere le .set).
 
 ## Stato build
-- [x] Stadio 1 — ingest (runnabile)
+- [x] Stadio 1 — preprocessing XDF→epoche, tutti i soggetti (runnabile)
 - [x] Stadio 2 — graph build (adattato da `EEG_07f`, runnabile)
 - [ ] Stadio 3 — DHSLP SS (adattare `EEG_13b`: N_CLASSES=5, label dirette, HG_ROOT 5words)
 - [ ] Stadio 4 — DHSLP SI (adattare `EEG_13`: split sui soggetti 5words)
