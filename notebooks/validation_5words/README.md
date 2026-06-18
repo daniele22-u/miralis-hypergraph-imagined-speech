@@ -47,7 +47,7 @@ Env: **`daniele_311`** (serve MNE per leggere le .set).
 - [x] Stadio 2 — graph build (adattato da `EEG_07f`, runnabile)
 - [x] Stadio 3 — DHSLP SS (`V5W_03`, adattato da EEG_13b: N_CLASSES=5, label dirette, chance 20%)
 - [x] Stadio 4 — DHSLP SI (`V5W_04`, adattato da EEG_13: split ~64/12/24% seed 42, N_CLASSES=5)
-- [ ] Stadio 5 — fenotipi (adattare `EEG_16b`: ricostruire la cache feature dai grafi 5words)
+- [x] Stadio 5 — fenotipi (`V5W_05`, adattato da EEG_16: feature dai grafi 5words, k=2, replica C0/C1)
 
-Gli stadi 3–5 si costruiscono **dopo** aver verificato l'output dello stadio 2
-(dipendono interamente dai grafi prodotti lì).
+Tutti i notebook sono scritti. Vanno eseguiti **in ordine** (1→2→3/4/5); 3-5 dipendono
+dai grafi prodotti dallo stadio 2.
