@@ -45,7 +45,7 @@ Env: **`daniele_311`** (serve MNE per leggere le .set).
 ## Stato build
 - [x] Stadio 1 — preprocessing XDF→epoche, tutti i soggetti (runnabile)
 - [x] Stadio 2 — graph build (adattato da `EEG_07f`, runnabile)
-- [ ] Stadio 3 — DHSLP SS (adattare `EEG_13b`: N_CLASSES=5, label dirette, HG_ROOT 5words)
+- [x] Stadio 3 — DHSLP SS (`V5W_03`, adattato da EEG_13b: N_CLASSES=5, label dirette, chance 20%)
 - [ ] Stadio 4 — DHSLP SI (adattare `EEG_13`: split sui soggetti 5words)
 - [ ] Stadio 5 — fenotipi (adattare `EEG_16b`: ricostruire la cache feature dai grafi 5words)
 
