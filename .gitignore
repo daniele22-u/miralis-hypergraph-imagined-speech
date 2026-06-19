@@ -17,7 +17,7 @@ src/
 notebooks/wandb/
 notebooks/checkpoints/
 models/checkpoints/
-
+notebooks/validation_5words/wandb
 
 datasets/       
 scripts/data_processing/eeglab2025.1.0
