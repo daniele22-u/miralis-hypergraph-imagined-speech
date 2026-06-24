@@ -2,7 +2,7 @@
 
 > Tesi Magistrale - Politecnico di Milano, DEIB
 > Autore: Daniele Uras
-> Ultimo aggiornamento: 10 giugno 2026
+> Ultimo aggiornamento: 24 giugno 2026
 
 ---
 
@@ -852,6 +852,32 @@ miralis-hypergraph-imagined-speech/
 7. **L'accuracy non è segnale primario per la variabilità inter-soggetto**: la spread delle accuracies tra soggetti è troppo bassa (~21–27% in concr4, very small range) per distinguere soggetti "capaci IS" da non-capaci. L'approccio corretto è clustering EEG-first (features grezze → cluster → validation post-hoc con accuracy).
 
 8. **La connettività threshold (adj_thr) è il segnale più discriminativo trovato**: il numero di coppie con PCC > p50 varia da ~679 a ~1525 tra soggetti (~2x), mentre consensus (185–237) e k-NN (~263 fisso) non discriminano. Due gruppi naturali emergono già da trial singolo.
+
+---
+
+## 9. Validazione dei Fenotipi su Coorte Indipendente (V5W, giugno 2026)
+
+Pipeline `notebooks/validation_5words/` (V5W_01–V5W_09) — validazione esterna su un **dataset indipendente** (Iacomi, 41 soggetti nuovi, 5 parole native), preprocessato col **pipeline della tesi** dal raw XDF.
+
+**Decoding → chance, confermato.** DHSLP (SS + SI), MDM e Tangent-Space+LR (Riemann), e il ML classico di Iacomi sono tutti a chance (~20%). Il ceiling del decoding è confermato con **3 famiglie di metodi su dataset+vocabolario indipendenti**.
+
+**Fenotipi → la geometria conta.**
+- Clustering **euclideo** sulla coorte di validazione: k=2 **p=0.62** (sembra non replicare).
+- Clustering nella **geometria di Riemann** (covarianze SPD → tangent space): silhouette **0.376, p<0.001**, k=2 ottimale → i due fenotipi emergono netti.
+- Punto chiave: a rivelarli è la **geometria** (matrici SPD su varietà di Riemann), **NON gli ipergrafi**.
+
+**Robustezza.** Lo split regge a det=1 (ampiezza), 1–30 Hz senza frontopolari (EMG/EOG) → **ARI 1.0** a ogni controllo → neurale, non artefatto (risolve il dubbio "ARI troppo pulito").
+
+**Stessi fenotipi.**
+- Riemann sulla **coorte originale** = fenotipi della tesi (|PCC|): **ARI 1.0** (geometria-invariante con ampiezza normalizzata).
+- Cross-coorte: pattern di connettività **r=0.895**; cross-modale (alpha → connettività) **AUC 0.73, p=0.012**.
+- Permutation test silhouette originale (euclideo, n=89): **p=0.021** (struttura reale; la coorte piccola V5W ha bisogno di Riemann per potenza).
+
+**Tre livelli di differenza C0/C1.** Connettività (hub: C0 fronto-motor / C1 fronto-occipital) · spettro (alpha mu, AUC 0.91, non-circolare) · fase (PLV, ARI 0.95).
+
+**I fenotipi NON predicono il decoding** (entrambi a chance) → tipi di *organizzazione*, non di *performance*.
+
+Deliverable: `~/Desktop/fenotipi_v5w.html`, `presentazione_fenotipi.pptx`, wiki `esperimenti/V5W_validazione_fenotipi`.
 
 ---
 

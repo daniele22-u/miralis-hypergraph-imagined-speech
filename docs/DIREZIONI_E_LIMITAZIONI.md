@@ -1,6 +1,6 @@
 # Direzioni Future e Limitazioni Attuali
 
-> Ultimo aggiornamento: 10 giugno 2026
+> Ultimo aggiornamento: 24 giugno 2026
 
 ---
 
@@ -289,7 +289,22 @@
 | Fenotipi stabili | ARI sessione | > 0.8 | ✅ **0.933** (EEG_19) |
 | Fenotipi stabili trial | ARI trial | > 0.5 | ✅ **0.796** (EEG_19 §9-13) |
 | Hypergraph (ref. Li et al.) | bAcc comparabile | avvicinare 78% | ⚠️ 39% best soggetto |
-| Ceiling informazionale | MI → max bAcc | da stimare | 🔄 EEG_34 (pending) |
+| Ceiling informazionale | MI → max bAcc | da stimare | 🔄 EEG_34 §7 (null+CI per permutazione, in corso) |
+| Replica fenotipi (coorte indipendente) | esistono su dataset nuovo | sì/no | ✅ **sì** (V5W: Riemann sil 0.376 p<0.001; cross-coorte r=0.895) |
+| Fenotipi geometria-invarianti | Riemann = tesi |PCC| | match | ✅ **ARI 1.0** (V5W_09) |
+
+---
+
+## 6. Stato Scrittura (giugno 2026)
+
+L'analisi è sostanzialmente completa. Pronti a scrivere:
+- **Cap. 4 (Decoding)** — chance, blindato (DHSLP, ML Iacomi, Riemann, 2 dataset).
+- **Cap. 6 (Fenotipi)** — validato da ogni angolo (V5W: geometria-invariante ARI 1.0, coorte-invariante r=0.895 + cross-modale 0.73, robusto agli artefatti).
+
+Ultimo tassello analitico aperto:
+- **Cap. 5 (Ceiling)** — MI/Fano: aggiunto il null per permutazione + CI (EEG_34 §7) per blindare "MI≈0" contro il bias dello stimatore. Da runnare sul server.
+
+Minori (gestibili in scrittura): robustezza ε² alla normalizzazione; framing BCI-literate / concr4.
 
 ---
 
