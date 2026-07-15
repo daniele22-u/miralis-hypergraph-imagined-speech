@@ -37,9 +37,13 @@ def make_braindecode(name: str, n_chans: int, n_times: int, n_classes: int = C.N
       2) in ogni caso rimuoviamo un eventuale strato finale (Log)Softmax.
     """
     import inspect
-    from braindecode.models import EEGNetv4, ShallowFBCSPNet, Deep4Net
+    try:
+        from braindecode.models import EEGNet as _EEGNet          # nome nuovo (braindecode recenti)
+    except ImportError:
+        from braindecode.models import EEGNetv4 as _EEGNet        # alias vecchio (braindecode <1.12)
+    from braindecode.models import ShallowFBCSPNet, Deep4Net
     name = name.lower()
-    cls = {"eegnet": EEGNetv4, "shallow": ShallowFBCSPNet, "deep4": Deep4Net}.get(name)
+    cls = {"eegnet": _EEGNet, "shallow": ShallowFBCSPNet, "deep4": Deep4Net}.get(name)
     if cls is None:
         raise ValueError(f"nome braindecode sconosciuto: {name}")
     kw = dict(n_chans=n_chans, n_outputs=n_classes, n_times=n_times, final_conv_length="auto")
