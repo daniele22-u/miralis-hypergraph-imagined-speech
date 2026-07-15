@@ -192,7 +192,7 @@ def run_subject_dependent(model_name, subjects=None, *, merge_val=False,
     subjects = subjects or C.SUBJECTS
     model_kwargs = model_kwargs or {}
     train_kwargs = train_kwargs or {}
-    pp_kwargs = pp_kwargs or {}
+    pp_kwargs = dict(C.PP_MINIMAL) if pp_kwargs is None else pp_kwargs  # MINIMAL = standard (vedi README)
     device = device or C.get_device()
     set_seed(seed)
 
@@ -272,7 +272,7 @@ def run_subject_mixed(model_name, subjects=None, *, merge_val=False,
     subjects = subjects or C.SUBJECTS
     model_kwargs = model_kwargs or {}
     train_kwargs = train_kwargs or {}
-    pp_kwargs = pp_kwargs or {}
+    pp_kwargs = dict(C.PP_MINIMAL) if pp_kwargs is None else pp_kwargs  # MINIMAL = standard (vedi README)
     device = device or C.get_device()
     set_seed(seed)
 
@@ -387,7 +387,7 @@ def run_subject_independent(model_name, *, mode="holdout",
     spec = _MODEL_SPEC[model_name]
     model_kwargs = model_kwargs or {}
     train_kwargs = train_kwargs or {}
-    pp_kwargs = pp_kwargs or {}
+    pp_kwargs = dict(C.PP_MINIMAL) if pp_kwargs is None else pp_kwargs  # MINIMAL = standard (vedi README)
     device = device or C.get_device()
     set_seed(seed)
 
@@ -494,7 +494,7 @@ def classical_baseline(subjects=None, *, pp_kwargs=None, protocol="mixed", verbo
     """
     from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
     subjects = subjects or C.SUBJECTS
-    pp_kwargs = pp_kwargs or {}
+    pp_kwargs = dict(C.PP_MINIMAL) if pp_kwargs is None else pp_kwargs  # MINIMAL = standard (vedi README)
 
     def _feat(d, split):
         bf = P.band_features(d[f"X_{split}"], d["fs"])
