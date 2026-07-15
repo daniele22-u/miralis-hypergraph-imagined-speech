@@ -7,6 +7,11 @@ Pipeline completa (preprocessing → modelli → grafici) per il dataset della c
 > ⚠️ Dataset **diverso** da quello della tesi (74 soggetti × 110 parole). Qui: 15 soggetti,
 > 5 classi, **subject-dependent**. I due non vanno mescolati.
 
+> 📊 **Risultati e finding principale in [RESULTS.md](RESULTS.md).** In breve: il **bandpass FIR
+> su epoche corte distruggeva il segnale** — con preprocessing minimo (`PP_MINIMAL`, ora lo standard)
+> EEGNet subject-dependent passa da 0.24 a **0.555**. Miglior modello: **ShallowFBCSPNet** (0.575).
+> Cross-subject (independent) resta a chance: l'imagined speech non trasferisce tra soggetti.
+
 ---
 
 ## 1. Il dataset in breve (dal PDF `Data_description(Track3).pdf`)
