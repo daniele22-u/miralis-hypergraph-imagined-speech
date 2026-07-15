@@ -59,15 +59,18 @@ Sulla VM WSL, la cartella Downloads di Windows è montata sotto `/mnt/c/...`. Il
 1. variabile d'ambiente `TRACK3_DATA`
 2. i candidati in `_CANDIDATE_ROOTS` dentro `track3_config.py`
 
-**Opzione A — variabile d'ambiente (consigliata):**
+Su `spinlabs-01` l'utente Windows è **`students`**, quindi il path atteso è già tra i candidati:
+`/mnt/c/Users/students/Downloads/Track#3 Imagined speech classification`.
+
+**Opzione A — variabile d'ambiente (override esplicito):**
 ```bash
-export TRACK3_DATA="/mnt/c/Users/<TUO_UTENTE_WINDOWS>/Downloads/Track#3 Imagined speech classification"
+export TRACK3_DATA="/mnt/c/Users/students/Downloads/Track#3 Imagined speech classification"
 ```
 (mettila in `~/.bashrc` per renderla permanente)
 
 **Opzione B — symlink dentro la home WSL:**
 ```bash
-ln -s "/mnt/c/Users/<TUO_UTENTE_WINDOWS>/Downloads/Track#3 Imagined speech classification" ~/track3_data
+ln -s "/mnt/c/Users/students/Downloads/Track#3 Imagined speech classification" ~/track3_data
 ```
 `~/track3_data` è già tra i candidati.
 

@@ -27,8 +27,8 @@ _CANDIDATE_ROOTS = [
     # --- Mac locale di Daniele ---
     "/Users/danieleuras/Downloads/Track#3 Imagined speech classification",
     # --- Macchina SSH spinlabs-01 (WSL): Downloads di Windows montato sotto /mnt/c ---
-    # NB: sostituisci <winuser> con il tuo utente Windows quando linkeremo Downloads<->WSL.
-    "/mnt/c/Users/danieleuras/Downloads/Track#3 Imagined speech classification",
+    # Utente Windows su spinlabs-01 = "students".
+    "/mnt/c/Users/students/Downloads/Track#3 Imagined speech classification",
     # --- eventuale copia dentro la home WSL dopo il link ---
     os.path.expanduser("~/data/Track#3 Imagined speech classification"),
     os.path.expanduser("~/track3_data"),
