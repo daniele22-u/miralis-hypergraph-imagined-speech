@@ -114,11 +114,16 @@ def train_model(model, data, device, *, epochs=200, lr=1e-3, weight_decay=1e-4,
     if best_state is not None:
         model.load_state_dict(best_state)
 
+    # train accuracy del modello migliore -> distingue underfitting da overfitting:
+    #   train_acc ~ chance  => il modello NON impara (bug/preprocessing) [underfitting]
+    #   train_acc alta, test ~ chance => problema di generalizzazione/protocollo [overfitting]
+    ytr_e, ptr_e, _ = _evaluate(model, tl, device, criterion)
     yt, pt, tloss = _evaluate(model, tel, device, criterion)
     res = {
         "history": hist,
         "best_epoch": best_epoch,
         "val_bacc": float(best_bacc),
+        "train_acc": float(accuracy_score(ytr_e, ptr_e)),
         "test_acc": float(accuracy_score(yt, pt)),
         "test_bacc": float(balanced_accuracy_score(yt, pt)),
         "test_loss": tloss,
@@ -220,8 +225,8 @@ def run_subject_dependent(model_name, subjects=None, *, merge_val=False,
                      "test_acc": res["test_acc"], "test_bacc": res["test_bacc"],
                      "best_epoch": res["best_epoch"], "sec": round(time.time() - t0, 1)})
         if verbose:
-            print(f"S{s:02d}  test_acc={res['test_acc']:.3f}  test_bacc={res['test_bacc']:.3f}  "
-                  f"(val_bacc={res['val_bacc']:.3f}, {rows[-1]['sec']}s)")
+            print(f"S{s:02d}  train_acc={res['train_acc']:.3f}  test_acc={res['test_acc']:.3f}  "
+                  f"test_bacc={res['test_bacc']:.3f}  (val_bacc={res['val_bacc']:.3f}, {rows[-1]['sec']}s)")
 
     df = pd.DataFrame(rows).set_index("subject")
     if verbose:
@@ -329,10 +334,63 @@ def run_subject_mixed(model_name, subjects=None, *, merge_val=False,
     res["elapsed_sec"] = round(time.time() - t0, 1)
 
     if verbose:
-        print(f"\n== {model_name} SUBJECT-MIXED ==  test_acc={res['test_acc']:.3f}  "
-              f"test_bacc={res['test_bacc']:.3f}  (val_bacc={res['val_bacc']:.3f}, "
-              f"{res['elapsed_sec']}s, chance={C.CHANCE_LEVEL:.2f})")
+        print(f"\n== {model_name} SUBJECT-MIXED ==  train_acc={res['train_acc']:.3f}  "
+              f"test_acc={res['test_acc']:.3f}  test_bacc={res['test_bacc']:.3f}  "
+              f"(val_bacc={res['val_bacc']:.3f}, {res['elapsed_sec']}s, chance={C.CHANCE_LEVEL:.2f})")
+        if res['train_acc'] < 0.35:
+            print("  ⚠️ train_acc ~ chance => il modello NON impara (underfitting): "
+                  "sospetta doppio softmax o preprocessing che distrugge il segnale.")
+        elif res['test_acc'] < 0.30:
+            print("  ⚠️ train_acc alta ma test ~ chance => generalizzazione scarsa "
+                  "(overfitting / info non trasferibile).")
     return df, res
+
+
+# ---------------------------------------------------------------------------
+# Baseline classico (sanity check: c'è segnale decodificabile senza deep learning?)
+# ---------------------------------------------------------------------------
+def classical_baseline(subjects=None, *, pp_kwargs=None, protocol="mixed", verbose=True):
+    """
+    LDA su band-power (differential entropy per canale/banda). Veloce, CPU.
+    Se anche questo è a chance con un preprocessing ma sale con un altro,
+    il problema è il PREPROCESSING, non il modello deep.
+      protocol='mixed'      -> pool 15 soggetti, un LDA
+      protocol='dependent'  -> un LDA per soggetto, media
+    Ritorna il dict dei risultati.
+    """
+    from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
+    subjects = subjects or C.SUBJECTS
+    pp_kwargs = pp_kwargs or {}
+
+    def _feat(d, split):
+        bf = P.band_features(d[f"X_{split}"], d["fs"])
+        return bf.reshape(bf.shape[0], -1)
+
+    if protocol == "dependent":
+        accs = []
+        for s in subjects:
+            d = P.preprocess_subject(s, **pp_kwargs)
+            clf = LDA().fit(_feat(d, "train"), d["y_train"])
+            accs.append(clf.score(_feat(d, "test"), d["y_test"]))
+        acc = float(np.mean(accs))
+        if verbose:
+            print(f"LDA band-power SUBJECT-DEPENDENT: test_acc medio={acc:.3f} "
+                  f"(chance {C.CHANCE_LEVEL})")
+        return {"test_acc": acc, "per_subject": accs}
+
+    Xtr, ytr, Xte, yte = [], [], [], []
+    for s in subjects:
+        d = P.preprocess_subject(s, **pp_kwargs)
+        Xtr.append(_feat(d, "train")); ytr.append(d["y_train"])
+        Xte.append(_feat(d, "test"));  yte.append(d["y_test"])
+    Xtr, ytr = np.concatenate(Xtr), np.concatenate(ytr)
+    Xte, yte = np.concatenate(Xte), np.concatenate(yte)
+    clf = LDA().fit(Xtr, ytr)
+    acc = float(clf.score(Xte, yte))
+    if verbose:
+        print(f"LDA band-power SUBJECT-MIXED: test_acc={acc:.3f} "
+              f"(train {clf.score(Xtr, ytr):.3f}, chance {C.CHANCE_LEVEL})")
+    return {"test_acc": acc}
 
 
 # ---------------------------------------------------------------------------

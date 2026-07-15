@@ -28,20 +28,43 @@ def make_braindecode(name: str, n_chans: int, n_times: int, n_classes: int = C.N
                      sfreq: float = C.FS) -> nn.Module:
     """
     name in {'eegnet','shallow','deep4'}. Restituisce un nn.Module che mappa
-    (batch, n_chans, n_times) -> logits (batch, n_classes).
+    (batch, n_chans, n_times) -> LOGITS (batch, n_classes).
+
+    IMPORTANTE: alcune versioni di braindecode terminano il modello con LogSoftmax.
+    Con nn.CrossEntropyLoss il softmax verrebbe applicato DUE VOLTE (log_softmax(log_softmax(x)))
+    -> gradiente schiacciato, il modello resta a chance. Qui garantiamo output = logits:
+      1) se il costruttore supporta `add_log_softmax`, lo mettiamo False;
+      2) in ogni caso rimuoviamo un eventuale strato finale (Log)Softmax.
     """
+    import inspect
     from braindecode.models import EEGNetv4, ShallowFBCSPNet, Deep4Net
     name = name.lower()
-    kw = dict(n_chans=n_chans, n_outputs=n_classes, n_times=n_times)
-    if name == "eegnet":
-        model = EEGNetv4(**kw, final_conv_length="auto")
-    elif name == "shallow":
-        model = ShallowFBCSPNet(**kw, final_conv_length="auto")
-    elif name == "deep4":
-        model = Deep4Net(**kw, final_conv_length="auto")
-    else:
+    cls = {"eegnet": EEGNetv4, "shallow": ShallowFBCSPNet, "deep4": Deep4Net}.get(name)
+    if cls is None:
         raise ValueError(f"nome braindecode sconosciuto: {name}")
+    kw = dict(n_chans=n_chans, n_outputs=n_classes, n_times=n_times, final_conv_length="auto")
+    if "add_log_softmax" in inspect.signature(cls.__init__).parameters:
+        kw["add_log_softmax"] = False
+    model = cls(**kw)
+    _strip_softmax(model)
     return model
+
+
+def _strip_softmax(model: nn.Module) -> nn.Module:
+    """Sostituisce con Identity ogni (Log)Softmax nel modello (garantisce output = logits)."""
+    for parent in model.modules():
+        for key, child in list(parent.named_children()):
+            if isinstance(child, (nn.LogSoftmax, nn.Softmax)):
+                setattr(parent, key, nn.Identity())
+    return model
+
+
+def output_is_logprob(model: nn.Module, x) -> bool:
+    """Diagnostica: True se l'output somiglia a log-probabilità (exp somma ~1) invece che logits."""
+    model.eval()
+    with torch.no_grad():
+        s = model(x[:8]).exp().sum(dim=1)
+    return bool((s - 1).abs().mean() < 1e-2)
 
 
 # ===========================================================================
