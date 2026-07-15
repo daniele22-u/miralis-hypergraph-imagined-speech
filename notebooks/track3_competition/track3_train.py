@@ -61,14 +61,16 @@ def _evaluate(model, loader, device, criterion):
 # Training di un singolo modello/soggetto
 # ---------------------------------------------------------------------------
 def train_model(model, data, device, *, epochs=200, lr=1e-3, weight_decay=1e-4,
-                batch_size=32, patience=30, wandb_run=None, verbose=False):
+                batch_size=32, patience=30, label_smoothing=0.0,
+                wandb_run=None, verbose=False):
     """
     data: dict con X_train,y_train,X_val,y_val,X_test,y_test (numpy).
     Early stopping sulla balanced accuracy di validation. Ripristina i pesi migliori.
-    Ritorna dict con history e metriche di test.
+    label_smoothing: passato a CrossEntropyLoss (CBraMod usa 0.1).
+    Ritorna dict con history e metriche di test (inclusa max_train_acc: capacità di fit).
     """
     model = model.to(device)
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(label_smoothing=label_smoothing)
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=epochs)
 
@@ -76,25 +78,30 @@ def train_model(model, data, device, *, epochs=200, lr=1e-3, weight_decay=1e-4,
     vl = _to_loader(data["X_val"], data["y_val"], batch_size, False)
     tel = _to_loader(data["X_test"], data["y_test"], batch_size, False)
 
-    hist = {"train_loss": [], "val_loss": [], "val_bacc": []}
+    hist = {"train_loss": [], "train_acc": [], "val_loss": [], "val_bacc": []}
     best_bacc, best_state, best_epoch, since = -1.0, None, 0, 0
 
     for epoch in range(epochs):
         model.train()
-        run_loss = 0.0
+        run_loss, tr_correct, tr_total = 0.0, 0, 0
         for xb, yb in tl:
             xb, yb = xb.to(device), yb.to(device)
             opt.zero_grad()
-            loss = criterion(model(xb), yb)
+            out = model(xb)
+            loss = criterion(out, yb)
             loss.backward()
             opt.step()
             run_loss += loss.item() * len(yb)
+            tr_correct += (out.argmax(1) == yb).sum().item()   # train acc "gratis" dai batch
+            tr_total += len(yb)
         sched.step()
         train_loss = run_loss / len(data["y_train"])
+        train_acc_ep = tr_correct / tr_total
 
         yv, pv, vloss = _evaluate(model, vl, device, criterion)
         vbacc = balanced_accuracy_score(yv, pv)
         hist["train_loss"].append(train_loss)
+        hist["train_acc"].append(train_acc_ep)
         hist["val_loss"].append(vloss)
         hist["val_bacc"].append(vbacc)
         if wandb_run is not None:
@@ -124,6 +131,7 @@ def train_model(model, data, device, *, epochs=200, lr=1e-3, weight_decay=1e-4,
         "best_epoch": best_epoch,
         "val_bacc": float(best_bacc),
         "train_acc": float(accuracy_score(ytr_e, ptr_e)),
+        "max_train_acc": float(max(hist["train_acc"])) if hist["train_acc"] else 0.0,
         "test_acc": float(accuracy_score(yt, pt)),
         "test_bacc": float(balanced_accuracy_score(yt, pt)),
         "test_loss": tloss,
@@ -334,15 +342,15 @@ def run_subject_mixed(model_name, subjects=None, *, merge_val=False,
     res["elapsed_sec"] = round(time.time() - t0, 1)
 
     if verbose:
-        print(f"\n== {model_name} SUBJECT-MIXED ==  train_acc={res['train_acc']:.3f}  "
+        print(f"\n== {model_name} SUBJECT-MIXED ==  max_train_acc={res['max_train_acc']:.3f}  "
               f"test_acc={res['test_acc']:.3f}  test_bacc={res['test_bacc']:.3f}  "
               f"(val_bacc={res['val_bacc']:.3f}, {res['elapsed_sec']}s, chance={C.CHANCE_LEVEL:.2f})")
-        if res['train_acc'] < 0.35:
-            print("  ⚠️ train_acc ~ chance => il modello NON impara (underfitting): "
-                  "sospetta doppio softmax o preprocessing che distrugge il segnale.")
+        if res['max_train_acc'] < 0.35:
+            print("  ⚠️ max_train_acc ~ chance => il modello NON riesce a fittare nemmeno il "
+                  "training = problema di OTTIMIZZAZIONE (LR, ecc.), non di dati.")
         elif res['test_acc'] < 0.30:
-            print("  ⚠️ train_acc alta ma test ~ chance => generalizzazione scarsa "
-                  "(overfitting / info non trasferibile).")
+            print("  ⚠️ fitta il training ma test ~ chance => è un SOFFITTO di generalizzazione "
+                  "(imagined speech è così), non un bug.")
     return df, res
 
 
@@ -404,6 +412,8 @@ def plot_training_curves(results, subject, ax=None):
     ax.plot(h["train_loss"], label="train loss")
     ax.plot(h["val_loss"], label="val loss")
     ax2 = ax.twinx()
+    if h.get("train_acc"):
+        ax2.plot(h["train_acc"], color="orange", label="train acc")
     ax2.plot(h["val_bacc"], color="green", label="val bAcc")
     ax2.axhline(C.CHANCE_LEVEL, color="grey", ls="--", lw=1)
     ax.set_xlabel("epoch"); ax.set_ylabel("loss"); ax2.set_ylabel("balanced accuracy")
