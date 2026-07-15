@@ -109,6 +109,16 @@ CROP_MS = (0.0, 2000.0)        # finestra analizzata (imagined speech). None = u
 NOTCH_HZ = None                # es. 50.0 se serve togliere rete elettrica; None = off
 REVE_FS = 200                  # REVE richiede 200 Hz -> resample da 256
 
+# --- Preset di preprocessing (passali come pp_kwargs ai runner) ---
+# DEFAULT: bandpass 0.5-45, baseline, crop 0-2000 (quello usato finora).
+PP_DEFAULT = dict(bandpass_hz=BANDPASS_HZ, notch=NOTCH_HZ,
+                  baseline_ms=BASELINE_MS, crop_ms=CROP_MS)
+# MINIMAL: solo epoca intera, nessun filtro/baseline/crop -> il più vicino a CBraMod.
+PP_MINIMAL = dict(bandpass_hz=None, notch=None, baseline_ms=None, crop_ms=None)
+# HIGHGAMMA: tiene l'alto gamma (45-100 Hz), spesso informativo nell'imagined speech,
+#            epoca intera (Nyquist 128 a 256 Hz -> ok fino a 100 Hz).
+PP_HIGHGAMMA = dict(bandpass_hz=(0.5, 100.0), notch=None, baseline_ms=None, crop_ms=None)
+
 # ---------------------------------------------------------------------------
 # 4. Device
 # ---------------------------------------------------------------------------
