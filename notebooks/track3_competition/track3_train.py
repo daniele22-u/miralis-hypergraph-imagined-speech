@@ -172,7 +172,7 @@ _MODEL_SPEC = {
     "shallow": {"feature": "raw",  "resample": None},
     "deep4":   {"feature": "raw",  "resample": None},
     "dhslp":   {"feature": "raw",  "resample": None},
-    "dgcnn":   {"feature": "band", "resample": None},
+    "dgcnn":   {"feature": "raw",  "resample": None},   # ora grafo PCC per-trial sul raw
     "reve":    {"feature": "raw",  "resample": C.REVE_FS},
 }
 
