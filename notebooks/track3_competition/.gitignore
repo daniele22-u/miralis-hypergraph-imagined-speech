@@ -1,0 +1,6 @@
+# tensori preprocessati e output pesanti (non versionare)
+interim/
+results/figures/
+*.pt
+# notebook checkpoints
+.ipynb_checkpoints/
