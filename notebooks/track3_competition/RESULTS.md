@@ -60,6 +60,25 @@ restano nel codice solo per l'ablation.
 CBraMod resta davanti (grazie al pretraining), ma il nostro Shallow con preprocessing minimo
 è nel gruppo di testa dei baseline non-foundation.
 
+## Modelli a grafo: retry con costruzione "base" (PCC per-trial + DHSLP EEG_13b)
+
+Rifatti DGCNN e DHSLP con la tecnica corretta della tesi (non più band-power / kNN):
+- **DGCNN**: grafo **PCC per-trial + pruning top-k** (`track3_graphs.py`), node features dal raw.
+- **DHSLP**: **fedele a EEG_13b** — iperarchi appresi, incidenza soft `H=softmax(node·E)`, K finestre raw.
+
+| modello | dependent | mixed | max_train (mixed) |
+|---|---|---|---|
+| DGCNN (grafo PCC) | 0.283 | 0.199 | **0.236** (non fitta il training) |
+| DHSLP (EEG_13b) | 0.241 | 0.207 | 0.427 (fitta, non generalizza) |
+
+**Verdetto (robusto su entrambi i protocolli)**: la struttura a grafo/ipergrafo **NON aggiunge
+nulla** sopra le ConvNet sul raw.
+- DGCNN **underfitta**: ridurre i 64 canali a connettività + mean-pool butta via l'informazione
+  spazio-temporale che le ConvNet sfruttano (non fitta nemmeno 4500 trial di training).
+- DHSLP **overfitta subject-dependent** (train→1.0, test chance) e resta a chance sul mixed:
+  memorizza, la struttura appresa non trasferisce.
+- Coerente con la filosofia "raw end-to-end": le ConvNet (Shallow 0.575, EEGNet 0.555) dominano.
+
 ## TODO
 
 - [ ] LOSO per i numeri subject-independent finali (gold standard cross-subject).
