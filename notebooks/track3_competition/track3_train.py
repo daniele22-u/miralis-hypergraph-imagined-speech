@@ -231,6 +231,111 @@ def run_subject_dependent(model_name, subjects=None, *, merge_val=False,
 
 
 # ---------------------------------------------------------------------------
+# Runner SUBJECT-MIXED (protocollo di CBraMod Table 9)
+# ---------------------------------------------------------------------------
+def run_subject_mixed(model_name, subjects=None, *, merge_val=False,
+                      model_kwargs=None, train_kwargs=None, pp_kwargs=None,
+                      use_wandb=False, device=None, seed=42, verbose=True,
+                      standardize_per_subject=True):
+    """
+    Protocollo SUBJECT-MIXED (come CBraMod, Table 9): i 15 soggetti vengono messi
+    in un UNICO dataset e si allena UN SOLO modello.
+      train pool = tutti i training trial dei soggetti (~4500)
+      val pool   = tutti i validation trial (~750) -> early stopping affidabile
+      test pool  = tutti i test trial (~750), degli STESSI soggetti visti in training
+
+    NB: NON è il protocollo ufficiale della competizione (che è subject-dependent).
+    Serve per confrontarsi con i numeri di Table 9 del paper CBraMod.
+
+    Standardizzazione: per default z-score PER SOGGETTO (stats del suo train) prima del
+    pooling -> rimuove le differenze di scala inter-soggetto senza leakage.
+
+    Ritorna (summary_df, res) dove:
+      - res contiene anche res['test_subject'] (id soggetto per ogni test trial)
+      - summary_df ha l'accuratezza per-soggetto SOTTO IL MODELLO MIXED + riga 'ALL'
+    """
+    model_name = model_name.lower()
+    spec = _MODEL_SPEC[model_name]
+    subjects = subjects or C.SUBJECTS
+    model_kwargs = model_kwargs or {}
+    train_kwargs = train_kwargs or {}
+    pp_kwargs = pp_kwargs or {}
+    device = device or C.get_device()
+    set_seed(seed)
+
+    wandb = None
+    if use_wandb:
+        try:
+            import wandb as _wandb
+            wandb = _wandb
+        except ImportError:
+            print("[wandb non installato: pip install wandb — continuo senza logging]")
+
+    # --- accumula e poola tutti i soggetti ---
+    parts = {k: [] for k in ("Xtr", "ytr", "Xva", "yva", "Xte", "yte")}
+    test_subj = []
+    clab = None
+    auto_kw = {}
+    t0 = time.time()
+    for s in subjects:
+        d = P.preprocess_subject(s, merge_val_into_train=merge_val,
+                                 resample_to=spec["resample"],
+                                 standardize=standardize_per_subject, **pp_kwargs)
+        data, auto_kw = _prepare_inputs(d, spec["feature"])
+        parts["Xtr"].append(data["X_train"]); parts["ytr"].append(data["y_train"])
+        parts["Xva"].append(data["X_val"]);   parts["yva"].append(data["y_val"])
+        parts["Xte"].append(data["X_test"]);  parts["yte"].append(data["y_test"])
+        test_subj.append(np.full(len(data["y_test"]), s))
+        clab = d["clab"]
+
+    pooled = {
+        "X_train": np.concatenate(parts["Xtr"], 0), "y_train": np.concatenate(parts["ytr"], 0),
+        "X_val": np.concatenate(parts["Xva"], 0),   "y_val": np.concatenate(parts["yva"], 0),
+        "X_test": np.concatenate(parts["Xte"], 0),  "y_test": np.concatenate(parts["yte"], 0),
+    }
+    test_subj = np.concatenate(test_subj, 0)
+    if verbose:
+        print(f"pool: train={pooled['X_train'].shape[0]}  val={pooled['X_val'].shape[0]}  "
+              f"test={pooled['X_test'].shape[0]}  (input {pooled['X_train'].shape[1:]})")
+
+    # --- costruisci e allena UN modello ---
+    build_kw = dict(n_ch=C.N_CHANNELS, **auto_kw, **model_kwargs)
+    if model_name == "reve":
+        build_kw["electrode_names"] = clab
+    model = M.build_model(model_name, **build_kw)
+
+    run = None
+    if wandb is not None:
+        run = wandb.init(entity=C.WANDB_ENTITY, project=C.WANDB_PROJECT,
+                         name=f"track3mixed_{model_name}", reinit=True,
+                         tags=["track3", "subject-mixed", model_name],
+                         config={"notebook": "track3", "model": model_name,
+                                 "protocol": "subject-mixed", "feature": spec["feature"],
+                                 "n_train": pooled["X_train"].shape[0]})
+    res = train_model(model, pooled, device, wandb_run=run, **train_kwargs)
+    if run is not None:
+        run.finish()
+    res["test_subject"] = test_subj
+
+    # --- breakdown per-soggetto sotto il modello mixed ---
+    rows = []
+    for s in subjects:
+        m = test_subj == s
+        rows.append({"subject": int(s),
+                     "test_acc": float(accuracy_score(res["y_true"][m], res["y_pred"][m])),
+                     "test_bacc": float(balanced_accuracy_score(res["y_true"][m], res["y_pred"][m]))})
+    df = pd.DataFrame(rows).set_index("subject")
+    df.loc["ALL"] = [res["test_acc"], res["test_bacc"]]
+    res["elapsed_sec"] = round(time.time() - t0, 1)
+
+    if verbose:
+        print(f"\n== {model_name} SUBJECT-MIXED ==  test_acc={res['test_acc']:.3f}  "
+              f"test_bacc={res['test_bacc']:.3f}  (val_bacc={res['val_bacc']:.3f}, "
+              f"{res['elapsed_sec']}s, chance={C.CHANCE_LEVEL:.2f})")
+    return df, res
+
+
+# ---------------------------------------------------------------------------
 # Plotting
 # ---------------------------------------------------------------------------
 def plot_training_curves(results, subject, ax=None):
