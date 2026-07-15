@@ -355,6 +355,132 @@ def run_subject_mixed(model_name, subjects=None, *, merge_val=False,
 
 
 # ---------------------------------------------------------------------------
+# Runner SUBJECT-INDEPENDENT (cross-subject: soggetti di test MAI visti)
+# ---------------------------------------------------------------------------
+def _subject_bundle(subject, feature, spec, pp_kwargs):
+    """Tutti i trial di un soggetto (train+val+test concatenati), già preprocessati."""
+    d = P.preprocess_subject(subject, resample_to=spec["resample"], **pp_kwargs)
+    data, auto_kw = _prepare_inputs(d, feature)
+    X = np.concatenate([data["X_train"], data["X_val"], data["X_test"]], 0)
+    y = np.concatenate([data["y_train"], data["y_val"], data["y_test"]], 0)
+    return X, y, auto_kw, d["clab"]
+
+
+def run_subject_independent(model_name, *, mode="holdout",
+                            train_subjects=None, val_subjects=None, test_subjects=None,
+                            model_kwargs=None, train_kwargs=None, pp_kwargs=None,
+                            use_wandb=False, device=None, seed=42, verbose=True):
+    """
+    SUBJECT-INDEPENDENT (cross-subject): i soggetti di TEST non compaiono MAI in training.
+    È il protocollo più difficile: misura la vera generalizzazione tra soggetti.
+
+    mode='holdout' (default, veloce): UN modello.
+        train_subjects (def 1-11) -> training
+        val_subjects   (def 12-13) -> early stopping (soggetti held-out)
+        test_subjects  (def 14-15) -> test (soggetti held-out)
+    mode='loso' (leave-one-subject-out, 15 modelli):
+        per ogni soggetto s: test = s, val = 2 soggetti (diversi da s), train = i restanti 12.
+
+    Ritorna (df, results). Standardizzazione per-soggetto (nessun leakage cross-subject).
+    """
+    model_name = model_name.lower()
+    spec = _MODEL_SPEC[model_name]
+    model_kwargs = model_kwargs or {}
+    train_kwargs = train_kwargs or {}
+    pp_kwargs = pp_kwargs or {}
+    device = device or C.get_device()
+    set_seed(seed)
+
+    wandb = None
+    if use_wandb:
+        try:
+            import wandb as _wandb
+            wandb = _wandb
+        except ImportError:
+            print("[wandb non installato: pip install wandb — continuo senza logging]")
+
+    # cache dei bundle per soggetto (evita di ri-preprocessare in LOSO)
+    cache = {}
+    clab = [None]
+
+    def bundle(s):
+        if s not in cache:
+            X, y, auto_kw, cl = _subject_bundle(s, spec["feature"], spec, pp_kwargs)
+            cache[s] = (X, y, auto_kw)
+            clab[0] = cl
+        return cache[s]
+
+    def _pool(subjs):
+        Xs, ys = [], []
+        auto_kw = {}
+        for s in subjs:
+            X, y, auto_kw = bundle(s)
+            Xs.append(X); ys.append(y)
+        return np.concatenate(Xs, 0), np.concatenate(ys, 0), auto_kw
+
+    def _fit_eval(tr_subj, va_subj, te_subj, tag):
+        Xtr, ytr, auto_kw = _pool(tr_subj)
+        Xva, yva, _ = _pool(va_subj)
+        Xte, yte, _ = _pool(te_subj)
+        build_kw = dict(n_ch=C.N_CHANNELS, **auto_kw, **model_kwargs)
+        if model_name == "reve":
+            build_kw["electrode_names"] = clab[0]
+        model = M.build_model(model_name, **build_kw)
+        run = None
+        if wandb is not None:
+            run = wandb.init(entity=C.WANDB_ENTITY, project=C.WANDB_PROJECT,
+                             name=f"track3indep_{model_name}_{tag}", reinit=True,
+                             tags=["track3", "subject-independent", model_name],
+                             config={"model": model_name, "protocol": "subject-independent",
+                                     "mode": mode, "test": list(te_subj)})
+        res = train_model(model, {"X_train": Xtr, "y_train": ytr, "X_val": Xva, "y_val": yva,
+                                  "X_test": Xte, "y_test": yte}, device, wandb_run=run, **train_kwargs)
+        if run is not None:
+            run.finish()
+        return res
+
+    t0 = time.time()
+    if mode == "holdout":
+        train_subjects = train_subjects or list(range(1, 12))   # 1-11
+        val_subjects = val_subjects or [12, 13]
+        test_subjects = test_subjects or [14, 15]
+        res = _fit_eval(train_subjects, val_subjects, test_subjects, "holdout")
+        df = pd.DataFrame([{"test_subjects": str(test_subjects),
+                            "max_train_acc": res["max_train_acc"],
+                            "test_acc": res["test_acc"], "test_bacc": res["test_bacc"],
+                            "val_bacc": res["val_bacc"]}])
+        if verbose:
+            print(f"== {model_name} SUBJECT-INDEPENDENT (holdout, test={test_subjects}) ==  "
+                  f"max_train_acc={res['max_train_acc']:.3f}  test_acc={res['test_acc']:.3f}  "
+                  f"test_bacc={res['test_bacc']:.3f}  ({round(time.time()-t0,1)}s, "
+                  f"chance={C.CHANCE_LEVEL:.2f})")
+        return df, {"holdout": res}
+
+    elif mode == "loso":
+        subs = list(C.SUBJECTS)
+        rows, results = [], {}
+        for i, s in enumerate(subs):
+            others = [x for x in subs if x != s]
+            va = [others[i % len(others)], others[(i + 1) % len(others)]]  # 2 soggetti come val
+            tr = [x for x in others if x not in va]
+            res = _fit_eval(tr, va, [s], f"loso_S{s:02d}")
+            results[s] = res
+            rows.append({"subject": s, "test_acc": res["test_acc"],
+                         "test_bacc": res["test_bacc"], "val_bacc": res["val_bacc"]})
+            if verbose:
+                print(f"LOSO test S{s:02d}: test_acc={res['test_acc']:.3f} "
+                      f"test_bacc={res['test_bacc']:.3f}")
+        df = pd.DataFrame(rows).set_index("subject")
+        df.loc["MEAN"] = [df.test_acc.mean(), df.test_bacc.mean(), df.val_bacc.mean()]
+        if verbose:
+            print(f"\n== {model_name} SUBJECT-INDEPENDENT (LOSO) ==  "
+                  f"test_acc mean={df.loc['MEAN','test_acc']:.3f} | chance={C.CHANCE_LEVEL:.2f}")
+        return df, results
+
+    raise ValueError(f"mode sconosciuto: {mode} (usa 'holdout' o 'loso')")
+
+
+# ---------------------------------------------------------------------------
 # Baseline classico (sanity check: c'è segnale decodificabile senza deep learning?)
 # ---------------------------------------------------------------------------
 def classical_baseline(subjects=None, *, pp_kwargs=None, protocol="mixed", verbose=True):
