@@ -221,11 +221,12 @@ class REVEClassifier(nn.Module):
     Input atteso: (batch, n_ch, time) a 200 Hz (usa preprocess_subject(resample_to=200)).
 
     NB: l'API esatta di REVE va verificata al primo run: la forward gestisce in modo
-    difensivo output tensore / dict (last_hidden_state / pooler_output) e costruisce la
-    testa lineare in modo lazy alla prima chiamata.
+    difensivo output tensore / dict (last_hidden_state / pooler_output). La testa lineare
+    viene costruita SUBITO in __init__ (con un forward fittizio per inferire la dim di
+    embedding), così i suoi parametri entrano nell'optimizer creato da train_model.
     """
     def __init__(self, electrode_names: list[str], n_classes: int = C.N_CLASSES,
-                 freeze_backbone: bool = True):
+                 freeze_backbone: bool = True, dummy_time: int = 200):
         super().__init__()
         from transformers import AutoModel
         self.pos_bank = AutoModel.from_pretrained("brain-bzh/reve-positions", trust_remote_code=True)
@@ -240,7 +241,12 @@ class REVEClassifier(nn.Module):
             pos = self.pos_bank(electrode_names)
             self.register_buffer("positions", pos if torch.is_tensor(pos) else torch.as_tensor(pos))
         self.n_classes = n_classes
-        self.head = None   # lazy
+        # --- testa costruita SUBITO via forward fittizio (fix: deve esistere prima
+        #     dell'optimizer, altrimenti i suoi pesi non verrebbero mai allenati) ---
+        with torch.no_grad():
+            dummy = torch.zeros(1, len(electrode_names), dummy_time)
+            emb = self._extract(self.backbone(dummy, self.positions.unsqueeze(0)))
+        self.head = nn.Linear(emb.size(-1), n_classes)
 
     def _extract(self, out):
         """Normalizza l'output di REVE in un vettore (batch, D)."""
@@ -267,8 +273,6 @@ class REVEClassifier(nn.Module):
         with ctx:
             out = self.backbone(x, pos)
         emb = self._extract(out)
-        if self.head is None:
-            self.head = nn.Linear(emb.size(-1), self.n_classes).to(emb.device)
         return self.head(emb)
 
 
