@@ -79,10 +79,35 @@ nulla** sopra le ConvNet sul raw.
   memorizza, la struttura appresa non trasferisce.
 - Coerente con la filosofia "raw end-to-end": le ConvNet (Shallow 0.575, EEGNet 0.555) dominano.
 
+## REVE (foundation model, brain-bzh/reve-large — CONGELATO + linear probe)
+
+REVE usato come feature extractor congelato + testa lineare (nessun adattamento del backbone).
+
+| protocollo | REVE (congelato) | miglior ConvNet |
+|---|---|---|
+| subject-dependent | 0.329 | Shallow 0.575 |
+| subject-mixed | 0.288 | Shallow 0.456 |
+| subject-independent (holdout) | 0.200 (chance) | ~0.225 |
+
+**Letture**:
+- REVE congelato ~0.33 (dependent): il linear probe è **ben sopra il chance** senza adattare il
+  backbone → il pretraining (60k ore) contiene feature rilevanti per l'imagined speech.
+- Ma **non batte le ConvNet task-specific** (Shallow 0.575): il transfer generico perde contro
+  un modello addestrato sul task.
+- **Cross-subject a chance anche per REVE**: nemmeno un foundation model da 60k ore rompe il muro
+  → conferma fortissima che l'imagined speech non trasferisce tra soggetti.
+- Da provare: **fine-tuning** (`freeze_backbone=False`), l'ultima leva per superare le ConvNet.
+
+## Quadro complessivo (subject-dependent, PP_MINIMAL, test acc)
+
+ShallowFBCSPNet 0.575 > EEGNet 0.555 > Deep4 0.472 > **REVE (frozen) 0.329** > DGCNN 0.283 > DHSLP 0.241.
+Cross-subject (independent): **tutti a chance (~0.20)**.
+
 ## TODO
 
+- [x] REVE congelato (linear probe) — 0.329 dep / 0.288 mixed / 0.200 indep. Sotto le ConvNet.
+- [ ] REVE **fine-tuning** (freeze_backbone=False) — ultima leva per battere le ConvNet.
 - [ ] LOSO per i numeri subject-independent finali (gold standard cross-subject).
 - [ ] Più seed per le medie ± std.
-- [ ] REVE (foundation model) — dove ci si aspetta di guadagnare sul cross-subject.
 - [ ] (opzionale) DHSLP fedele a Li et al. 2025 (gamma + PCC + pruning + 1-NN semi-sup).
 - [ ] Esperimento resample 200 Hz + normalizzazione /100µV per allinearsi esattamente a CBraMod.
