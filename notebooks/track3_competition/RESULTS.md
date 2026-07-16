@@ -96,7 +96,11 @@ REVE usato come feature extractor congelato + testa lineare (nessun adattamento 
   un modello addestrato sul task.
 - **Cross-subject a chance anche per REVE**: nemmeno un foundation model da 60k ore rompe il muro
   → conferma fortissima che l'imagined speech non trasferisce tra soggetti.
-- Da provare: **fine-tuning** (`freeze_backbone=False`), l'ultima leva per superare le ConvNet.
+- **Fine-tuning** (`freeze_backbone=False`), subject-independent holdout: `max_train_acc=0.807`,
+  `test=0.189` (chance). Il backbone sbloccato **fitta i soggetti di training all'80%** ma sui
+  soggetti mai visti resta a chance → **prova definitiva** che il muro cross-subject non è capacità
+  né ottimizzazione: il pattern dell'imagined speech è **soggetto-specifico**. Nemmeno un foundation
+  model da 60k ore, fine-tunato, lo supera.
 
 ## Quadro complessivo (subject-dependent, PP_MINIMAL, test acc)
 
@@ -106,7 +110,7 @@ Cross-subject (independent): **tutti a chance (~0.20)**.
 ## TODO
 
 - [x] REVE congelato (linear probe) — 0.329 dep / 0.288 mixed / 0.200 indep. Sotto le ConvNet.
-- [ ] REVE **fine-tuning** (freeze_backbone=False) — ultima leva per battere le ConvNet.
+- [x] REVE **fine-tuning** — indep: train 0.807 ma test 0.189 (chance). Muro cross-subject confermato.
 - [ ] LOSO per i numeri subject-independent finali (gold standard cross-subject).
 - [ ] Più seed per le medie ± std.
 - [ ] (opzionale) DHSLP fedele a Li et al. 2025 (gamma + PCC + pruning + 1-NN semi-sup).
