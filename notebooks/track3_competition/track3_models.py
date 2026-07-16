@@ -179,16 +179,22 @@ class DHSLP(nn.Module):
     def __init__(self, n_ch: int, n_times: int, n_classes: int = C.N_CLASSES,
                  K: int = 4, n_edges: int = 16, d_model: int = 64, hidden: int = 64,
                  n_layers: int = 2, dropout: float = 0.5,
-                 hyperedge_mode: str = "learned", metric: str = "pcc", k_neighbors: int = 8):
+                 hyperedge_mode: str = "learned", metric: str = "pcc", k_neighbors: int = 8,
+                 node_encoder: str = "linear"):
         super().__init__()
         self.K = K
         self.T_win = max(1, n_times // K)
         self.d_model = d_model
         self.hyperedge_mode = hyperedge_mode
         self.metric, self.k = metric, k_neighbors
+        self.node_encoder = node_encoder
         self.E = nn.Parameter(torch.randn(n_edges, d_model) * 0.01)      # iperarchi appresi
         self.pos_enc = nn.Parameter(torch.randn(n_ch, d_model) * 0.01)   # pos-encoding elettrodi
-        self.node_proj = nn.Sequential(nn.Linear(self.T_win, d_model), nn.LayerNorm(d_model), nn.ELU())
+        if node_encoder == "conv":
+            # feature nodo da conv temporale (frequenza-selettiva, come EEGNet/Shallow) sull'intera trial
+            self.encoder = _TemporalEncoder(d_model)
+        else:
+            self.node_proj = nn.Sequential(nn.Linear(self.T_win, d_model), nn.LayerNorm(d_model), nn.ELU())
         dims = [d_model] + [hidden] * n_layers
         self.convs = nn.ModuleList([_HGNNConv(dims[i], dims[i + 1]) for i in range(n_layers)])
         self.bns = nn.ModuleList([nn.BatchNorm1d(hidden) for _ in range(n_layers)])
@@ -204,25 +210,35 @@ class DHSLP(nn.Module):
             return torch.cat([H_learned, H_pruned], dim=2)
         return H_learned
 
+    def _hgnn_pass(self, feat, H_pruned):
+        H = self.build_dynamic_H(feat, H_pruned)
+        out = feat
+        B, N, _ = feat.shape
+        for conv, bn in zip(self.convs, self.bns):
+            out = conv(out, H)
+            out = bn(out.reshape(B * N, -1)).reshape(B, N, -1)
+            out = F.relu(out)
+            out = self.drop(out)
+        return out.mean(dim=1)                             # (B, hidden)
+
     def forward(self, x):
         B, N, T = x.shape
         H_pruned = None
         if self.hyperedge_mode in ("pruned", "hybrid"):
             H_pruned = G.hyperedge_incidence(x, self.metric, self.k)   # (B,N,N) una volta per trial
+
+        if self.node_encoder == "conv":
+            # encoder convoluzionale sull'intera trial (niente finestre): feature nodo forti
+            feat = self.encoder(x) + self.pos_enc         # (B,N,d)
+            return self.clf(self._hgnn_pass(feat, H_pruned))
+
         outs = []
         for k in range(self.K):
             x_k = x[:, :, k * self.T_win:(k + 1) * self.T_win]
             if x_k.shape[2] != self.T_win:         # scarta finestra finale incompleta
                 continue
             feat = self.node_proj(x_k) + self.pos_enc     # (B,N,d)
-            H_k = self.build_dynamic_H(feat, H_pruned)    # (B,N,n_edges)
-            out = feat
-            for conv, bn in zip(self.convs, self.bns):
-                out = conv(out, H_k)
-                out = bn(out.reshape(B * N, -1)).reshape(B, N, -1)
-                out = F.relu(out)
-                out = self.drop(out)
-            outs.append(out.mean(dim=1))                  # (B, hidden)
+            outs.append(self._hgnn_pass(feat, H_pruned))
         return self.clf(torch.stack(outs, dim=1).mean(dim=1))
 
 
