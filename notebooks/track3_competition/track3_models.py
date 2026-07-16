@@ -317,6 +317,60 @@ class HyperEEGNet(nn.Module):
 
 
 # ===========================================================================
+# 3c. HyperAdaptNet — MODELLO NOVEL v2 (subject-adaptive)
+#     Separa il "CHI" dal "COSA": un ramo IPERGRAFO sulla connettività produce un
+#     embedding del SOGGETTO (dove l'ipergrafo è forte: identità NMI 0.95), che via
+#     FiLM MODULA le feature di un backbone EEGNet-style (il "COSA" = la parola).
+#     Un solo modello che si adatta a ogni soggetto -> attacca la variabilità
+#     inter-soggetto (il motivo per cui il mixed 0.33 << dependent 0.55).
+# ===========================================================================
+class HyperAdaptNet(nn.Module):
+    def __init__(self, n_ch: int, n_times: int, n_classes: int = C.N_CLASSES,
+                 F1: int = 8, D: int = 2, F2: int = 16, kt: int = 64,
+                 hg_hidden: int = 48, metric: str = "pcc", k_neighbors: int = 8,
+                 dropout: float = 0.5, film: bool = True):
+        super().__init__()
+        self.metric, self.k, self.film = metric, k_neighbors, film
+        # --- WHAT: backbone stile EEGNet (temporale -> spaziale depthwise -> separable) ---
+        self.temporal = nn.Sequential(
+            nn.Conv2d(1, F1, (1, kt), padding=(0, kt // 2), bias=False), nn.BatchNorm2d(F1))
+        self.spatial = nn.Sequential(
+            nn.Conv2d(F1, F1 * D, (n_ch, 1), groups=F1, bias=False), nn.BatchNorm2d(F1 * D),
+            nn.ELU(), nn.AvgPool2d((1, 4)), nn.Dropout(dropout))
+        self.sep = nn.Sequential(
+            nn.Conv2d(F1 * D, F2, (1, 16), padding=(0, 8), bias=False), nn.BatchNorm2d(F2),
+            nn.ELU(), nn.AvgPool2d((1, 8)), nn.Dropout(dropout))
+        with torch.no_grad():
+            t_out = self.sep(self.spatial(self.temporal(torch.zeros(1, 1, n_ch, n_times)))).shape[-1]
+        # --- WHO: ipergrafo sulla connettività -> embedding soggetto ---
+        self.hg1 = _HGNNConv(n_ch, hg_hidden)      # node feat = riga di connettività (n_ch dim)
+        self.hg2 = _HGNNConv(hg_hidden, hg_hidden)
+        # --- FiLM: subject embedding -> (gamma, beta) per feature map F2 ---
+        self.film_g = nn.Linear(hg_hidden, F2)
+        self.film_b = nn.Linear(hg_hidden, F2)
+        for m in (self.film_g, self.film_b):       # init a zero -> parte come identità (backbone puro)
+            nn.init.zeros_(m.weight); nn.init.zeros_(m.bias)
+        self.clf = nn.Sequential(nn.Flatten(), nn.Linear(F2 * t_out, n_classes))
+
+    def _subject_embedding(self, x):
+        Cadj = G.pcc_adjacency(x) if self.metric == "pcc" else G.plv_adjacency(x)  # (B,n,n) node feat
+        H = G.hyperedge_incidence(x, self.metric, self.k)
+        h = F.relu(self.hg1(Cadj, H))
+        h = F.relu(self.hg2(h, H))
+        return h.mean(1)                            # (B, hg_hidden) firma del soggetto
+
+    def forward(self, x):
+        B = x.size(0)
+        h = self.sep(self.spatial(self.temporal(x.unsqueeze(1))))   # (B, F2, 1, t_out)
+        if self.film:
+            subj = self._subject_embedding(x)                       # (B, hg_hidden)
+            g = self.film_g(subj).view(B, -1, 1, 1)
+            b = self.film_b(subj).view(B, -1, 1, 1)
+            h = h * (1 + g) + b                                     # FiLM: adatta al soggetto
+        return self.clf(h)
+
+
+# ===========================================================================
 # 4. REVE — foundation model (brain-bzh/reve-large), input a 200 Hz
 # ===========================================================================
 class REVEClassifier(nn.Module):
@@ -399,6 +453,9 @@ def build_model(name: str, *, n_ch: int, n_times: int | None = None,
     if name == "hypereegnet":
         assert n_times is not None, "HyperEEGNet richiede n_times (segnale raw)"
         return HyperEEGNet(n_ch, n_times, **kw)
+    if name == "hyperadaptnet":
+        assert n_times is not None, "HyperAdaptNet richiede n_times (segnale raw)"
+        return HyperAdaptNet(n_ch, n_times, **kw)
     if name == "reve":
         assert electrode_names is not None
         return REVEClassifier(electrode_names, **kw)
