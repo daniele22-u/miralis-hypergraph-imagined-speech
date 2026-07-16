@@ -236,6 +236,109 @@ def silhouette_permutation(TS, k=2, n_perm=1000, seed=42):
     return float(obs), null, float((null >= obs).mean())
 
 
+# ===========================================================================
+# CROSS-COHORT — confronto fenotipi Track#3 vs coorte ORIGINALE (tesi, 61ch).
+# Portato da V5W_09. Richiede il raw originale (data/raw_csv/training_set, sul server).
+# I due montaggi differiscono -> si lavora sui CANALI CONDIVISI (~51).
+# ===========================================================================
+from pathlib import Path as _Path
+
+# rinomina 10-20 vecchia->nuova per massimizzare i canali condivisi
+_REMAP = {"T3": "T7", "T4": "T8", "T5": "P7", "T6": "P8", "FP2": "Fp2", "FP1": "Fp1", "FPZ": "FPz"}
+def _canon(name):
+    return _REMAP.get(name, name)
+
+
+def _repo_root():
+    p = _Path(__file__).resolve()
+    for q in [p] + list(p.parents):
+        if (q / ".git").exists():
+            return q
+    return p.parent
+
+
+def channel_intersection(clab_a, clab_b):
+    """Nomi canale condivisi (canonicalizzati), nell'ordine di clab_a."""
+    b = set(_canon(c) for c in clab_b)
+    return [_canon(c) for c in clab_a if _canon(c) in b]
+
+
+def restrict_covariances(M, clab, keep_names):
+    """Restringe matrici (n,C,C) ai soli canali keep_names (per nome canonico)."""
+    import numpy as np
+    canon = [_canon(c) for c in clab]
+    idx = [canon.index(n) for n in keep_names]
+    return M[:, idx][:, :, idx]
+
+
+def load_original_cohort_covariances(csv_root=None, exclude=(22,), min_trials=10,
+                                     n_chan=61, estimator="oas", cache=True):
+    """
+    Media di Riemann delle covarianze per soggetto della coorte ORIGINALE (110 parole, 61ch).
+    Legge data/raw_csv/training_set/PXXX_SYYY/*_img.csv (shape 61x384). Cache in INTERIM_DIR.
+    Ritorna (M_OG (n,61,61), subj_ids, clab_og). Solleva FileNotFoundError se il raw non c'è.
+    """
+    import numpy as np, pandas as pd, re, json
+    from collections import defaultdict
+    from pyriemann.estimation import Covariances
+    from pyriemann.utils.mean import mean_riemann
+    root = _repo_root()
+    csv_root = _Path(csv_root) if csv_root else (root / "data" / "raw_csv" / "training_set")
+    if not csv_root.exists():
+        raise FileNotFoundError(f"Coorte originale non trovata: {csv_root} "
+                                f"(serve il raw della tesi, presente sul server)")
+    clab_og = json.loads((root / "configs" / "chan_names.json").read_text())
+    cache_f = C.INTERIM_DIR / "og_subject_cov.npz"
+    if cache and cache_f.exists():
+        z = np.load(cache_f, allow_pickle=True)
+        return z["mean"], z["subj"].tolist(), clab_og
+    ce = Covariances(estimator=estimator)
+    pat = re.compile(r"^P(\d+)_S(\d+)$")
+    exclude = set(exclude)
+    subj_dirs = defaultdict(list)
+    for d in sorted(csv_root.iterdir()):
+        m = pat.match(d.name)
+        if m and int(m.group(1)) not in exclude:
+            subj_dirs[int(m.group(1))].append(d)
+    subj, means = [], []
+    for sid in sorted(subj_dirs):
+        X = []
+        for sd in subj_dirs[sid]:
+            for csv in sorted(sd.glob("*_img.csv")):
+                if csv.name.startswith("._"):
+                    continue
+                a = pd.read_csv(csv, header=None).values.astype(np.float32)
+                if a.shape == (n_chan, 384):
+                    X.append(a)
+        if len(X) < min_trials:
+            continue
+        means.append(mean_riemann(ce.transform(np.stack(X)))); subj.append(sid)
+    M = np.stack(means)
+    if cache:
+        np.savez(cache_f, mean=M, subj=np.array(subj))
+    return M, subj, clab_og
+
+
+def original_phenotype_labels():
+    """Label fenotipi della tesi (EEG_16b) da configs/eeg16b_cluster_labels.json: {subj_id: label}."""
+    import json
+    d = json.loads((_repo_root() / "configs" / "eeg16b_cluster_labels.json").read_text())
+    return {int(s): int(l) for s, l in zip(d["subj_ids"], d["labels"])}
+
+
+def orient_by_electrode(M, labels, clab, anchor="PO8"):
+    """
+    Fissa l'orientamento dei cluster: 'C1' = quello con node-strength più alto su `anchor`.
+    Rende confrontabili le label tra coorti (0/1 sono arbitrari per ogni clustering).
+    """
+    import numpy as np
+    canon = [_canon(c) for c in clab]
+    ai = canon.index(_canon(anchor))
+    s0 = M[labels == 0].mean(0)[ai].mean()
+    s1 = M[labels == 1].mean(0)[ai].mean()
+    return labels if s1 >= s0 else 1 - labels
+
+
 if __name__ == "__main__":
     feats, ids, mats = subject_fingerprints("plv", subjects=[1, 2, 3])
     print("fingerprints euclidee:", feats.shape, "ids:", ids)
