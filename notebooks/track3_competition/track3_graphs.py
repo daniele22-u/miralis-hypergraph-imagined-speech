@@ -77,3 +77,15 @@ def build_adjacency(x: torch.Tensor, metric: str = "pcc", k: int = 8) -> torch.T
     A = pcc_adjacency(x) if metric == "pcc" else plv_adjacency(x)
     A = topk_prune(A, k)
     return normalize_adj(A)
+
+
+def hyperedge_incidence(x: torch.Tensor, metric: str = "pcc", k: int = 8) -> torch.Tensor:
+    """
+    Incidenza ipergrafo PRUNED per-trial (come la pipeline hypergraphs_pruned della tesi).
+    Iperarco e_j = nodo j + i suoi top-k vicini per connettività (PCC/PLV). H binaria (B,N,N).
+    """
+    A = pcc_adjacency(x) if metric == "pcc" else plv_adjacency(x)
+    Ap = topk_prune(A, k)                                   # (B,N,N) pruned pesata
+    N = Ap.shape[1]
+    eye = torch.eye(N, device=x.device, dtype=Ap.dtype).unsqueeze(0)
+    return ((Ap.abs() > 1e-8).to(Ap.dtype) + eye > 0).to(Ap.dtype)   # +self-loop

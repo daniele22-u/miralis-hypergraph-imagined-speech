@@ -168,17 +168,24 @@ class _HGNNConv(nn.Module):
 class DHSLP(nn.Module):
     """
     Dynamic Hypergraph Structure Learning + Prediction (Li et al. 2025), come in EEG_13b.
-    Iperarchi = E (n_edges, d_model) APPRENDIBILI. Per K finestre temporali:
-      feat = node_proj(finestra_raw) + pos_enc ;  H = softmax(feat @ E.T)  (incidenza soft)
-    HGNN conv su H, mean pool su nodi e finestre.
+    Per K finestre temporali: feat = node_proj(finestra_raw) + pos_enc, HGNN conv, mean pool.
+
+    hyperedge_mode:
+      'learned' (EEG_13b): iperarchi = E appresi, H = softmax(feat @ E.T)  [soft, tende a overfittare]
+      'pruned'           : H = incidenza pruned da connettività PCC/PLV per-trial [struttura fissa data-driven]
+      'hybrid'           : concat delle due (appresa + pruned)
+    metric/k_neighbors: per il ramo 'pruned'/'hybrid'.
     """
     def __init__(self, n_ch: int, n_times: int, n_classes: int = C.N_CLASSES,
                  K: int = 4, n_edges: int = 16, d_model: int = 64, hidden: int = 64,
-                 n_layers: int = 2, dropout: float = 0.5):
+                 n_layers: int = 2, dropout: float = 0.5,
+                 hyperedge_mode: str = "learned", metric: str = "pcc", k_neighbors: int = 8):
         super().__init__()
         self.K = K
         self.T_win = max(1, n_times // K)
         self.d_model = d_model
+        self.hyperedge_mode = hyperedge_mode
+        self.metric, self.k = metric, k_neighbors
         self.E = nn.Parameter(torch.randn(n_edges, d_model) * 0.01)      # iperarchi appresi
         self.pos_enc = nn.Parameter(torch.randn(n_ch, d_model) * 0.01)   # pos-encoding elettrodi
         self.node_proj = nn.Sequential(nn.Linear(self.T_win, d_model), nn.LayerNorm(d_model), nn.ELU())
@@ -188,19 +195,27 @@ class DHSLP(nn.Module):
         self.drop = nn.Dropout(dropout)
         self.clf = nn.Linear(hidden, n_classes)
 
-    def build_dynamic_H(self, feat):
+    def build_dynamic_H(self, feat, H_pruned):
+        if self.hyperedge_mode == "pruned":
+            return H_pruned
         scores = torch.matmul(feat, self.E.T) / (self.d_model ** 0.5)
-        return torch.softmax(scores, dim=2)        # (B,N,n_edges) soft
+        H_learned = torch.softmax(scores, dim=2)        # (B,N,n_edges) soft
+        if self.hyperedge_mode == "hybrid":
+            return torch.cat([H_learned, H_pruned], dim=2)
+        return H_learned
 
     def forward(self, x):
         B, N, T = x.shape
+        H_pruned = None
+        if self.hyperedge_mode in ("pruned", "hybrid"):
+            H_pruned = G.hyperedge_incidence(x, self.metric, self.k)   # (B,N,N) una volta per trial
         outs = []
         for k in range(self.K):
             x_k = x[:, :, k * self.T_win:(k + 1) * self.T_win]
             if x_k.shape[2] != self.T_win:         # scarta finestra finale incompleta
                 continue
             feat = self.node_proj(x_k) + self.pos_enc     # (B,N,d)
-            H_k = self.build_dynamic_H(feat)              # (B,N,n_edges)
+            H_k = self.build_dynamic_H(feat, H_pruned)    # (B,N,n_edges)
             out = feat
             for conv, bn in zip(self.convs, self.bns):
                 out = conv(out, H_k)
