@@ -230,6 +230,7 @@ def run_subject_dependent(model_name, subjects=None, *, merge_val=False,
 
         results[s] = res
         rows.append({"subject": s, "val_bacc": res["val_bacc"],
+                     "train_acc": res["train_acc"],
                      "test_acc": res["test_acc"], "test_bacc": res["test_bacc"],
                      "best_epoch": res["best_epoch"], "sec": round(time.time() - t0, 1)})
         if verbose:
