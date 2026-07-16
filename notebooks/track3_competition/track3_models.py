@@ -256,9 +256,10 @@ class HyperEEGNet(nn.Module):
                  F1: int = 8, kernel_length: int = 64, pool: int = 8,
                  d_model: int = 64, hidden: int = 64, n_layers: int = 2, dropout: float = 0.5,
                  hyperedge_mode: str = "hybrid", metric: str = "pcc", k_neighbors: int = 8,
-                 n_edges: int = 16):
+                 n_edges: int = 16, readout: str = "attention"):
         super().__init__()
         self.hyperedge_mode, self.metric, self.k, self.d_model = hyperedge_mode, metric, k_neighbors, d_model
+        self.readout = readout
         # 1. front-end TEMPORALE stile EEGNet: filtri di frequenza, canali preservati come nodi
         self.temporal = nn.Sequential(
             nn.Conv2d(1, F1, (1, kernel_length), padding=(0, kernel_length // 2), bias=False),
@@ -276,6 +277,7 @@ class HyperEEGNet(nn.Module):
         self.convs = nn.ModuleList([_HGNNConv(dims[i], dims[i + 1]) for i in range(n_layers)])
         self.bns = nn.ModuleList([nn.BatchNorm1d(hidden) for _ in range(n_layers)])
         self.drop = nn.Dropout(dropout)
+        self.att = nn.Linear(hidden, 1)          # readout ad attenzione sui canali
         self.clf = nn.Sequential(nn.Linear(hidden, 64), nn.ELU(), nn.Dropout(dropout),
                                  nn.Linear(64, n_classes))
 
@@ -286,6 +288,15 @@ class HyperEEGNet(nn.Module):
         if self.hyperedge_mode == "hybrid":
             return torch.cat([H_learned, H_pruned], dim=2)
         return H_learned
+
+    def _readout(self, out):
+        # out: (B, Ch, hidden) -> (B, hidden). 'attention' PESA i canali invece di mediarli.
+        if self.readout == "attention":
+            w = torch.softmax(self.att(out), dim=1)      # (B, Ch, 1)
+            return (w * out).sum(1)
+        if self.readout == "max":
+            return out.max(1).values
+        return out.mean(1)                                # 'mean'
 
     def forward(self, x):
         B, Ch, T = x.shape
@@ -302,7 +313,7 @@ class HyperEEGNet(nn.Module):
             out = bn(out.reshape(B * Ch, -1)).reshape(B, Ch, -1)
             out = F.relu(out)
             out = self.drop(out)
-        return self.clf(out.mean(1))                        # global mean pool sui canali
+        return self.clf(self._readout(out))                 # readout sui canali (attention di default)
 
 
 # ===========================================================================
