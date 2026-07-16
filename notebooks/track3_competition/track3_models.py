@@ -243,6 +243,69 @@ class DHSLP(nn.Module):
 
 
 # ===========================================================================
+# 3b. HyperEEGNet — MODELLO NOVEL DELLA TESI
+#     Front-end temporale stile EEGNet (filtri di frequenza appresi) + modulo
+#     SPAZIALE a IPERGRAFO dinamico (invece della conv spaziale depthwise di EEGNet).
+#     L'ipergrafo modella relazioni di ORDINE SUPERIORE tra elettrodi (un iperarco
+#     collega gruppi di canali). Combina il meglio di EEGNet (feature temporali) e
+#     DHSLP (aggregazione a ipergrafo), risolvendo il collo di bottiglia di DHSLP
+#     (encoder dei nodi troppo debole).
+# ===========================================================================
+class HyperEEGNet(nn.Module):
+    def __init__(self, n_ch: int, n_times: int, n_classes: int = C.N_CLASSES,
+                 F1: int = 8, kernel_length: int = 64, pool: int = 8,
+                 d_model: int = 64, hidden: int = 64, n_layers: int = 2, dropout: float = 0.5,
+                 hyperedge_mode: str = "hybrid", metric: str = "pcc", k_neighbors: int = 8,
+                 n_edges: int = 16):
+        super().__init__()
+        self.hyperedge_mode, self.metric, self.k, self.d_model = hyperedge_mode, metric, k_neighbors, d_model
+        # 1. front-end TEMPORALE stile EEGNet: filtri di frequenza, canali preservati come nodi
+        self.temporal = nn.Sequential(
+            nn.Conv2d(1, F1, (1, kernel_length), padding=(0, kernel_length // 2), bias=False),
+            nn.BatchNorm2d(F1), nn.ELU(),
+            nn.AvgPool2d((1, pool)), nn.Dropout(dropout),
+        )
+        with torch.no_grad():                      # dimensione tempo dopo conv+pool (evita off-by-one)
+            t2 = self.temporal(torch.zeros(1, 1, n_ch, n_times)).shape[-1]
+        # 2. feature per NODO (canale) dal front-end temporale
+        self.node_proj = nn.Sequential(nn.Linear(F1 * t2, d_model), nn.LayerNorm(d_model), nn.ELU())
+        self.E = nn.Parameter(torch.randn(n_edges, d_model) * 0.01)
+        self.pos_enc = nn.Parameter(torch.randn(n_ch, d_model) * 0.01)
+        # 3. modulo SPAZIALE a ipergrafo (HGNN)
+        dims = [d_model] + [hidden] * n_layers
+        self.convs = nn.ModuleList([_HGNNConv(dims[i], dims[i + 1]) for i in range(n_layers)])
+        self.bns = nn.ModuleList([nn.BatchNorm1d(hidden) for _ in range(n_layers)])
+        self.drop = nn.Dropout(dropout)
+        self.clf = nn.Sequential(nn.Linear(hidden, 64), nn.ELU(), nn.Dropout(dropout),
+                                 nn.Linear(64, n_classes))
+
+    def _build_H(self, feat, H_pruned):
+        if self.hyperedge_mode == "pruned":
+            return H_pruned
+        H_learned = torch.softmax(feat @ self.E.T / (self.d_model ** 0.5), dim=2)
+        if self.hyperedge_mode == "hybrid":
+            return torch.cat([H_learned, H_pruned], dim=2)
+        return H_learned
+
+    def forward(self, x):
+        B, Ch, T = x.shape
+        H_pruned = None
+        if self.hyperedge_mode in ("pruned", "hybrid"):
+            H_pruned = G.hyperedge_incidence(x, self.metric, self.k)   # (B,Ch,Ch)
+        h = self.temporal(x.unsqueeze(1))                  # (B, F1, Ch, T2)
+        h = h.permute(0, 2, 1, 3).reshape(B, Ch, -1)       # (B, Ch, F1*T2) feature nodo
+        feat = self.node_proj(h) + self.pos_enc            # (B, Ch, d_model)
+        H = self._build_H(feat, H_pruned)
+        out = feat
+        for conv, bn in zip(self.convs, self.bns):
+            out = conv(out, H)
+            out = bn(out.reshape(B * Ch, -1)).reshape(B, Ch, -1)
+            out = F.relu(out)
+            out = self.drop(out)
+        return self.clf(out.mean(1))                        # global mean pool sui canali
+
+
+# ===========================================================================
 # 4. REVE — foundation model (brain-bzh/reve-large), input a 200 Hz
 # ===========================================================================
 class REVEClassifier(nn.Module):
@@ -322,6 +385,9 @@ def build_model(name: str, *, n_ch: int, n_times: int | None = None,
     if name == "dhslp":
         assert n_times is not None, "DHSLP (finestre raw) richiede n_times"
         return DHSLP(n_ch, n_times, **kw)
+    if name == "hypereegnet":
+        assert n_times is not None, "HyperEEGNet richiede n_times (segnale raw)"
+        return HyperEEGNet(n_ch, n_times, **kw)
     if name == "reve":
         assert electrode_names is not None
         return REVEClassifier(electrode_names, **kw)
