@@ -174,6 +174,7 @@ _MODEL_SPEC = {
     "dhslp":   {"feature": "raw",  "resample": None},
     "dgcnn":   {"feature": "raw",  "resample": None},   # ora grafo PCC per-trial sul raw
     "hypereegnet": {"feature": "raw", "resample": None},   # modello novel: EEGNet temporale + ipergrafo
+    "hyperadaptnet": {"feature": "raw", "resample": None}, # novel v2: subject-adaptive FiLM da ipergrafo
     "reve":    {"feature": "raw",  "resample": C.REVE_FS},
 }
 
