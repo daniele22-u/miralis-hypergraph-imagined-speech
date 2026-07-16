@@ -173,6 +173,7 @@ _MODEL_SPEC = {
     "deep4":   {"feature": "raw",  "resample": None},
     "dhslp":   {"feature": "raw",  "resample": None},
     "dgcnn":   {"feature": "raw",  "resample": None},   # ora grafo PCC per-trial sul raw
+    "hypereegnet": {"feature": "raw", "resample": None},   # modello novel: EEGNet temporale + ipergrafo
     "reve":    {"feature": "raw",  "resample": C.REVE_FS},
 }
 
