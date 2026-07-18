@@ -421,6 +421,51 @@ class EEGInception(nn.Module):
 
 
 # ===========================================================================
+# 3e. HyperTempNet — MODELLO NOVEL: ipergrafo sui SEGMENTI TEMPORALI
+#     (ispirato a Hyper-MML, Kang et al. 2026: inter-segment hyperedges).
+#     Front-end EEGInception (multi-scala) -> feature per segmento temporale ->
+#     IPERGRAFO sui segmenti (relazioni di ordine superiore nel TEMPO = dinamiche
+#     della parola, non connettivita' di canale = soggetto). Attacca l'asse GIUSTO.
+# ===========================================================================
+class HyperTempNet(nn.Module):
+    def __init__(self, n_ch: int, n_times: int, n_classes: int = C.N_CLASSES,
+                 F: int = 8, scales=(16, 32, 64, 128), K_seg: int = 10, n_edges: int = 16,
+                 hidden: int = 64, dropout: float = 0.5, temporal_hg: bool = True):
+        super().__init__()
+        self.temporal_hg, self.K, self.hidden = temporal_hg, K_seg, hidden
+        self.branches = nn.ModuleList([
+            nn.Sequential(nn.Conv2d(1, F, (1, k), padding=(0, k // 2), bias=False), nn.BatchNorm2d(F))
+            for k in scales])
+        Fc = F * len(scales)
+        self.spatial = nn.Sequential(                       # collassa i canali, tiene il tempo
+            nn.Conv2d(Fc, Fc, (n_ch, 1), groups=Fc, bias=False), nn.BatchNorm2d(Fc), nn.ELU(),
+            nn.Dropout(dropout))
+        self.proj = nn.Sequential(nn.Linear(Fc, hidden), nn.LayerNorm(hidden), nn.ELU())
+        self.E = nn.Parameter(torch.randn(n_edges, hidden) * 0.01)   # iperarchi APPRESI sui segmenti
+        self.hg1 = _HGNNConv(hidden, hidden)
+        self.hg2 = _HGNNConv(hidden, hidden)
+        self.drop = nn.Dropout(dropout)
+        self.clf = nn.Sequential(nn.Linear(hidden, 64), nn.ELU(), nn.Dropout(dropout),
+                                 nn.Linear(64, n_classes))
+
+    def forward(self, x):
+        h = torch.cat([b(x.unsqueeze(1)) for b in self.branches], 1)   # (B, Fc, C, T)
+        h = self.spatial(h).squeeze(2)                                  # (B, Fc, T)
+        B, Fc, T = h.shape
+        seg = T // self.K
+        h = h[:, :, :seg * self.K].reshape(B, Fc, self.K, seg).mean(3)  # (B, Fc, K) segmenti temporali
+        feat = self.proj(h.transpose(1, 2))                             # (B, K, hidden) K nodi = segmenti
+        if self.temporal_hg:
+            Hh = torch.softmax(feat @ self.E.T / (self.hidden ** 0.5), dim=2)   # (B, K, n_edges)
+            out = F.relu(self.hg1(feat, Hh)); out = self.drop(out)
+            out = F.relu(self.hg2(out, Hh))
+            pooled = out.mean(1)
+        else:
+            pooled = feat.mean(1)                                       # ablation: no ipergrafo temporale
+        return self.clf(pooled)
+
+
+# ===========================================================================
 # 4. REVE — foundation model (brain-bzh/reve-large), input a 200 Hz
 # ===========================================================================
 class REVEClassifier(nn.Module):
@@ -509,6 +554,9 @@ def build_model(name: str, *, n_ch: int, n_times: int | None = None,
     if name == "eeginception":
         assert n_times is not None, "EEGInception richiede n_times (segnale raw)"
         return EEGInception(n_ch, n_times, **kw)
+    if name == "hypertempnet":
+        assert n_times is not None, "HyperTempNet richiede n_times (segnale raw)"
+        return HyperTempNet(n_ch, n_times, **kw)
     if name == "reve":
         assert electrode_names is not None
         return REVEClassifier(electrode_names, **kw)
