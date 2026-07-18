@@ -466,6 +466,60 @@ class HyperTempNet(nn.Module):
 
 
 # ===========================================================================
+# 3f. HyperDualNet — DUE ipergrafi in parallelo: TEMPORALE (segmenti) + SPAZIALE (canali)
+#     Front-end multi-scala condiviso -> ramo temporale (segmenti=parola) +
+#     ramo spaziale (canali=connettivita'=soggetto) -> fusione -> classificatore.
+#     use_temporal/use_spatial per l'ablation (solo-T / solo-S / entrambi).
+# ===========================================================================
+class HyperDualNet(nn.Module):
+    def __init__(self, n_ch: int, n_times: int, n_classes: int = C.N_CLASSES,
+                 F: int = 8, scales=(16, 32, 64, 128), K_seg: int = 10, n_edges: int = 16,
+                 hidden: int = 64, dropout: float = 0.5,
+                 use_temporal: bool = True, use_spatial: bool = True):
+        super().__init__()
+        assert use_temporal or use_spatial
+        self.use_t, self.use_s, self.K, self.hidden = use_temporal, use_spatial, K_seg, hidden
+        self.branches = nn.ModuleList([
+            nn.Sequential(nn.Conv2d(1, F, (1, k), padding=(0, k // 2), bias=False), nn.BatchNorm2d(F))
+            for k in scales])
+        Fc = F * len(scales)
+        self.drop = nn.Dropout(dropout)
+        # --- ramo TEMPORALE (segmenti) ---
+        if use_temporal:
+            self.t_spatial = nn.Sequential(nn.Conv2d(Fc, Fc, (n_ch, 1), groups=Fc, bias=False),
+                                           nn.BatchNorm2d(Fc), nn.ELU(), nn.Dropout(dropout))
+            self.t_proj = nn.Sequential(nn.Linear(Fc, hidden), nn.LayerNorm(hidden), nn.ELU())
+            self.t_E = nn.Parameter(torch.randn(n_edges, hidden) * 0.01)
+            self.t_hg1, self.t_hg2 = _HGNNConv(hidden, hidden), _HGNNConv(hidden, hidden)
+        # --- ramo SPAZIALE (canali) ---
+        if use_spatial:
+            self.s_proj = nn.Sequential(nn.Linear(Fc, hidden), nn.LayerNorm(hidden), nn.ELU())
+            self.s_E = nn.Parameter(torch.randn(n_edges, hidden) * 0.01)
+            self.s_hg1, self.s_hg2 = _HGNNConv(hidden, hidden), _HGNNConv(hidden, hidden)
+        cdim = hidden * (int(use_temporal) + int(use_spatial))
+        self.clf = nn.Sequential(nn.Linear(cdim, 64), nn.ELU(), nn.Dropout(dropout), nn.Linear(64, n_classes))
+
+    def _hg(self, feat, E, hg1, hg2):
+        H = torch.softmax(feat @ E.T / (self.hidden ** 0.5), dim=2)
+        out = F.relu(hg1(feat, H)); out = self.drop(out); out = F.relu(hg2(out, H))
+        return out.mean(1)
+
+    def forward(self, x):
+        h = torch.cat([b(x.unsqueeze(1)) for b in self.branches], 1)   # (B, Fc, C, T)
+        B, Fc, Ch, T = h.shape
+        feats = []
+        if self.use_t:                                                  # segmenti temporali
+            ht = self.t_spatial(h).squeeze(2)                           # (B, Fc, T)
+            seg = T // self.K
+            ht = ht[:, :, :seg * self.K].reshape(B, Fc, self.K, seg).mean(3)
+            feats.append(self._hg(self.t_proj(ht.transpose(1, 2)), self.t_E, self.t_hg1, self.t_hg2))
+        if self.use_s:                                                  # canali (spaziale)
+            hs = h.mean(3)                                              # (B, Fc, C) pool sul tempo
+            feats.append(self._hg(self.s_proj(hs.transpose(1, 2)), self.s_E, self.s_hg1, self.s_hg2))
+        return self.clf(torch.cat(feats, 1))
+
+
+# ===========================================================================
 # 4. REVE — foundation model (brain-bzh/reve-large), input a 200 Hz
 # ===========================================================================
 class REVEClassifier(nn.Module):
@@ -557,6 +611,9 @@ def build_model(name: str, *, n_ch: int, n_times: int | None = None,
     if name == "hypertempnet":
         assert n_times is not None, "HyperTempNet richiede n_times (segnale raw)"
         return HyperTempNet(n_ch, n_times, **kw)
+    if name == "hyperdualnet":
+        assert n_times is not None, "HyperDualNet richiede n_times (segnale raw)"
+        return HyperDualNet(n_ch, n_times, **kw)
     if name == "reve":
         assert electrode_names is not None
         return REVEClassifier(electrode_names, **kw)
