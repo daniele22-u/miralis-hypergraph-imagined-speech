@@ -389,6 +389,38 @@ class HyperAdaptNet(nn.Module):
 
 
 # ===========================================================================
+# 3d. EEGInception — backbone multi-scala (stile Inception/GoogLeNet per EEG)
+#     Rami temporali paralleli con kernel di lunghezze diverse (scale di frequenza
+#     diverse), concatenati -> conv spaziale depthwise -> separable -> classificatore.
+# ===========================================================================
+class EEGInception(nn.Module):
+    def __init__(self, n_ch: int, n_times: int, n_classes: int = C.N_CLASSES,
+                 F: int = 8, D: int = 2, scales=(16, 32, 64, 128), pool: int = 8, dropout: float = 0.5):
+        super().__init__()
+        self.branches = nn.ModuleList([
+            nn.Sequential(nn.Conv2d(1, F, (1, k), padding=(0, k // 2), bias=False), nn.BatchNorm2d(F))
+            for k in scales])
+        Fc = F * len(scales)
+        self.spatial = nn.Sequential(
+            nn.Conv2d(Fc, Fc * D, (n_ch, 1), groups=Fc, bias=False), nn.BatchNorm2d(Fc * D),
+            nn.ELU(), nn.AvgPool2d((1, 4)), nn.Dropout(dropout))
+        self.sep = nn.Sequential(
+            nn.Conv2d(Fc * D, Fc * D, (1, 16), padding=(0, 8), groups=Fc * D, bias=False),
+            nn.Conv2d(Fc * D, 32, (1, 1), bias=False), nn.BatchNorm2d(32),
+            nn.ELU(), nn.AvgPool2d((1, pool)), nn.Dropout(dropout))
+        with torch.no_grad():
+            t = self._fw(torch.zeros(1, 1, n_ch, n_times)).shape[-1]
+        self.clf = nn.Sequential(nn.Flatten(), nn.Linear(32 * t, n_classes))
+
+    def _fw(self, x1):
+        h = torch.cat([b(x1) for b in self.branches], 1)   # multi-scala temporale
+        return self.sep(self.spatial(h))
+
+    def forward(self, x):
+        return self.clf(self._fw(x.unsqueeze(1)))
+
+
+# ===========================================================================
 # 4. REVE — foundation model (brain-bzh/reve-large), input a 200 Hz
 # ===========================================================================
 class REVEClassifier(nn.Module):
@@ -474,6 +506,9 @@ def build_model(name: str, *, n_ch: int, n_times: int | None = None,
     if name == "hyperadaptnet":
         assert n_times is not None, "HyperAdaptNet richiede n_times (segnale raw)"
         return HyperAdaptNet(n_ch, n_times, **kw)
+    if name == "eeginception":
+        assert n_times is not None, "EEGInception richiede n_times (segnale raw)"
+        return EEGInception(n_ch, n_times, **kw)
     if name == "reve":
         assert electrode_names is not None
         return REVEClassifier(electrode_names, **kw)
