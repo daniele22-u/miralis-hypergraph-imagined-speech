@@ -26,6 +26,18 @@ temporali (nodi) → ipergrafo appreso sui segmenti (HGNN) → classificatore.
 - **Contributo ipergrafo temporale** (on vs off): Δ=**+0.046**, **Wilcoxon p=0.0012**, 13/15 soggetti meglio.
 - **vs baseline Shallow**: Δ=**+0.147**, **Wilcoxon p=0.0004**, 14/15 soggetti meglio.
 
+**Confronto sui 3 protocolli** (HyperTempNet vs Shallow, stessa harness):
+
+| protocollo | HyperTempNet | Shallow | Δ |
+|---|---|---|---|
+| subject-dependent | **0.711** | 0.556 | +0.155 |
+| subject-mixed | **0.501** | 0.404 | +0.097 |
+| subject-independent | 0.231 | 0.221 | +0.010 (entrambi ~chance) |
+
+HyperTempNet vince su **dependent e mixed** (dove c'è segnale). Sul **mixed 0.501** batte tutti i baseline
+(Shallow 0.456) e si avvicina a **CBraMod 0.537** (foundation model) senza pretraining. Cross-subject a
+chance per entrambi (muro cross-subject invariato).
+
 **Controllo dual** (ipergrafo temporale + spaziale in parallelo): lo **spaziale da solo = 0.24 (chance)**,
 il dual ≈ temporale-solo → lo spaziale non aggiunge info sulla parola (conferma la storia).
 
