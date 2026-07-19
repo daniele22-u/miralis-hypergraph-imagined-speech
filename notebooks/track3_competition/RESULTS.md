@@ -57,14 +57,14 @@ Metriche finali su test (5 seed, media ± std), sulle **stesse colonne** del pap
 | LaBraM-Base *(paper)* | 5.8M | 0.5060 | 0.3800 | 0.5054 |
 | CBraMod *(foundation, paper)* | 4.0M | 0.5373 ± 0.0108 | 0.4216 ± 0.0163 | 0.5383 ± 0.0096 |
 | Shallow *(nostro, in-harness)* | 0.04M | 0.4021 ± 0.0133 | 0.2527 ± 0.0166 | 0.4013 ± 0.0134 |
-| **⭐ HyperTempNet *(nostro, Optuna)*** | **~0.1M** | **0.5555 ± 0.0169** | **0.4443 ± 0.0212** | **0.5551 ± 0.0170** |
+| **⭐ HyperTempNet *(nostro, Optuna)*** | **0.04M** | **0.5555 ± 0.0169** | **0.4443 ± 0.0212** | **0.5551 ± 0.0170** |
 
 **Lettura onesta**: HyperTempNet batte nettamente i baseline non-foundation (vs Shallow +0.153 bacc,
 +0.192 κ) ed è **alla pari / marginalmente sopra CBraMod** su tutte e tre le metriche (+0.018 bacc,
 +0.023 κ, +0.017 mF1) — **ma le barre d'errore si sovrappongono**, quindi il claim è "eguaglia un
-foundation model", non "lo supera in modo significativo". Il valore sta nel **contesto**: ~40× meno
-parametri (~0.1M vs 4.0M) e **nessun pretraining** (CBraMod è pre-addestrato su ~60k ore). Notebook
-`11_optuna_metrics.ipynb`.
+foundation model", non "lo supera in modo significativo". Il valore sta nel **contesto**: **~100× meno
+parametri** (40.549 = 0.04M vs 4.0M — stessa taglia della Shallow che batte) e **nessun pretraining**
+(CBraMod è pre-addestrato su ~60k ore). Notebook `11_optuna_metrics.ipynb`.
 
 ## Finding principale: il bandpass FIR distruggeva il segnale
 
