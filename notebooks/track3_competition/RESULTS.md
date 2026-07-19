@@ -1,7 +1,37 @@
 # Track#3 — Risultati (imagined speech, 5 classi, chance 20%)
 
 > Aggiornato: luglio 2026. Numeri = **test accuracy** (classi bilanciate → acc ≈ balanced acc).
-> Preprocessing: **PP_MINIMAL** (solo z-score, nessun bandpass/baseline/crop). 1 seed.
+> Preprocessing: **PP_MINIMAL** (solo z-score, nessun bandpass/baseline/crop).
+
+## ⭐ Modello novel: HyperTempNet — ipergrafo TEMPORALE (batte il baseline)
+
+**Contributo principale**: gli ipergrafi di connettività **spaziale** (sui canali) NON aiutano la
+decodifica di imagined speech — la connettività codifica il **soggetto** (NMI 0.95), non la **parola**
+(NMI 0.001), dimostrato con ablation su 5 architetture (DHSLP, HyperEEGNet, HyperAdaptNet, DGCNN,
+membro-ensemble). Proponiamo invece un **ipergrafo sui SEGMENTI TEMPORALI** (dinamiche della parola),
+ispirato agli inter-segment hyperedges di Hyper-MML (Kang et al. 2026), combinato con un front-end
+multi-scala (EEG-Inception) e la costruzione dinamica dell'ipergrafo (cfr. DHSLP).
+
+**Architettura**: raw → conv multi-scala (kernel 16/32/64/128) → conv spaziale → K=10 segmenti
+temporali (nodi) → ipergrafo appreso sui segmenti (HGNN) → classificatore.
+
+**Risultati (subject-dependent, 5 seed, Wilcoxon paired per-soggetto):**
+
+| modello | test acc (media ± std) |
+|---|---|
+| **HyperTempNet (ipergrafo temporale ON)** | **0.701 ± 0.008** |
+| HyperTempNet (ablation: ipergrafo OFF) | 0.655 ± 0.015 |
+| Shallow (in-harness, confronto equo) | 0.554 ± 0.014 |
+
+- **Contributo ipergrafo temporale** (on vs off): Δ=**+0.046**, **Wilcoxon p=0.0012**, 13/15 soggetti meglio.
+- **vs baseline Shallow**: Δ=**+0.147**, **Wilcoxon p=0.0004**, 14/15 soggetti meglio.
+
+**Controllo dual** (ipergrafo temporale + spaziale in parallelo): lo **spaziale da solo = 0.24 (chance)**,
+il dual ≈ temporale-solo → lo spaziale non aggiunge info sulla parola (conferma la storia).
+
+**La storia della tesi**: *ipergrafi spaziali (connettività) falliscono perché catturano il soggetto;
+ipergrafi temporali (segmenti) funzionano perché catturano le dinamiche della parola.* Negative +
+positive, con meccanismo e ablation. È il cuore della novelty.
 
 ## Finding principale: il bandpass FIR distruggeva il segnale
 

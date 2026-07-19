@@ -175,6 +175,9 @@ _MODEL_SPEC = {
     "dgcnn":   {"feature": "raw",  "resample": None},   # ora grafo PCC per-trial sul raw
     "hypereegnet": {"feature": "raw", "resample": None},   # modello novel: EEGNet temporale + ipergrafo
     "hyperadaptnet": {"feature": "raw", "resample": None}, # novel v2: subject-adaptive FiLM da ipergrafo
+    "eeginception": {"feature": "raw", "resample": None},  # backbone multi-scala
+    "hypertempnet": {"feature": "raw", "resample": None},  # ⭐ novel: ipergrafo TEMPORALE (batte baseline)
+    "hyperdualnet": {"feature": "raw", "resample": None},  # ipergrafo temporale + spaziale in parallelo
     "reve":    {"feature": "raw",  "resample": C.REVE_FS},
 }
 
