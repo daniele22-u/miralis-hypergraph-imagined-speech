@@ -45,6 +45,27 @@ il dual ≈ temporale-solo → lo spaziale non aggiunge info sulla parola (confe
 ipergrafi temporali (segmenti) funzionano perché catturano le dinamiche della parola.* Negative +
 positive, con meccanismo e ablation. È il cuore della novelty.
 
+### Metriche stile CBraMod Table 9 (Optuna + subject-mixed, 5 seed)
+
+Iperparametri di HyperTempNet ottimizzati con **Optuna** (30 trial TPE, obiettivo `val_bacc`, nessun
+leakage): `F=16, K_seg=12, n_edges=8, hidden=96, dropout=0.3, lr=7.4e-4, wd=3.7e-5, batch=32`.
+Metriche finali su test (5 seed, media ± std), sulle **stesse colonne** del paper CBraMod:
+
+| Metodo | Params | Balanced Acc | Cohen's κ | Macro-F1 |
+|---|---|---|---|---|
+| EEGNet *(paper CBraMod)* | 0.003M | 0.4413 | 0.3016 | 0.4413 |
+| LaBraM-Base *(paper)* | 5.8M | 0.5060 | 0.3800 | 0.5054 |
+| CBraMod *(foundation, paper)* | 4.0M | 0.5373 ± 0.0108 | 0.4216 ± 0.0163 | 0.5383 ± 0.0096 |
+| Shallow *(nostro, in-harness)* | 0.04M | 0.4021 ± 0.0133 | 0.2527 ± 0.0166 | 0.4013 ± 0.0134 |
+| **⭐ HyperTempNet *(nostro, Optuna)*** | **~0.1M** | **0.5555 ± 0.0169** | **0.4443 ± 0.0212** | **0.5551 ± 0.0170** |
+
+**Lettura onesta**: HyperTempNet batte nettamente i baseline non-foundation (vs Shallow +0.153 bacc,
++0.192 κ) ed è **alla pari / marginalmente sopra CBraMod** su tutte e tre le metriche (+0.018 bacc,
++0.023 κ, +0.017 mF1) — **ma le barre d'errore si sovrappongono**, quindi il claim è "eguaglia un
+foundation model", non "lo supera in modo significativo". Il valore sta nel **contesto**: ~40× meno
+parametri (~0.1M vs 4.0M) e **nessun pretraining** (CBraMod è pre-addestrato su ~60k ore). Notebook
+`11_optuna_metrics.ipynb`.
+
 ## Finding principale: il bandpass FIR distruggeva il segnale
 
 Il preprocessing iniziale (`PP_DEFAULT`: bandpass 0.5–45 Hz + baseline + crop 0–2000 ms)
