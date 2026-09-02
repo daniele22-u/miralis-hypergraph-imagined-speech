@@ -142,6 +142,14 @@ pre.code{margin:0;padding:12px 14px;font-family:var(--mono);font-size:11.5px;lin
 :root[data-theme="dark"] .code .kw,:root:not([data-theme="light"]) .code .kw{color:#c39cf5}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .code .st{color:#5ad0bd}:root:not([data-theme="light"]) .code .nu{color:#e0a76a}:root:not([data-theme="light"]) .code .fn{color:#79aaf5}}
 :root[data-theme="dark"] .code .st{color:#5ad0bd}:root[data-theme="dark"] .code .nu{color:#e0a76a}:root[data-theme="dark"] .code .fn{color:#79aaf5}
+.ed{position:relative;height:100%;min-height:190px}
+.ed pre.hlt,.ed textarea.src{position:absolute;inset:0;margin:0;padding:12px 14px;font-family:var(--mono);font-size:11.5px;line-height:1.65;white-space:pre;tab-size:4;border:0}
+.ed pre.hlt{overflow:hidden;pointer-events:none;background:var(--panel-2)}
+.ed textarea.src{overflow:auto;background:transparent;color:transparent;caret-color:var(--accent);-webkit-text-fill-color:transparent;resize:none;outline:none}
+.ed textarea.src::selection{background:rgba(14,111,102,.28)}
+.dbody.edit{overflow:hidden}
+.badge{font-family:var(--mono);font-size:10.5px;color:#b0651f;background:rgba(176,101,31,.12);border:1px solid rgba(176,101,31,.4);border-radius:20px;padding:2px 8px;white-space:nowrap}
+.badge.bad{color:var(--danger);background:rgba(168,58,58,.12);border-color:rgba(168,58,58,.45)}
 textarea.io{width:100%;height:100%;min-height:200px;border:none;background:var(--panel-2);padding:12px 14px;font-family:var(--mono);font-size:11.5px;resize:none}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:7px 15px;border-radius:20px;font-size:12px;z-index:50;opacity:0;pointer-events:none;transition:opacity .18s}
 .toast.on{opacity:.96}
@@ -228,6 +236,9 @@ textarea.io{width:100%;height:100%;min-height:200px;border:none;background:var(-
       <button class="tab" data-tab="json">JSON</button>
       <div class="spacer"></div>
       <span class="hint" id="codehint">pycore/tikzeng.py</span>
+      <span class="badge" id="pydirty" hidden>● modificato</span>
+      <button class="btn" id="regen" hidden title="Scarta le modifiche e rigenera dal diagramma">↻ Rigenera</button>
+      <button class="btn primary" id="runpy" hidden title="Applica il codice al diagramma (Ctrl+Invio)">▶ Esegui</button>
       <button class="btn" id="copycode">Copia</button>
       <button class="btn" id="toggledrawer">Nascondi</button>
     </div>
@@ -282,10 +293,10 @@ function presetDHSLP() {
     mk("Box",         {name:"eeg",   caption:"EEG 61\\times384", s:384, n:[61,0], w:[1.5], h:42, dp:42, ox:0, to:"origin", fill:"#8A8F98"}),
     mk("ConvConvRelu",{name:"tconv", caption:"Temporal Conv",    s:384, n:[32,32], w:[2.5,2.5], h:38, dp:36, ox:3.2}),
     mk("Conv",        {name:"sconv", caption:"Spatial Conv",     s:384, n:[64,0], w:[3.5], h:30, dp:30, ox:3.2}),
-    mk("Pool",        {name:"p1",    caption:"AvgPool",          w:[1], h:30, dp:30, ox:0.2}),
+    mk("Pool",        {name:"p1",    caption:"",                 w:[1], h:30, dp:30, ox:0.2}),
     mk("ConvConvRelu",{name:"hgc",   caption:"DHSLP hyperedge",  s:96, n:[128,128], w:[3.5,3.5], h:24, dp:24, ox:3.0}),
     mk("ConvRes",     {name:"gat",   caption:"GAT readout",      s:96, n:[128,0], w:[5], h:24, dp:24, ox:2.8}),
-    mk("Pool",        {name:"p2",    caption:"Global pool",      w:[1], h:24, dp:24, ox:0.2}),
+    mk("Pool",        {name:"p2",    caption:"",                 w:[1], h:24, dp:24, ox:0.2}),
     mk("Fc",          {name:"fc1",   caption:"FC 256",           s:256, n:[256,0], w:[2], h:4, dp:26, ox:3.0}),
     mk("SoftMax",     {name:"sm",    caption:"concr4",           s:4, w:[1.5], h:3, dp:26, ox:2.0})
   ];
@@ -299,9 +310,9 @@ function presetEEGNet() {
     mk("Box",   {name:"eeg",   caption:"EEG 61\\times384", s:384, n:[61,0], w:[1.5], h:42, dp:42, ox:0, to:"origin", fill:"#8A8F98"}),
     mk("Conv",  {name:"temp",  caption:"Temporal 1\\times64", s:384, n:[8,0], w:[2], h:40, dp:36, ox:3.2}),
     mk("Conv",  {name:"depth", caption:"Depthwise 61\\times1", s:384, n:[16,0], w:[3], h:10, dp:36, ox:3.2}),
-    mk("Pool",  {name:"ap1",   caption:"AvgPool 4",        w:[1], h:10, dp:36, ox:0.2}),
+    mk("Pool",  {name:"ap1",   caption:"",                 w:[1], h:10, dp:36, ox:0.2}),
     mk("ConvConvRelu",{name:"sep", caption:"Separable Conv", s:96, n:[16,16], w:[2,2], h:10, dp:26, ox:2.8}),
-    mk("Pool",  {name:"ap2",   caption:"AvgPool 8",        w:[1], h:10, dp:26, ox:0.2}),
+    mk("Pool",  {name:"ap2",   caption:"",                 w:[1], h:10, dp:26, ox:0.2}),
     mk("SoftMax",{name:"sm",   caption:"4 classi",         s:4, w:[1.5], h:3, dp:22, ox:2.4})
   ];
   const C = []; for (let i=1;i<A.length;i++) C.push({from:A[i-1].id,to:A[i].id,kind:"arrow"});
@@ -763,6 +774,152 @@ function genTex() {
 `;
   return s;
 }
+
+/* ---------- 5b. Python -> documento (round-trip) ------------------------ */
+/* Firme posizionali di pycore/tikzeng.py, piu' i due helper generati da noi. */
+const SIG = {
+  to_Conv:        ["name","s","n","offset","to","width","height","depth","caption"],
+  to_ConvConvRelu:["name","s","n","offset","to","width","height","depth","caption"],
+  to_ConvRes:     ["name","s","n","offset","to","width","height","depth","opacity","caption"],
+  to_Pool:        ["name","offset","to","width","height","depth","opacity","caption"],
+  to_UnPool:      ["name","offset","to","width","height","depth","opacity","caption"],
+  to_ConvSoftMax: ["name","s","offset","to","width","height","depth","caption"],
+  to_SoftMax:     ["name","s","offset","to","width","height","depth","opacity","caption"],
+  to_Sum:         ["name","offset","to","radius","opacity"],
+  to_Box:         ["name","s","n","offset","to","width","height","depth","opacity","fill","caption"],
+  to_Ball:        ["name","offset","to","radius","opacity","caption"],
+  to_connection:  ["of","to"],
+  to_skip:        ["of","to","pos"]
+};
+const FN2KIND = {to_Conv:"Conv", to_ConvConvRelu:"ConvConvRelu", to_ConvRes:"ConvRes", to_Pool:"Pool",
+  to_UnPool:"UnPool", to_ConvSoftMax:"ConvSoftMax", to_SoftMax:"SoftMax", to_Sum:"Sum", to_Ball:"Sum"};
+const XC2KIND = {"\\ConvColor":"Conv", "\\PoolColor":"Pool", "\\UnpoolColor":"UnPool",
+  "\\FcColor":"Fc", "\\FcReluColor":"FcRelu", "\\SoftmaxColor":"ConvSoftMax", "\\SumColor":"Sum"};
+
+function splitArgs(src) {
+  const out = []; let d = 0, q = null, cur = "";
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i];
+    if (q) { if (c === q && src[i-1] !== "\\") q = null; cur += c; continue; }
+    if (c === '"' || c === "'") { q = c; cur += c; continue; }
+    if (c === "(" || c === "[" || c === "{") d++;
+    if (c === ")" || c === "]" || c === "}") d--;
+    if (c === "," && d === 0) { out.push(cur.trim()); cur = ""; continue; }
+    cur += c;
+  }
+  if (cur.trim() !== "") out.push(cur.trim());
+  return out;
+}
+function pyLit(v) {
+  v = String(v).trim();
+  const m = /^[rbfu]*(['"])([\s\S]*)\1$/.exec(v);
+  if (m) return m[2];
+  if (/^\(.*\)$/.test(v) || /^\[.*\]$/.test(v)) return splitArgs(v.slice(1, -1)).map(pyLit);
+  if (v !== "" && isFinite(+v)) return +v;
+  return v;
+}
+function parseArgs(argstr, sig) {
+  const o = {}, parts = splitArgs(argstr); let p = 0;
+  parts.forEach(a => {
+    const m = /^([A-Za-z_]\w*)\s*=\s*([\s\S]+)$/.exec(a);
+    if (m) { const k = ({s_filer:"s", n_filer:"n"})[m[1]] || m[1]; o[k] = pyLit(m[2]); }
+    else { if (p < sig.length) o[sig[p]] = pyLit(a); p++; }
+  });
+  return o;
+}
+/* isola la lista arch = [ ... ] per non leggere le def degli helper o main() */
+function archRegion(src) {
+  const m = /\barch\s*=\s*\[/.exec(src);
+  if (!m) return src;
+  let i = m.index + m[0].length, d = 1, q = null;
+  while (i < src.length && d > 0) {
+    const c = src[i];
+    if (q) { if (c === q && src[i-1] !== "\\") q = null; }
+    else if (c === '"' || c === "'") q = c;
+    else if (c === "[" || c === "(") d++;
+    else if (c === "]" || c === ")") d--;
+    i++;
+  }
+  return src.slice(m.index + m[0].length, i - 1);
+}
+function scanCalls(src) {
+  const calls = [], re = /\bto_([A-Za-z]\w*)\s*\(/g; let m;
+  while ((m = re.exec(src))) {
+    if (/def\s+$/.test(src.slice(Math.max(0, m.index - 6), m.index))) { continue; }
+    let i = re.lastIndex, d = 1, q = null;
+    while (i < src.length && d > 0) {
+      const c = src[i];
+      if (q) { if (c === q && src[i-1] !== "\\") q = null; }
+      else if (c === '"' || c === "'") q = c;
+      else if (c === "(") d++;
+      else if (c === ")") d--;
+      i++;
+    }
+    calls.push({fn: "to_" + m[1], args: src.slice(re.lastIndex, i - 1)});
+    re.lastIndex = i;
+  }
+  return calls;
+}
+const xc2hex = (v) => {
+  const m = /rgb,\s*255\s*:\s*red\s*,\s*(\d+)\s*;\s*green\s*,\s*(\d+)\s*;\s*blue\s*,\s*(\d+)/i.exec(v || "");
+  if (!m) return null;
+  return "#" + [1,2,3].map(i => (+m[i]).toString(16).padStart(2, "0")).join("");
+};
+function pyToDoc(src) {
+  const calls = scanCalls(archRegion(src));
+  const layers = [], pend = [], byName = {};
+  calls.forEach(c => {
+    const sig = SIG[c.fn]; if (!sig) return;
+    const a = parseArgs(c.args, sig);
+    if (c.fn === "to_connection" || c.fn === "to_skip") {
+      if (a.of && a.to) pend.push({f: String(a.of), t: String(a.to), kind: c.fn === "to_skip" ? "skip" : "arrow"});
+      return;
+    }
+    let kind = FN2KIND[c.fn];
+    let hex = null;
+    if (c.fn === "to_Box") {
+      const f = String(a.fill == null ? "" : a.fill).trim();
+      hex = xc2hex(f);
+      kind = XC2KIND[f] || (hex ? "Box" : "Box");
+      if (hex && XC2KIND[f]) hex = null;
+    }
+    if (!kind || !KINDS[kind]) return;
+    const k = KINDS[kind], L = mk(kind);
+    L.name = String(a.name == null ? "" : a.name);
+    const cap = a.caption == null ? "" : String(a.caption);
+    L.caption = cap.trim() === "" ? "" : cap;
+    if (k.ball) {
+      L.radius = num(a.radius, 2.5); L.op = num(a.opacity, k.op);
+    } else {
+      if (a.s != null) L.s = a.s;
+      const nn = Array.isArray(a.n) ? a.n : (a.n != null ? [a.n] : []);
+      if (nn.length) L.n = [nn[0], nn.length > 1 ? nn[1] : nn[0]];
+      const ww = Array.isArray(a.width) ? a.width : (a.width != null ? [a.width] : null);
+      if (ww) L.w = k.dual ? [num(ww[0], 2), num(ww[1] != null ? ww[1] : ww[0], 2)] : [num(ww[0], 2)];
+      L.h = num(a.height, L.h); L.dp = num(a.depth, L.dp);
+      L.op = num(a.opacity, k.op);
+      if (hex) L.fill = hex;
+    }
+    const off = /\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)/.exec(String(a.offset || ""));
+    L.ox = off ? +off[1] : 0; L.oy = off ? +off[2] : 0;
+    const ref = /^\(\s*([A-Za-z]\w*)\s*-\s*([a-z]+)\s*\)$/.exec(String(a.to || "").trim());
+    if (ref) { L._ref = ref[1]; L.anchor = ref[2]; } else { L.to = "origin"; }
+    if (L.name) byName[L.name] = L.id;
+    layers.push(L);
+  });
+  if (!layers.length) throw new Error("nessuna chiamata to_* riconosciuta dentro arch = [ ... ]");
+  layers.forEach((L, i) => {
+    if (!L._ref) return;
+    const id = byName[L._ref];
+    L.to = (id && !(i > 0 && layers[i-1].id === id && L.anchor === "east")) ? (id || "auto") : "auto";
+    if (!id) L.to = "auto";
+    delete L._ref;
+  });
+  const conns = [];
+  pend.forEach(c => { if (byName[c.f] && byName[c.t]) conns.push({from: byName[c.f], to: byName[c.t], kind: c.kind}); });
+  const t = /^#\s*(.+?)\s+—\s+generato con PlotNeuralNet Live/m.exec(src);
+  return {title: t ? t[1] : (doc.title || "Nuova rete"), scale: num(doc.scale, .2), layers, conns};
+}
 </script>
 
 <script>
@@ -917,19 +1074,68 @@ function hl(src, lang) {
   }
   return s;
 }
+/* --- editor Python bidirezionale: si modifica e si riesegue --- */
+let pyDirty = false, pySrc = null;
+function setBadge(txt, bad) {
+  const b = $("#pydirty"); if (!b) return;
+  b.textContent = txt; b.classList.toggle("bad", !!bad); b.hidden = tab !== "py" || !txt;
+}
+function syncHL() {
+  const t = $("#src"), p = $("#hlt"); if (!t || !p) return;
+  p.innerHTML = hl(t.value, "py") + "\n"; p.scrollTop = t.scrollTop; p.scrollLeft = t.scrollLeft;
+}
+function setSrc(v) { const t = $("#src"); if (!t) return; t.value = v; pySrc = v; syncHL(); }
+function markDirty() { pyDirty = true; setBadge("● modificato — premi Esegui", false); }
+function wireEditor() {
+  const t = $("#src");
+  t.addEventListener("input", () => { pySrc = t.value; markDirty(); syncHL(); });
+  t.addEventListener("scroll", syncHL);
+  t.addEventListener("keydown", (e) => {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const a = t.selectionStart, b = t.selectionEnd;
+      t.value = t.value.slice(0, a) + "    " + t.value.slice(b);
+      t.selectionStart = t.selectionEnd = a + 4; pySrc = t.value; markDirty(); syncHL();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runPy(); }
+  });
+}
+function runPy() {
+  const t = $("#src"); if (!t) return;
+  try {
+    const d = pyToDoc(t.value);
+    const refit = d.layers.length !== doc.layers.length;
+    doc = d; sel = null; pyDirty = false;
+    renderAll({refit}); pushHist(true);
+    setSrc(genPython()); setBadge("", false);
+    toast(`Codice applicato · ${d.layers.length} blocchi, ${d.conns.length} collegamenti`);
+  } catch (e) { setBadge("● " + e.message, true); toast("Codice non applicato: " + e.message); }
+}
 function renderCode() {
-  const body = $("#dbody");
+  const body = $("#dbody"), isPy = tab === "py";
+  $("#runpy").hidden = !isPy; $("#regen").hidden = !isPy;
+  $("#pydirty").hidden = !isPy || !$("#pydirty").textContent;
   if (!drawerOpen) { body.classList.add("hide"); return; }
   body.classList.remove("hide");
+  body.classList.toggle("edit", isPy);
   if (tab === "json") {
-    body.innerHTML = `<textarea class="io" id="jsonio" spellcheck="false"></textarea>`;
+    if (body.dataset.mode !== "json") { body.dataset.mode = "json";
+      body.innerHTML = `<textarea class="io" id="jsonio" spellcheck="false"></textarea>`; }
     $("#jsonio").value = JSON.stringify(doc, null, 2);
+  } else if (isPy) {
+    if (body.dataset.mode !== "py") {
+      body.dataset.mode = "py";
+      body.innerHTML = `<div class="ed"><pre class="code hlt" id="hlt" aria-hidden="true"></pre>` +
+        `<textarea class="src" id="src" spellcheck="false" wrap="off" aria-label="Codice Python"></textarea></div>`;
+      wireEditor(); setSrc(pyDirty && pySrc != null ? pySrc : genPython());
+    } else if (!pyDirty && document.activeElement !== $("#src")) setSrc(genPython());
   } else {
-    const src = tab === "py" ? genPython() : genTex();
-    body.innerHTML = `<pre class="code">${hl(src, tab)}</pre>`;
+    body.dataset.mode = "tex";
+    body.innerHTML = `<pre class="code">${hl(genTex(), "tex")}</pre>`;
   }
   $("#copycode").textContent = tab === "json" ? "Importa" : "Copia";
-  $("#codehint").textContent = tab === "py" ? "pyexamples/arch.py" : tab === "tex" ? "arch.tex — compilabile con pdflatex" : "incolla e premi Importa";
+  $("#codehint").textContent = isPy ? "modifica e premi Esegui (Ctrl+Invio)"
+    : tab === "tex" ? "arch.tex — compilabile con pdflatex" : "incolla e premi Importa";
 }
 function renderAll(o) {
   o = o || {};
@@ -1078,8 +1284,11 @@ $("#copypy").onclick = () => copy(genPython(), "Script Python");
 $("#copycode").onclick = () => {
   if (tab === "json") { try { const d = JSON.parse($("#jsonio").value); doc = d; sel = null; renderAll({refit: true}); pushHist(true); toast("JSON importato"); }
     catch (err) { toast("JSON non valido: " + err.message); } return; }
-  copy(tab === "py" ? genPython() : genTex(), tab === "py" ? "Script Python" : "Sorgente LaTeX");
+  copy(tab === "py" ? ($("#src") ? $("#src").value : genPython()) : genTex(),
+       tab === "py" ? "Script Python" : "Sorgente LaTeX");
 };
+$("#runpy").onclick = runPy;
+$("#regen").onclick = () => { pyDirty = false; setSrc(genPython()); setBadge("", false); toast("Codice rigenerato dal diagramma"); };
 $("#autolink").onclick = autolink;
 $("#undo").onclick = undo;
 $("#redo").onclick = redo;
@@ -1094,8 +1303,10 @@ $("#toggledrawer").onclick = (e) => { drawerOpen = !drawerOpen;
 $("#preset").onchange = (e) => { const p = PRESETS[e.target.value]; if (!p) return;
   doc = p[1](); sel = null; e.target.value = ""; renderAll({refit: true}); pushHist(true); toast("Preset caricato: " + p[0]); };
 document.addEventListener("keydown", (e) => {
-  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); return e.shiftKey ? redo() : undo(); }
+  const ae = document.activeElement;
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
+  const inEditor = ae.id === "src" || ae.id === "jsonio";
+  if (!inEditor && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); return e.shiftKey ? redo() : undo(); }
   if (typing) return;
   if ((e.key === "Delete" || e.key === "Backspace") && sel) { e.preventDefault(); delLayer(sel); }
   if (e.key === "Escape") { sel = null; renderAll(); }
