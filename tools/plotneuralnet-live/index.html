@@ -1,0 +1,1108 @@
+<title>PlotNeuralNet Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Crimson+Pro:wght@400;600&display=swap">
+<style>
+:root{
+  --ground:#e7e9ee; --panel:#ffffff; --panel-2:#f3f5f8; --panel-3:#eceff4;
+  --ink:#161922; --ink-2:#596173; --ink-3:#8b92a2;
+  --line:#d5dae3; --line-2:#e5e9f0;
+  --accent:#0e6f66; --accent-ink:#ffffff; --accent-soft:#d7ecea;
+  --danger:#a83a3a;
+  --paper:#fcfcfb; --paper-grid:#e9e9e4; --fig-ink:#1b1b1b; --fig-ink-2:#4a4a4a;
+  --r:5px;
+  --ui:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --fig:"Crimson Pro",Georgia,"Times New Roman",serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0e1016; --panel:#161a22; --panel-2:#1c212b; --panel-3:#222836;
+    --ink:#e6e9f1; --ink-2:#98a0b2; --ink-3:#697086;
+    --line:#2b3140; --line-2:#232935;
+    --accent:#4fd2c2; --accent-ink:#08211f; --accent-soft:#12332f;
+    --danger:#e07a7a;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0e1016; --panel:#161a22; --panel-2:#1c212b; --panel-3:#222836;
+  --ink:#e6e9f1; --ink-2:#98a0b2; --ink-3:#697086;
+  --line:#2b3140; --line-2:#232935;
+  --accent:#4fd2c2; --accent-ink:#08211f; --accent-soft:#12332f;
+  --danger:#e07a7a;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--ui);font-size:13px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- shell ---------- */
+.app{height:100dvh;min-height:600px;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:0}
+.work{display:grid;grid-template-columns:280px minmax(0,1fr) 300px;min-height:0}
+
+/* ---------- header ---------- */
+header{display:flex;align-items:center;gap:14px;padding:9px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:9px;padding-right:14px;border-right:1px solid var(--line-2)}
+.brand h1{margin:0;font-size:14px;font-weight:600;letter-spacing:-.01em;white-space:nowrap}
+.brand small{display:block;font-family:var(--mono);font-size:10px;color:var(--ink-3);letter-spacing:.04em}
+.spacer{flex:1}
+.tbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);cursor:pointer;white-space:nowrap;font-size:12px}
+.btn:hover{background:var(--panel-3);border-color:var(--ink-3)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:500}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.icon{padding:5px 8px;font-family:var(--mono)}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+select.btn{padding-right:6px}
+.hint{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+
+/* ---------- panels ---------- */
+.rail,.insp{background:var(--panel);display:flex;flex-direction:column;min-height:0}
+.rail{border-right:1px solid var(--line)}
+.insp{border-left:1px solid var(--line)}
+.ph{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px 7px;border-bottom:1px solid var(--line-2)}
+.ph h2{margin:0;font-size:10px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-2)}
+.scroll{overflow-y:auto;overflow-x:hidden;flex:1;min-height:0}
+.scroll::-webkit-scrollbar{width:9px}
+.scroll::-webkit-scrollbar-thumb{background:var(--line);border-radius:9px;border:3px solid var(--panel)}
+
+/* ---------- add palette ---------- */
+.palette{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:9px 10px;border-bottom:1px solid var(--line-2);background:var(--panel-2)}
+.padd{display:flex;align-items:center;gap:6px;padding:5px 7px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);cursor:pointer;font-size:11.5px;text-align:left;min-width:0}
+.padd:hover{border-color:var(--accent);background:var(--accent-soft)}
+.padd span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sw{width:11px;height:11px;border-radius:2px;border:1px solid rgba(0,0,0,.35);flex:none}
+.sw.round{border-radius:50%}
+
+/* ---------- layer stack ---------- */
+ol.stack{list-style:none;margin:0;padding:6px}
+.lay{display:grid;grid-template-columns:18px 11px 1fr auto;align-items:center;gap:7px;padding:6px 7px;border:1px solid transparent;border-radius:var(--r);cursor:pointer;position:relative}
+.lay+.lay{margin-top:2px}
+.lay:hover{background:var(--panel-2)}
+.lay.sel{background:var(--accent-soft);border-color:var(--accent)}
+.lay.drop{box-shadow:inset 0 2px 0 var(--accent)}
+.lay .idx{font-family:var(--mono);font-size:10px;color:var(--ink-3);text-align:right;font-variant-numeric:tabular-nums}
+.lay .nm{min-width:0}
+.lay .nm b{display:block;font-weight:500;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lay .nm i{display:block;font-style:normal;font-family:var(--mono);font-size:9.5px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lay .act{display:flex;gap:2px;opacity:0;transition:opacity .12s}
+.lay:hover .act,.lay.sel .act{opacity:1}
+.lay .act button{width:20px;height:20px;display:grid;place-items:center;background:none;border:1px solid transparent;border-radius:4px;cursor:pointer;color:var(--ink-2);font-family:var(--mono);font-size:12px;line-height:1;padding:0}
+.lay .act button:hover{background:var(--panel-3);border-color:var(--line);color:var(--ink)}
+.lay .act button.del:hover{color:var(--danger);border-color:var(--danger)}
+.empty{padding:22px 14px;color:var(--ink-3);font-size:12px;text-align:center}
+
+/* ---------- connections ---------- */
+.conns{border-top:1px solid var(--line-2);padding:0 0 8px}
+.conn{display:flex;align-items:center;gap:7px;padding:4px 12px;font-family:var(--mono);font-size:11px}
+.conn .arw{color:var(--ink-3)}
+.conn.skip .arw{color:#4a4aa8}
+.conn button{margin-left:auto;background:none;border:none;color:var(--ink-3);cursor:pointer;font-family:var(--mono);padding:0 2px}
+.conn button:hover{color:var(--danger)}
+
+/* ---------- stage ---------- */
+.stage{position:relative;min-width:0;background:var(--panel-3);display:flex;flex-direction:column}
+.stagebar{position:absolute;left:12px;bottom:12px;z-index:3;display:flex;gap:5px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:4px 5px;box-shadow:0 2px 10px rgba(0,0,0,.10)}
+.stagebar .zl{font-family:var(--mono);font-size:11px;color:var(--ink-2);min-width:44px;text-align:center;font-variant-numeric:tabular-nums}
+.paper{flex:1;min-height:0;background:var(--paper);cursor:grab;touch-action:none;display:block;width:100%}
+.paper.panning{cursor:grabbing}
+.tag{position:absolute;right:12px;top:10px;z-index:3;font-family:var(--mono);font-size:10px;color:var(--fig-ink-2);background:rgba(252,252,251,.85);border:1px solid var(--paper-grid);border-radius:4px;padding:3px 7px;letter-spacing:.03em}
+.lbox{cursor:move}
+
+/* ---------- inspector ---------- */
+.fields{padding:10px 12px 16px;display:flex;flex-direction:column;gap:11px}
+.grp{display:flex;flex-direction:column;gap:6px}
+.grp>label{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.row{display:grid;gap:6px}
+.row.c2{grid-template-columns:1fr 1fr}
+.row.c3{grid-template-columns:1fr 1fr 1fr}
+.f{display:flex;flex-direction:column;gap:3px;min-width:0}
+.f span{font-size:10.5px;color:var(--ink-2);font-family:var(--mono);letter-spacing:.02em}
+.f input,.f select{width:100%;padding:5px 7px;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
+.f input[type=text]{font-family:var(--ui);font-size:12.5px}
+.f input:focus,.f select:focus{background:var(--panel);border-color:var(--accent)}
+.f input[type=range]{padding:0;background:none;border:none;accent-color:var(--accent)}
+.f input[type=color]{padding:2px;height:28px;cursor:pointer}
+.divider{height:1px;background:var(--line-2)}
+.kindtag{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--ink-2)}
+.note{font-size:11.5px;color:var(--ink-2);line-height:1.5}
+.note code{font-family:var(--mono);font-size:11px;background:var(--panel-2);border:1px solid var(--line-2);border-radius:3px;padding:0 4px}
+
+/* ---------- code drawer ---------- */
+.drawer{background:var(--panel);border-top:1px solid var(--line);display:flex;flex-direction:column}
+.dh{display:flex;align-items:center;gap:4px;padding:5px 10px}
+.tab{padding:5px 11px;background:none;border:1px solid transparent;border-radius:var(--r);cursor:pointer;font-size:12px;color:var(--ink-2)}
+.tab:hover{color:var(--ink);background:var(--panel-2)}
+.tab.on{background:var(--panel-2);border-color:var(--line);color:var(--ink);font-weight:500}
+.dbody{border-top:1px solid var(--line-2);overflow:auto;height:min(38vh,340px);background:var(--panel-2)}
+.dbody.hide{display:none}
+pre.code{margin:0;padding:12px 14px;font-family:var(--mono);font-size:11.5px;line-height:1.65;white-space:pre;tab-size:4}
+.code .kw{color:#8a5cd6}.code .st{color:#12786a}.code .cm{color:var(--ink-3);font-style:italic}.code .nu{color:#b0651f}.code .fn{color:#2a5fb8}
+:root[data-theme="dark"] .code .kw,:root:not([data-theme="light"]) .code .kw{color:#c39cf5}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .code .st{color:#5ad0bd}:root:not([data-theme="light"]) .code .nu{color:#e0a76a}:root:not([data-theme="light"]) .code .fn{color:#79aaf5}}
+:root[data-theme="dark"] .code .st{color:#5ad0bd}:root[data-theme="dark"] .code .nu{color:#e0a76a}:root[data-theme="dark"] .code .fn{color:#79aaf5}
+textarea.io{width:100%;height:100%;min-height:200px;border:none;background:var(--panel-2);padding:12px 14px;font-family:var(--mono);font-size:11.5px;resize:none}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:7px 15px;border-radius:20px;font-size:12px;z-index:50;opacity:0;pointer-events:none;transition:opacity .18s}
+.toast.on{opacity:.96}
+
+@media (max-width:1080px){
+  .app{height:auto;min-height:0}
+  .work{grid-template-columns:1fr;grid-template-rows:auto 460px auto}
+  .rail{border-right:none;border-bottom:1px solid var(--line)}
+  .insp{border-left:none;border-top:1px solid var(--line)}
+  .scroll{max-height:340px}
+}
+</style>
+
+<div class="app">
+  <header>
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
+        <path d="M4 8.5 L11 5 L18 8.5 L11 12 Z" fill="#FFCC66" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/>
+        <path d="M4 8.5 L4 14 L11 17.5 L11 12 Z" fill="#C40000" fill-opacity=".5" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/>
+        <path d="M18 8.5 L18 14 L11 17.5 L11 12 Z" fill="#9966CC" fill-opacity=".55" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/>
+      </svg>
+      <div>
+        <h1>PlotNeuralNet Live</h1>
+        <small>tikz · scale 0.2</small>
+      </div>
+    </div>
+    <div class="tbar">
+      <select class="btn" id="preset" title="Carica un'architettura di partenza">
+        <option value="">Preset…</option>
+      </select>
+      <button class="btn icon" id="undo" title="Annulla (Ctrl+Z)">↶</button>
+      <button class="btn icon" id="redo" title="Ripeti (Ctrl+Shift+Z)">↷</button>
+    </div>
+    <div class="spacer"></div>
+    <span class="hint" id="stat"></span>
+    <div class="tbar">
+      <button class="btn" id="autolink" title="Ricrea le frecce tra livelli consecutivi">Ricollega</button>
+      <button class="btn primary" id="copypy">Copia Python</button>
+    </div>
+  </header>
+
+  <div class="work">
+    <!-- ============ RAIL ============ -->
+    <aside class="rail">
+      <div class="ph"><h2>Aggiungi livello</h2></div>
+      <div class="palette" id="palette"></div>
+      <div class="ph"><h2>Architettura</h2><span class="hint" id="ncount"></span></div>
+      <div class="scroll">
+        <ol class="stack" id="stack"></ol>
+        <div class="conns">
+          <div class="ph" style="border:none;padding-bottom:2px"><h2>Collegamenti</h2>
+            <button class="btn icon" id="addskip" title="Aggiungi una skip connection tra i due livelli selezionabili sotto">+ skip</button>
+          </div>
+          <div id="connlist"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============ STAGE ============ -->
+    <section class="stage">
+      <span class="tag" id="figtag">figura · 0 blocchi</span>
+      <svg class="paper" id="paper" role="img" aria-label="Anteprima della figura PlotNeuralNet"></svg>
+      <div class="stagebar">
+        <button class="btn icon" id="zout" title="Riduci">−</button>
+        <span class="zl" id="zlab">100%</span>
+        <button class="btn icon" id="zin" title="Ingrandisci">+</button>
+        <button class="btn" id="fit" title="Adatta alla vista">Adatta</button>
+        <button class="btn" id="copysvg" title="Copia l'SVG dell'anteprima">SVG</button>
+      </div>
+    </section>
+
+    <!-- ============ INSPECTOR ============ -->
+    <aside class="insp">
+      <div class="ph"><h2 id="insptitle">Ispettore</h2></div>
+      <div class="scroll"><div class="fields" id="fields"></div></div>
+    </aside>
+  </div>
+
+  <!-- ============ CODE ============ -->
+  <section class="drawer">
+    <div class="dh">
+      <button class="tab on" data-tab="py">Python</button>
+      <button class="tab" data-tab="tex">LaTeX</button>
+      <button class="tab" data-tab="json">JSON</button>
+      <div class="spacer"></div>
+      <span class="hint" id="codehint">pycore/tikzeng.py</span>
+      <button class="btn" id="copycode">Copia</button>
+      <button class="btn" id="toggledrawer">Nascondi</button>
+    </div>
+    <div class="dbody" id="dbody"></div>
+  </section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* =========================================================================
+   PlotNeuralNet Live — editor interattivo
+   Geometria e colori derivati dai sorgenti originali del progetto:
+   pycore/tikzeng.py, layers/Box.sty, layers/RightBandedBox.sty, layers/Ball.sty
+   ========================================================================= */
+
+/* ---------- 1. Tipi di livello ------------------------------------------ */
+const KINDS = {
+  Conv:        {it:"Conv",            fill:"#FFCC66", band:null,      op:.40, bop:.60, fn:"to_Conv",         s:1, n:1, dual:0, def:{w:[2],   h:40, d:40}},
+  ConvConvRelu:{it:"Conv + ReLU",     fill:"#FFCC66", band:"#FFAA55", op:.40, bop:.60, fn:"to_ConvConvRelu", s:1, n:2, dual:1, def:{w:[2,2], h:40, d:40}},
+  ConvRes:     {it:"Blocco residuo",  fill:"#404040", band:"#555555", op:.20, bop:.60, fn:"to_ConvRes",      s:1, n:1, dual:0, def:{w:[6],   h:40, d:40}},
+  Pool:        {it:"Pooling",         fill:"#C40000", band:null,      op:.50, fn:"to_Pool",                  s:0, n:0, dual:0, def:{w:[1],   h:32, d:32}},
+  UnPool:      {it:"Unpooling",       fill:"#004D9B", band:null,      op:.50, fn:"to_UnPool",                s:0, n:0, dual:0, def:{w:[1],   h:32, d:32}},
+  Fc:          {it:"Fully connected", fill:"#9966CC", band:null,      op:.40, fn:null, tc:"\\FcColor",       s:1, n:1, dual:0, def:{w:[1],   h:3,  d:25}},
+  FcRelu:      {it:"FC + ReLU",       fill:"#A449A4", band:null,      op:.40, fn:null, tc:"\\FcReluColor",   s:1, n:1, dual:0, def:{w:[1],   h:3,  d:25}},
+  ConvSoftMax: {it:"Conv SoftMax",    fill:"#6A006A", band:null,      op:.40, fn:"to_ConvSoftMax",           s:1, n:0, dual:0, def:{w:[1],   h:40, d:40}},
+  SoftMax:     {it:"SoftMax",         fill:"#6A006A", band:null,      op:.80, fn:"to_SoftMax",               s:1, n:0, dual:0, def:{w:[1.5], h:3,  d:25}},
+  Sum:         {it:"Somma ⊕",    fill:"#00BF40", band:null,      op:.60, fn:"to_Sum", ball:1,           s:0, n:0, dual:0, def:{radius:2.5}},
+  Box:         {it:"Blocco generico", fill:"#8A8F98", band:null,      op:.40, fn:null,                       s:1, n:1, dual:0, def:{w:[2],   h:30, d:30}}
+};
+const ORDER = ["Conv","ConvConvRelu","ConvRes","Pool","UnPool","Fc","FcRelu","ConvSoftMax","SoftMax","Sum","Box"];
+
+/* ---------- 2. Documento ------------------------------------------------ */
+const KEY = "pnl-live-doc-v2";
+let uid = 1;
+const nid = () => "L" + (uid++) + "_" + Math.random().toString(36).slice(2, 6);
+
+function mk(kind, over) {
+  const k = KINDS[kind], d = k.def;
+  const L = {
+    id: nid(), kind, name: "", caption: "",
+    s: 32, n: [64, 64], w: (d.w || [2]).slice(), h: d.h || 40, dp: d.d || 40,
+    radius: d.radius || 2.5, op: k.op, fill: null,
+    ox: 2.6, oy: 0, to: "auto", anchor: "east"
+  };
+  return Object.assign(L, over || {});
+}
+
+/* Architettura di partenza: la pipeline DHSLP della tesi (EEG 61 x 384 -> concr4) */
+function presetDHSLP() {
+  const A = [
+    mk("Box",         {name:"eeg",   caption:"EEG 61\\times384", s:384, n:[61,0], w:[1.5], h:42, dp:42, ox:0, to:"origin", fill:"#8A8F98"}),
+    mk("ConvConvRelu",{name:"tconv", caption:"Temporal Conv",    s:384, n:[32,32], w:[2.5,2.5], h:38, dp:36, ox:3.2}),
+    mk("Conv",        {name:"sconv", caption:"Spatial Conv",     s:384, n:[64,0], w:[3.5], h:30, dp:30, ox:3.2}),
+    mk("Pool",        {name:"p1",    caption:"AvgPool",          w:[1], h:30, dp:30, ox:0.2}),
+    mk("ConvConvRelu",{name:"hgc",   caption:"DHSLP hyperedge",  s:96, n:[128,128], w:[3.5,3.5], h:24, dp:24, ox:3.0}),
+    mk("ConvRes",     {name:"gat",   caption:"GAT readout",      s:96, n:[128,0], w:[5], h:24, dp:24, ox:2.8}),
+    mk("Pool",        {name:"p2",    caption:"Global pool",      w:[1], h:24, dp:24, ox:0.2}),
+    mk("Fc",          {name:"fc1",   caption:"FC 256",           s:256, n:[256,0], w:[2], h:4, dp:26, ox:3.0}),
+    mk("SoftMax",     {name:"sm",    caption:"concr4",           s:4, w:[1.5], h:3, dp:26, ox:2.0})
+  ];
+  const C = [];
+  for (let i = 1; i < A.length; i++) C.push({from: A[i-1].id, to: A[i].id, kind: "arrow"});
+  C.push({from: A[2].id, to: A[5].id, kind: "skip"});
+  return {title: "DHSLP — imagined speech", scale: .2, layers: A, conns: C};
+}
+function presetEEGNet() {
+  const A = [
+    mk("Box",   {name:"eeg",   caption:"EEG 61\\times384", s:384, n:[61,0], w:[1.5], h:42, dp:42, ox:0, to:"origin", fill:"#8A8F98"}),
+    mk("Conv",  {name:"temp",  caption:"Temporal 1\\times64", s:384, n:[8,0], w:[2], h:40, dp:36, ox:3.2}),
+    mk("Conv",  {name:"depth", caption:"Depthwise 61\\times1", s:384, n:[16,0], w:[3], h:10, dp:36, ox:3.2}),
+    mk("Pool",  {name:"ap1",   caption:"AvgPool 4",        w:[1], h:10, dp:36, ox:0.2}),
+    mk("ConvConvRelu",{name:"sep", caption:"Separable Conv", s:96, n:[16,16], w:[2,2], h:10, dp:26, ox:2.8}),
+    mk("Pool",  {name:"ap2",   caption:"AvgPool 8",        w:[1], h:10, dp:26, ox:0.2}),
+    mk("SoftMax",{name:"sm",   caption:"4 classi",         s:4, w:[1.5], h:3, dp:22, ox:2.4})
+  ];
+  const C = []; for (let i=1;i<A.length;i++) C.push({from:A[i-1].id,to:A[i].id,kind:"arrow"});
+  return {title:"EEGNet", scale:.2, layers:A, conns:C};
+}
+function presetVGG() {
+  const A = [
+    mk("ConvConvRelu",{name:"cr1", caption:"conv1", s:224, n:[64,64],   w:[2,2], h:40, dp:40, ox:0, to:"origin"}),
+    mk("Pool",        {name:"p1",  caption:"",      w:[1], h:32, dp:32, ox:0.2}),
+    mk("ConvConvRelu",{name:"cr2", caption:"conv2", s:112, n:[128,128], w:[3,3], h:32, dp:32, ox:3.0}),
+    mk("Pool",        {name:"p2",  caption:"",      w:[1], h:25, dp:25, ox:0.2}),
+    mk("ConvConvRelu",{name:"cr3", caption:"conv3", s:56,  n:[256,256], w:[4,4], h:25, dp:25, ox:2.6}),
+    mk("Pool",        {name:"p3",  caption:"",      w:[1], h:18, dp:18, ox:0.2}),
+    mk("Fc",          {name:"fc1", caption:"fc",    s:4096, n:[4096,0], w:[2], h:3, dp:25, ox:2.6}),
+    mk("SoftMax",     {name:"sm",  caption:"softmax", s:1000, w:[1.5], h:3, dp:25, ox:2.0})
+  ];
+  const C = []; for (let i=1;i<A.length;i++) C.push({from:A[i-1].id,to:A[i].id,kind:"arrow"});
+  return {title:"VGG", scale:.2, layers:A, conns:C};
+}
+function presetUNet() {
+  const A = [
+    mk("ConvConvRelu",{name:"e1", caption:"enc 1", s:256, n:[64,64],   w:[2,2], h:40, dp:40, ox:0, to:"origin"}),
+    mk("Pool",        {name:"pe1",caption:"",      w:[1], h:32, dp:32, ox:0.2}),
+    mk("ConvConvRelu",{name:"e2", caption:"enc 2", s:128, n:[128,128], w:[3,3], h:32, dp:32, ox:3.0}),
+    mk("Pool",        {name:"pe2",caption:"",      w:[1], h:25, dp:25, ox:0.2}),
+    mk("ConvConvRelu",{name:"bn", caption:"bottleneck", s:64, n:[256,256], w:[4,4], h:25, dp:25, ox:2.6}),
+    mk("UnPool",      {name:"u1", caption:"",      w:[1], h:32, dp:32, ox:2.6}),
+    mk("ConvConvRelu",{name:"d2", caption:"dec 2", s:128, n:[128,128], w:[3,3], h:32, dp:32, ox:0.2}),
+    mk("UnPool",      {name:"u2", caption:"",      w:[1], h:40, dp:40, ox:2.8}),
+    mk("ConvConvRelu",{name:"d1", caption:"dec 1", s:256, n:[64,64],   w:[2,2], h:40, dp:40, ox:0.2}),
+    mk("ConvSoftMax", {name:"out",caption:"softmax", s:256, w:[1], h:40, dp:40, ox:2.6})
+  ];
+  const C = []; for (let i=1;i<A.length;i++) C.push({from:A[i-1].id,to:A[i].id,kind:"arrow"});
+  C.push({from:A[2].id, to:A[6].id, kind:"skip"});
+  C.push({from:A[0].id, to:A[8].id, kind:"skip"});
+  return {title:"U-Net", scale:.2, layers:A, conns:C};
+}
+const PRESETS = {
+  dhslp: ["DHSLP — imagined speech (tesi)", presetDHSLP],
+  eegnet:["EEGNet", presetEEGNet],
+  vgg:   ["VGG-16 (ridotta)", presetVGG],
+  unet:  ["U-Net encoder/decoder", presetUNet],
+  vuoto: ["Foglio vuoto", () => ({title: "Nuova rete", scale: .2, layers: [], conns: []})]
+};
+
+let doc = null, sel = null, tab = "py", drawerOpen = true;
+try { const raw = localStorage.getItem(KEY); if (raw) doc = JSON.parse(raw); } catch (e) {}
+if (!doc || !Array.isArray(doc.layers)) doc = presetDHSLP();
+
+/* ---------- 3. Geometria (proiezione TikZ 3d) --------------------------- */
+const PX = 40;      // px per cm a zoom 1
+const ZK = 0.385;   // vettore z di default di pgf: (-0.385cm, -0.385cm)
+const P = (x, y, z) => [(x - ZK * z) * PX, -(y - ZK * z) * PX];
+const pt = (p) => p[0].toFixed(2) + "," + p[1].toFixed(2);
+const widthsOf = (L) => (KINDS[L.kind].dual ? L.w.slice(0, 2) : [L.w[0]]).map(Number);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const num = (v, d) => { const x = parseFloat(v); return isFinite(x) ? x : d; };
+/* le didascalie sono scritte in LaTeX: per l'anteprima ne mostro il testo leggibile */
+const plain = (s) => String(s || "").replace(/\\times/g, "×").replace(/\\[a-zA-Z]+/g, "").replace(/[{}$]/g, "");
+
+function layout() {
+  const S = num(doc.scale, .2), map = {}, list = [];
+  doc.layers.forEach((L, i) => {
+    const k = KINDS[L.kind]; if (!k) return;
+    let base = [0, 0, 0];
+    const ref = L.to === "auto" ? (i > 0 ? doc.layers[i - 1].id : null) : (L.to === "origin" ? null : L.to);
+    if (ref && map[ref]) base = anchorOf(map[ref], L.anchor || "east");
+    const g = {id: L.id, L, k, S};
+    g.origin = [base[0] + num(L.ox, 0), base[1] + num(L.oy, 0), base[2]];
+    if (k.ball) { g.r = num(L.radius, 2.5) * S; }
+    else {
+      g.ws = widthsOf(L).map(w => num(w, 1) * S);
+      g.len = g.ws.reduce((a, b) => a + b, 0);
+      g.y = num(L.h, 40) * S; g.z = num(L.dp, 40) * S;
+    }
+    map[L.id] = g; list.push(g);
+  });
+  return {map, list};
+}
+function anchorOf(g, a) {
+  const [ox, oy, oz] = g.origin;
+  let t;
+  if (g.r != null) {
+    const r = g.r;
+    t = ({east:[r,0,0], west:[-r,0,0], north:[0,r,0], south:[0,-r,0], anchor:[0,0,0]})[a] || [r,0,0];
+  } else {
+    const L = g.len, y = g.y, z = g.z;
+    t = ({west:[0,0,0], east:[L,0,0], north:[L/2,y/2,0], south:[L/2,-y/2,0], anchor:[L/2,0,0],
+      northeast:[L,y/2,0], southeast:[L,-y/2,0], northwest:[0,y/2,0], southwest:[0,-y/2,0],
+      near:[L/2,0,z/2], far:[L/2,0,-z/2]})[a] || [L,0,0];
+  }
+  return [ox + t[0], oy + t[1], oz + t[2]];
+}
+
+/* ---------- 4. Render SVG ---------------------------------------------- */
+const paper = document.getElementById("paper");
+let vb = null, pts = [];
+
+function boxSVG(g) {
+  const L = g.L, k = g.k, fill = L.fill || k.fill, band = k.band;
+  const op = k.band ? k.op : num(L.op, k.op);
+  const [ox, oy, oz] = g.origin, y = g.y, z = g.z;
+  const st = 'stroke="var(--fig-ink)" stroke-width="1" stroke-linejoin="round"';
+  let out = "", kx = 0;
+  const A = (x, yy, zz) => { const p = P(ox + x, oy + yy, oz + zz); pts.push(p); return p; };
+  g.ws.forEach((x, i) => {
+    kx += x;
+    const a = A(kx - x, y/2, z/2), b = A(kx - x, -y/2, z/2), c = A(kx, -y/2, z/2), d = A(kx, y/2, z/2),
+          e = A(kx, y/2, -z/2), f = A(kx, -y/2, -z/2), gg = A(kx - x, -y/2, -z/2), h = A(kx - x, y/2, -z/2);
+    out += `<polygon points="${pt(d)} ${pt(a)} ${pt(b)} ${pt(c)}" fill="${fill}" fill-opacity="${op}" ${st}/>`;
+    out += `<polygon points="${pt(d)} ${pt(a)} ${pt(h)} ${pt(e)}" fill="${fill}" fill-opacity="${op}" ${st}/>`;
+    out += `<path d="M${pt(f)} L${pt(gg)} M${pt(b)} L${pt(gg)} M${pt(h)} L${pt(gg)}" fill="none" stroke="var(--fig-ink)" stroke-width=".8" stroke-dasharray="3 2.4" opacity=".55"/>`;
+    if (band) {
+      const art = A(kx - x/3, y/2, z/2), brt = A(kx - x/3, -y/2, z/2), hrt = A(kx - x/3, y/2, -z/2);
+      out += `<polygon points="${pt(d)} ${pt(art)} ${pt(brt)} ${pt(c)}" fill="${band}" fill-opacity="${k.bop}" ${st}/>`;
+      out += `<polygon points="${pt(d)} ${pt(art)} ${pt(hrt)} ${pt(e)}" fill="${band}" fill-opacity="${k.bop}" ${st}/>`;
+      out += `<polygon points="${pt(d)} ${pt(a)} ${pt(b)} ${pt(c)}" fill="none" ${st}/>`;
+      out += `<polygon points="${pt(d)} ${pt(a)} ${pt(h)} ${pt(e)}" fill="none" ${st}/>`;
+    }
+    if (k.n > 0) {           // xlabel = numero di filtri, sotto lo spigolo frontale
+      const nv = L.n[i]; if (nv !== "" && nv != null && k.n > i)
+        out += `<text class="lbl" x="${((b[0]+c[0])/2).toFixed(1)}" y="${(b[1]+12).toFixed(1)}" text-anchor="middle">${esc(nv)}</text>`;
+    }
+  });
+  const d2 = A(kx, y/2, z/2), e2 = A(kx, y/2, -z/2), f2 = A(kx, -y/2, -z/2), c2 = A(kx, -y/2, z/2);
+  out += `<polygon points="${pt(d2)} ${pt(e2)} ${pt(f2)} ${pt(c2)}" fill="${fill}" fill-opacity="${op}" ${st}/>`;
+  if (band) out += `<polygon points="${pt(d2)} ${pt(e2)} ${pt(f2)} ${pt(c2)}" fill="${band}" fill-opacity="${k.bop}" ${st}/>`;
+  if (k.s && L.s !== "" && L.s != null) {   // zlabel = dimensione spaziale, ruotata a 45 gradi
+    const mx = (c2[0] + f2[0]) / 2 + 8, my = (c2[1] + f2[1]) / 2 + 8;
+    out += `<text class="lbl sm" transform="translate(${mx.toFixed(1)},${my.toFixed(1)}) rotate(-45)" text-anchor="middle">${esc(L.s)}</text>`;
+    pts.push([mx + 22, my + 12], [mx - 22, my - 12]);
+  }
+  if (L.caption) {          // caption: 25pt sotto il bordo frontale inferiore
+    const cp = P(ox + g.len / 2, oy - y / 2, oz + z / 2);
+    out += `<text class="cap" x="${cp[0].toFixed(1)}" y="${(cp[1] + 36).toFixed(1)}" text-anchor="middle">${esc(plain(L.caption))}</text>`;
+    pts.push([cp[0] - 46, cp[1] + 46], [cp[0] + 46, cp[1] + 46]);
+  }
+  return out;
+}
+function ballSVG(g) {
+  const L = g.L, k = g.k, fill = L.fill || k.fill, r = g.r * PX;
+  const c = P(g.origin[0], g.origin[1], g.origin[2]);
+  pts.push([c[0] - r, c[1] - r], [c[0] + r, c[1] + r]);
+  let out = `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="${r.toFixed(1)}" fill="${fill}" fill-opacity="${num(L.op,k.op)}" stroke="var(--fig-ink)" stroke-width="1"/>`;
+  out += `<text class="cap" x="${c[0].toFixed(1)}" y="${(c[1] + r*.42).toFixed(1)}" text-anchor="middle" font-size="${(r*1.1).toFixed(1)}">+</text>`;
+  if (L.caption) { out += `<text class="cap" x="${c[0].toFixed(1)}" y="${(c[1]+r+26).toFixed(1)}" text-anchor="middle">${esc(plain(L.caption))}</text>`;
+    pts.push([c[0], c[1] + r + 34]); }
+  return out;
+}
+function head(p1, p2, color) {   // punta di freccia stile Stealth, a metà segmento
+  const mx = (p1[0]+p2[0])/2, my = (p1[1]+p2[1])/2;
+  const ang = Math.atan2(p2[1]-p1[1], p2[0]-p1[0]) * 180 / Math.PI;
+  return `<path d="M-6,-4.6 L6,0 L-6,4.6 L-3.4,0 Z" fill="${color}" transform="translate(${mx.toFixed(1)},${my.toFixed(1)}) rotate(${ang.toFixed(1)})" opacity=".85"/>`;
+}
+function connSVG(c, map) {
+  const A = map[c.from], B = map[c.to]; if (!A || !B) return "";
+  if (c.kind === "skip") {
+    const col = "#1C1C71";
+    const ne = anchorOf(A, "northeast"), no = anchorOf(B, "north");
+    const topA = [ne[0], A.r != null ? ne[1] + A.r*.5 : A.origin[1] + .75 * A.y, 0];
+    const topB = [no[0], B.r != null ? no[1] + B.r*.5 : B.origin[1] + .75 * B.y, 0];
+    const q = [P(...ne), P(...topA), P(...topB), P(...no)];
+    q.forEach(p => pts.push(p));
+    let o = `<polyline points="${q.map(pt).join(" ")}" fill="none" stroke="${col}" stroke-width="2.6" opacity=".7" stroke-linejoin="round"/>`;
+    for (let i = 0; i < 3; i++) o += head(q[i], q[i+1], col);
+    return o;
+  }
+  const a = P(...anchorOf(A, "east")), b = P(...anchorOf(B, "west"));
+  pts.push(a, b);
+  return `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="#155555" stroke-width="2.6" opacity=".7"/>` + head(a, b, "#155555");
+}
+function renderSVG(refit) {
+  const {map, list} = layout();
+  pts = [];
+  let body = "";
+  list.forEach(g => {
+    const inner = g.k.ball ? ballSVG(g) : boxSVG(g);
+    body += `<g class="lbox" data-id="${g.id}" ${g.id === sel ? 'data-sel="1"' : ""}>${inner}</g>`;
+  });
+  let cons = "";
+  (doc.conns || []).forEach(c => { cons += connSVG(c, map); });
+  let ring = "";
+  if (sel && map[sel]) {
+    const g = map[sel];
+    const bb = boxBounds(g);
+    ring = `<rect x="${bb[0]-7}" y="${bb[1]-7}" width="${bb[2]-bb[0]+14}" height="${bb[3]-bb[1]+14}" rx="4" fill="none" stroke="#0e6f66" stroke-width="1.6" stroke-dasharray="5 4" opacity=".9"/>`;
+  }
+  if (!pts.length) pts = [[-100,-100],[100,100]];
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  const bx = [Math.min(...xs)-46, Math.min(...ys)-46, Math.max(...xs)+46, Math.max(...ys)+46];
+  if (!vb || refit) {
+    const r = paper.getBoundingClientRect() , w = bx[2]-bx[0], h = bx[3]-bx[1];
+    const sc = Math.min((r.width||900)/w, (r.height||400)/h, 1.6);
+    vb = {x: bx[0] + w/2 - (r.width||900)/sc/2, y: bx[1] + h/2 - (r.height||400)/sc/2, w: (r.width||900)/sc, h: (r.height||400)/sc};
+  }
+  paper.innerHTML =
+    `<defs><pattern id="gr" width="24" height="24" patternUnits="userSpaceOnUse">
+       <path d="M24 0H0V24" fill="none" stroke="var(--paper-grid)" stroke-width="1"/></pattern>
+     <style>
+       .lbl{font-family:var(--fig);font-size:15px;fill:var(--fig-ink)}
+       .lbl.sm{font-size:13px;fill:var(--fig-ink-2)}
+       .cap{font-family:var(--fig);font-size:16px;font-weight:600;fill:var(--fig-ink)}
+     </style></defs>
+     <rect x="${bx[0]-4000}" y="${bx[1]-4000}" width="9000" height="9000" fill="url(#gr)" opacity=".55"/>
+     ${body}${cons}${ring}`;
+  applyVB();
+  document.getElementById("figtag").textContent = `figura · ${list.length} blocchi · ${(doc.conns||[]).length} collegamenti`;
+}
+function boxBounds(g) {
+  const c = [];
+  if (g.r != null) { const p = P(...g.origin), r = g.r*PX; return [p[0]-r,p[1]-r,p[0]+r,p[1]+r]; }
+  const [ox,oy,oz]=g.origin, y=g.y, z=g.z, L=g.len;
+  [[0,-y/2,-z/2],[0,y/2,z/2],[L,-y/2,-z/2],[L,y/2,z/2],[0,y/2,-z/2],[L,-y/2,z/2],[0,-y/2,z/2],[L,y/2,-z/2]]
+    .forEach(t => c.push(P(ox+t[0], oy+t[1], oz+t[2])));
+  const xs=c.map(p=>p[0]), ys=c.map(p=>p[1]);
+  return [Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)];
+}
+function applyVB() {
+  paper.setAttribute("viewBox", `${vb.x.toFixed(1)} ${vb.y.toFixed(1)} ${vb.w.toFixed(1)} ${vb.h.toFixed(1)}`);
+  const r = paper.getBoundingClientRect();
+  document.getElementById("zlab").textContent = Math.round((r.width || vb.w) / vb.w * 100) + "%";
+}
+</script>
+
+<style>
+.conn{display:grid;grid-template-columns:1fr 20px 1fr 18px;align-items:center;gap:5px}
+.conn select{width:100%;padding:2px 3px;background:var(--panel-2);border:1px solid var(--line-2);border-radius:3px;font-family:var(--mono);font-size:10.5px;min-width:0}
+.conn .arw{cursor:pointer;text-align:center;font-size:13px;background:none;border:none;padding:0}
+</style>
+<script>
+"use strict";
+/* ---------- 5. Nomi e generazione codice -------------------------------- */
+const fmt = (v) => { const x = num(v, 0); return String(+x.toFixed(3)); };
+const safeName = (s) => String(s || "").replace(/[^A-Za-z0-9]/g, "");
+function uniqueNames() {
+  const used = {}, out = {};
+  doc.layers.forEach((L, i) => {
+    let base = safeName(L.name) || (L.kind.toLowerCase().replace(/[^a-z]/g, "") + (i + 1));
+    if (!/^[A-Za-z]/.test(base)) base = "b" + base;
+    let n = base, c = 2; while (used[n]) n = base + (c++);
+    used[n] = 1; out[L.id] = n;
+  });
+  return out;
+}
+const hex2xcolor = (hex) => {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || ""); if (!m) return "\\ConvColor";
+  const v = parseInt(m[1], 16);
+  return `{rgb,255:red,${(v >> 16) & 255};green,${(v >> 8) & 255};blue,${v & 255}}`;
+};
+function usesBox(L) {
+  const k = KINDS[L.kind];
+  if (k.ball || k.band) return false;
+  if (!k.fn) return true;                                  // Fc, FcRelu, Box generico
+  if (L.fill && L.fill.toLowerCase() !== k.fill.toLowerCase()) return true;
+  const hasOp = ["Pool", "UnPool", "SoftMax"].indexOf(L.kind) >= 0;
+  if (!hasOp && Math.abs(num(L.op, k.op) - k.op) > 1e-6) return true;
+  return false;
+}
+function toCoord(L, i, N) {
+  const ref = L.to === "auto" ? (i > 0 ? doc.layers[i - 1].id : null) : (L.to === "origin" ? null : L.to);
+  if (!ref || !N[ref]) return "(0,0,0)";
+  return `(${N[ref]}-${L.anchor || "east"})`;
+}
+const TC = {Conv:"\\ConvColor", ConvConvRelu:"\\ConvColor", ConvRes:"{rgb:white,1;black,3}",
+  Pool:"\\PoolColor", UnPool:"\\UnpoolColor", Fc:"\\FcColor", FcRelu:"\\FcReluColor",
+  ConvSoftMax:"\\SoftmaxColor", SoftMax:"\\SoftmaxColor", Sum:"\\SumColor", Box:null};
+function fillOf(L) {
+  const k = KINDS[L.kind];
+  if (L.fill && L.fill.toLowerCase() !== k.fill.toLowerCase()) return hex2xcolor(L.fill);
+  return TC[L.kind] || hex2xcolor(k.fill);
+}
+/* valore Python: numerico grezzo, altrimenti stringa quotata */
+const pyVal = (v) => (v === "" || v == null) ? '""' : (isFinite(+v) && String(v).trim() !== "" ? String(+v) : JSON.stringify(String(v)));
+/* --- chiamata Python per un livello --- */
+function blockPy(L, i, N) {
+  const k = KINDS[L.kind], nm = `"${N[L.id]}"`, to = `to="${toCoord(L, i, N)}"`,
+        off = `offset="(${fmt(L.ox)},${fmt(L.oy)},0)"`, cap = `caption="${L.caption || " "}"`,
+        w = widthsOf(L).map(fmt), h = fmt(L.h), d = fmt(L.dp);
+  if (k.ball) {
+    return L.caption
+      ? `to_Ball(${nm}, ${off}, ${to}, radius=${fmt(L.radius)}, opacity=${fmt(L.op)}, ${cap})`
+      : `to_Sum(${nm}, ${off}, ${to}, radius=${fmt(L.radius)}, opacity=${fmt(L.op)})`;
+  }
+  if (usesBox(L))
+    return `to_Box(${nm}, ${k.s ? pyVal(L.s) : '""'}, ${k.n ? pyVal(L.n[0]) : '""'}, ${off}, ${to}, width=${w[0]}, height=${h}, depth=${d}, opacity=${fmt(L.op)}, fill=r"${fillOf(L)}", ${cap})`;
+  switch (L.kind) {
+    case "Conv":         return `to_Conv(${nm}, ${pyVal(L.s)}, ${pyVal(L.n[0])}, ${off}, ${to}, width=${w[0]}, height=${h}, depth=${d}, ${cap})`;
+    case "ConvConvRelu": return `to_ConvConvRelu(${nm}, ${pyVal(L.s)}, (${pyVal(L.n[0])},${pyVal(L.n[1])}), ${off}, ${to}, width=(${w[0]},${w[1]}), height=${h}, depth=${d}, ${cap})`;
+    case "ConvRes":      return `to_ConvRes(${nm}, ${pyVal(L.s)}, ${pyVal(L.n[0])}, ${off}, ${to}, width=${w[0]}, height=${h}, depth=${d}, opacity=${fmt(L.op)}, ${cap})`;
+    case "Pool":         return `to_Pool(${nm}, ${off}, ${to}, width=${w[0]}, height=${h}, depth=${d}, opacity=${fmt(L.op)}, ${cap})`;
+    case "UnPool":       return `to_UnPool(${nm}, ${off}, ${to}, width=${w[0]}, height=${h}, depth=${d}, opacity=${fmt(L.op)}, ${cap})`;
+    case "ConvSoftMax":  return `to_ConvSoftMax(${nm}, ${pyVal(L.s)}, ${off}, ${to}, width=${w[0]}, height=${h}, depth=${d}, ${cap})`;
+    case "SoftMax":      return `to_SoftMax(${nm}, ${pyVal(L.s)}, ${off}, ${to}, width=${w[0]}, height=${h}, depth=${d}, opacity=${fmt(L.op)}, ${cap})`;
+  }
+  return "";
+}
+const PY_BOX = String.raw`
+def to_Box(name, s_filer="", n_filer="", offset="(0,0,0)", to="(0,0,0)", width=1, height=40,
+           depth=40, opacity=0.4, fill=r"\ConvColor", caption=" "):
+    """Box con riempimento e opacita' arbitrari (Fc, blocchi custom)."""
+    return r"""
+\pic[shift={""" + offset + r"""}] at """ + to + r"""
+    {Box={
+        name=""" + name + r""",
+        caption=""" + caption + r""",
+        xlabel={{""" + str(n_filer) + r""", }},
+        zlabel=""" + str(s_filer) + r""",
+        fill=""" + fill + r""",
+        opacity=""" + str(opacity) + r""",
+        height=""" + str(height) + r""",
+        width=""" + str(width) + r""",
+        depth=""" + str(depth) + r"""
+        }
+    };
+"""
+`;
+const PY_BALL = String.raw`
+def to_Ball(name, offset="(0,0,0)", to="(0,0,0)", radius=2.5, opacity=0.6, caption=" "):
+    """Come to_Sum, ma con didascalia."""
+    return r"""
+\pic[shift={""" + offset + r"""}] at """ + to + r"""
+    {Ball={
+        name=""" + name + r""",
+        caption=""" + caption + r""",
+        fill=\SumColor,
+        opacity=""" + str(opacity) + r""",
+        radius=""" + str(radius) + r""",
+        logo=$+$
+        }
+    };
+"""
+`;
+function genPython() {
+  const N = uniqueNames();
+  const needBox = doc.layers.some(usesBox);
+  const needBall = doc.layers.some(L => L.kind === "Sum" && L.caption);
+  let s = `# -*- coding: utf-8 -*-\n# ${doc.title || "rete"} — generato con PlotNeuralNet Live\n`;
+  s += `# Uso: copia questo file in PlotNeuralNet/pyexamples/ ed esegui\n`;
+  s += `#   python arch.py && bash ../tikzmake.sh arch\n\nimport sys\nsys.path.append('../')\nfrom pycore.tikzeng import *\n`;
+  if (needBox) s += PY_BOX;
+  if (needBall) s += PY_BALL;
+  s += `\narch = [\n    to_head('..'),\n    to_cor(),\n    to_begin(),\n\n    # ---- blocchi ----\n`;
+  doc.layers.forEach((L, i) => { const b = blockPy(L, i, N); if (b) s += `    ${b},\n`; });
+  const cs = (doc.conns || []).filter(c => N[c.from] && N[c.to]);
+  if (cs.length) {
+    s += `\n    # ---- collegamenti ----\n`;
+    cs.forEach(c => {
+      s += c.kind === "skip"
+        ? `    to_skip(of="${N[c.from]}", to="${N[c.to]}", pos=1.25),\n`
+        : `    to_connection("${N[c.from]}", "${N[c.to]}"),\n`;
+    });
+  }
+  s += `\n    to_end()\n]\n\n\ndef main():\n    namefile = str(sys.argv[0]).split('.')[0]\n    to_generate(arch, namefile + '.tex')\n\n\nif __name__ == '__main__':\n    main()\n`;
+  return s;
+}
+/* --- LaTeX: stesse stringhe che produrrebbe tikzeng.py --- */
+function texBlock(L, i, N) {
+  const k = KINDS[L.kind], nm = N[L.id], to = toCoord(L, i, N),
+        off = `(${fmt(L.ox)},${fmt(L.oy)},0)`, cap = L.caption || " ",
+        w = widthsOf(L).map(fmt), h = fmt(L.h), d = fmt(L.dp);
+  const B = (extra, fill, op, xlab) => String.raw`
+\pic[shift={` + off + String.raw`}] at ` + to + `
+    {Box={
+        name=${nm},
+        caption=${cap},${xlab}
+        zlabel=${k.s ? L.s : ""},
+        fill=${fill},${op == null ? "" : `
+        opacity=${fmt(op)},`}
+        height=${h},
+        width=${extra},
+        depth=${d}
+        }
+    };
+`;
+  if (k.ball) return String.raw`
+\pic[shift={` + off + String.raw`}] at ` + to + `
+    {Ball={
+        name=${nm},
+        caption=${cap},
+        fill=\SumColor,
+        opacity=${fmt(L.op)},
+        radius=${fmt(L.radius)},
+        logo=$+$
+        }
+    };
+`;
+  if (k.band) {
+    const bandfill = L.kind === "ConvRes" ? "{rgb:white,1;black,2}" : "\\ConvReluColor";
+    const basefill = L.kind === "ConvRes" ? "{rgb:white,1;black,3}" : "\\ConvColor";
+    const xl = k.dual ? `{{ ${L.n[0]}, ${L.n[1]} }}` : `{{ ${L.n[0]}, }}`;
+    const wd = k.dual ? `{ ${w[0]} , ${w[1]} }` : w[0];
+    return String.raw`
+\pic[shift={ ` + off + String.raw` }] at ` + to + `
+    {RightBandedBox={
+        name=${nm},
+        caption=${cap},
+        xlabel=${xl},
+        zlabel=${L.s},
+        fill=${basefill},
+        bandfill=${bandfill},${L.kind === "ConvRes" ? `
+        opacity=${fmt(L.op)},` : ""}
+        height=${h},
+        width=${wd},
+        depth=${d}
+        }
+    };
+`;
+  }
+  const xlab = k.n ? `
+        xlabel={{${L.n[0]}, }},` : (L.kind === "SoftMax" ? `
+        xlabel={{" ","dummy"}},` : "");
+  const hasOp = ["Pool", "UnPool", "SoftMax"].indexOf(L.kind) >= 0 || usesBox(L);
+  return B(w[0], fillOf(L), hasOp ? num(L.op, k.op) : null, xlab);
+}
+function genTex() {
+  const N = uniqueNames();
+  let s = String.raw`
+\documentclass[border=8pt, multi, tikz]{standalone}
+\usepackage{import}
+\subimport{../layers/}{init}
+\usetikzlibrary{positioning}
+\usetikzlibrary{3d} %for including external image
+
+\def\ConvColor{rgb:yellow,5;red,2.5;white,5}
+\def\ConvReluColor{rgb:yellow,5;red,5;white,5}
+\def\PoolColor{rgb:red,1;black,0.3}
+\def\UnpoolColor{rgb:blue,2;green,1;black,0.3}
+\def\FcColor{rgb:blue,5;red,2.5;white,5}
+\def\FcReluColor{rgb:blue,5;red,5;white,4}
+\def\SoftmaxColor{rgb:magenta,5;black,7}
+\def\SumColor{rgb:blue,5;green,15}
+
+\newcommand{\copymidarrow}{\tikz \draw[-Stealth,line width=0.8mm,draw={rgb:blue,4;red,1;green,1;black,3}] (-0.3,0) -- ++(0.3,0);}
+
+\begin{document}
+\begin{tikzpicture}
+\tikzstyle{connection}=[ultra thick,every node/.style={sloped,allow upside down},draw=\edgecolor,opacity=0.7]
+\tikzstyle{copyconnection}=[ultra thick,every node/.style={sloped,allow upside down},draw={rgb:blue,4;red,1;green,1;black,3},opacity=0.7]
+`;
+  doc.layers.forEach((L, i) => { s += texBlock(L, i, N); });
+  (doc.conns || []).forEach(c => {
+    if (!N[c.from] || !N[c.to]) return;
+    s += c.kind === "skip"
+      ? String.raw`
+\path (${N[c.from]}-southeast) -- (${N[c.from]}-northeast) coordinate[pos=1.25] (${N[c.from]}-top) ;
+\path (${N[c.to]}-south)  -- (${N[c.to]}-north)  coordinate[pos=1.25] (${N[c.to]}-top) ;
+\draw [copyconnection]  (${N[c.from]}-northeast)
+-- node {\copymidarrow}(${N[c.from]}-top)
+-- node {\copymidarrow}(${N[c.to]}-top)
+-- node {\copymidarrow} (${N[c.to]}-north);
+`
+      : String.raw`
+\draw [connection]  (${N[c.from]}-east)    -- node {\midarrow} (${N[c.to]}-west);
+`;
+  });
+  s += String.raw`
+\end{tikzpicture}
+\end{document}
+`;
+  return s;
+}
+</script>
+
+<script>
+"use strict";
+/* ---------- 6. Interfaccia --------------------------------------------- */
+const $ = (s) => document.querySelector(s);
+const stackEl = $("#stack"), fieldsEl = $("#fields"), connEl = $("#connlist");
+let hist = [], hi = -1, histT = null;
+
+function save() { try { localStorage.setItem(KEY, JSON.stringify(doc)); } catch (e) {} }
+function pushHist(now) {
+  clearTimeout(histT);
+  const go = () => { const s = JSON.stringify(doc); if (hist[hi] === s) return;
+    hist = hist.slice(0, hi + 1); hist.push(s); if (hist.length > 80) hist.shift(); hi = hist.length - 1; syncHist(); };
+  now ? go() : (histT = setTimeout(go, 350));
+}
+function syncHist() { $("#undo").disabled = hi <= 0; $("#redo").disabled = hi >= hist.length - 1; }
+function undo() { if (hi > 0) { hi--; doc = JSON.parse(hist[hi]); if (!doc.layers.some(l => l.id === sel)) sel = null; renderAll(); syncHist(); } }
+function redo() { if (hi < hist.length - 1) { hi++; doc = JSON.parse(hist[hi]); renderAll(); syncHist(); } }
+
+let toastT = null;
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), 1700); }
+async function copy(text, what) {
+  try { await navigator.clipboard.writeText(text); toast(what + " copiato negli appunti"); }
+  catch (e) { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta);
+    ta.select(); try { document.execCommand("copy"); toast(what + " copiato"); } catch (_) { toast("Copia non riuscita"); }
+    ta.remove(); }
+}
+
+/* --- palette --- */
+$("#palette").innerHTML = ORDER.map(k =>
+  `<button class="padd" data-add="${k}" title="Aggiungi ${KINDS[k].it}">
+     <i class="sw${KINDS[k].ball ? " round" : ""}" style="background:${KINDS[k].fill}"></i><span>${KINDS[k].it}</span>
+   </button>`).join("");
+$("#preset").innerHTML = `<option value="">Preset…</option>` +
+  Object.keys(PRESETS).map(k => `<option value="${k}">${PRESETS[k][0]}</option>`).join("");
+
+/* --- stack dei livelli --- */
+function renderRail() {
+  const N = uniqueNames();
+  stackEl.innerHTML = doc.layers.length ? doc.layers.map((L, i) => {
+    const k = KINDS[L.kind];
+    const dims = k.ball ? `r=${fmt(L.radius)}`
+      : `${widthsOf(L).map(fmt).join("+")}×${fmt(L.h)}×${fmt(L.dp)}`;
+    return `<li class="lay${L.id === sel ? " sel" : ""}" data-id="${L.id}" draggable="true">
+      <span class="idx">${i + 1}</span>
+      <i class="sw${k.ball ? " round" : ""}" style="background:${L.fill || k.fill}"></i>
+      <span class="nm"><b>${esc(N[L.id])}</b><i>${esc(k.it)} · ${dims}</i></span>
+      <span class="act">
+        <button data-up="${L.id}" title="Sposta su">↑</button>
+        <button data-dn="${L.id}" title="Sposta giù">↓</button>
+        <button data-dup="${L.id}" title="Duplica">⧉</button>
+        <button class="del" data-del="${L.id}" title="Elimina">✕</button>
+      </span></li>`;
+  }).join("") : `<div class="empty">Nessun livello.<br>Aggiungine uno dalla palette qui sopra.</div>`;
+  $("#ncount").textContent = doc.layers.length + " livelli";
+  const opts = (selId) => doc.layers.map(L => `<option value="${L.id}"${L.id === selId ? " selected" : ""}>${esc(N[L.id])}</option>`).join("");
+  connEl.innerHTML = (doc.conns || []).map((c, i) =>
+    `<div class="conn${c.kind === "skip" ? " skip" : ""}">
+       <select data-cf="${i}">${opts(c.from)}</select>
+       <button class="arw" data-ck="${i}" title="Alterna freccia / skip">${c.kind === "skip" ? "⤻" : "→"}</button>
+       <select data-ct="${i}">${opts(c.to)}</select>
+       <button data-cd="${i}" title="Elimina collegamento">✕</button>
+     </div>`).join("") || `<div class="empty" style="padding:10px">Nessun collegamento</div>`;
+}
+
+/* --- ispettore --- */
+function fnum(lab, f, v, step, min) {
+  return `<label class="f"><span>${lab}</span><input type="number" data-f="${f}" value="${v}" step="${step || 1}"${min != null ? ` min="${min}"` : ""}></label>`;
+}
+function renderInsp() {
+  const L = doc.layers.find(x => x.id === sel);
+  const N = uniqueNames();
+  let h = "";
+  if (L) {
+    const k = KINDS[L.kind];
+    $("#insptitle").textContent = "Livello · " + N[L.id];
+    h += `<div class="grp"><label>Identità</label>
+      <div class="row"><label class="f"><span>nome (LaTeX)</span><input type="text" data-f="name" value="${esc(L.name)}" placeholder="${esc(N[L.id])}"></label></div>
+      <div class="row"><label class="f"><span>didascalia</span><input type="text" data-f="caption" value="${esc(L.caption)}" placeholder="(vuota)"></label></div>
+      <div class="row"><label class="f"><span>tipo</span><select data-f="kind">${ORDER.map(o => `<option value="${o}"${o === L.kind ? " selected" : ""}>${KINDS[o].it}</option>`).join("")}</select></label></div>
+    </div><div class="divider"></div>`;
+
+    if (k.ball) {
+      h += `<div class="grp"><label>Geometria</label><div class="row c2">
+        ${fnum("radius", "radius", fmt(L.radius), .5, 0)}
+        ${fnum("opacity", "op", fmt(L.op), .05, 0)}
+      </div></div>`;
+    } else {
+      h += `<div class="grp"><label>Dimensioni del blocco</label><div class="row c2">
+        ${k.s ? `<label class="f"><span>s_filer (spaziale)</span><input type="text" data-f="s" value="${esc(L.s)}"></label>` : ""}
+        ${k.n >= 1 ? `<label class="f"><span>n_filer${k.dual ? " 1" : " (canali)"}</span><input type="text" data-f="n0" value="${esc(L.n[0])}"></label>` : ""}
+        ${k.dual ? `<label class="f"><span>n_filer 2</span><input type="text" data-f="n1" value="${esc(L.n[1])}"></label>` : ""}
+      </div>
+      <div class="row c3">
+        ${fnum("width" + (k.dual ? " 1" : ""), "w0", fmt(L.w[0]), .5, 0)}
+        ${k.dual ? fnum("width 2", "w1", fmt(L.w[1]), .5, 0) : ""}
+        ${fnum("height", "h", fmt(L.h), 1, 0)}
+        ${fnum("depth", "dp", fmt(L.dp), 1, 0)}
+      </div></div><div class="divider"></div>`;
+      h += `<div class="grp"><label>Aspetto</label><div class="row c2">
+        <label class="f"><span>opacity ${k.band ? "(fissa)" : ""}</span><input type="number" data-f="op" value="${fmt(L.op)}" step=".05" min="0" max="1"${k.band ? " disabled" : ""}></label>
+        ${k.band ? `<label class="f"><span>colore</span><input type="color" value="${k.fill}" disabled title="I blocchi a banda usano i colori standard"></label>`
+                 : `<label class="f"><span>colore</span><input type="color" data-f="fill" value="${L.fill || k.fill}"></label>`}
+      </div>${k.band ? `<p class="note">Blocco a banda: usa <code>\\ConvColor</code> + <code>\\ConvReluColor</code> come in <code>tikzeng.py</code>.</p>` : ""}
+      </div><div class="divider"></div>`;
+    }
+    h += `<div class="grp"><label>Posizione</label>
+      <div class="row c2">
+        <label class="f"><span>ancorato a</span><select data-f="to">
+          <option value="auto"${L.to === "auto" ? " selected" : ""}>← precedente</option>
+          <option value="origin"${L.to === "origin" ? " selected" : ""}>origine (0,0,0)</option>
+          ${doc.layers.filter(x => x.id !== L.id).map(x => `<option value="${x.id}"${L.to === x.id ? " selected" : ""}>${esc(N[x.id])}</option>`).join("")}
+        </select></label>
+        <label class="f"><span>anchor</span><select data-f="anchor">
+          ${["east","west","north","south","anchor","northeast","southeast","northwest","southwest","near","far"]
+            .map(a => `<option${a === (L.anchor || "east") ? " selected" : ""}>${a}</option>`).join("")}
+        </select></label>
+      </div>
+      <div class="row c2">${fnum("offset x (cm)", "ox", fmt(L.ox), .1)}${fnum("offset y (cm)", "oy", fmt(L.oy), .1)}</div>
+      <p class="note">Trascina il blocco nel foglio per cambiare l'offset.</p>
+    </div>`;
+  } else {
+    $("#insptitle").textContent = "Ispettore";
+    h += `<p class="note">Seleziona un livello nello stack o nel foglio per modificarne i parametri.
+      Ogni valore corrisponde a un argomento delle funzioni <code>to_*</code> di <code>pycore/tikzeng.py</code>.</p>`;
+  }
+  h += `<div class="divider"></div><div class="grp"><label>Documento</label>
+    <div class="row"><label class="f"><span>titolo</span><input type="text" data-g="title" value="${esc(doc.title || "")}"></label></div>
+    <div class="row c2">
+      <label class="f"><span>scale globale</span><input type="number" data-g="scale" value="${fmt(doc.scale)}" step=".05" min=".05"></label>
+      <label class="f"><span>blocchi</span><input type="text" value="${doc.layers.length}" disabled></label>
+    </div>
+    <p class="note">In TikZ ogni misura è moltiplicata per <code>scale</code> (default <code>0.2</code>): <code>height=40</code> → 8 cm.</p>
+  </div>`;
+  fieldsEl.innerHTML = h;
+}
+
+/* --- codice --- */
+function hl(src, lang) {
+  let s = esc(src);
+  if (lang === "py") {
+    s = s.replace(/(#[^\n]*)/g, '<span class="cm">$1</span>')
+         .replace(/(&quot;[^&\n]*&quot;|'[^'\n]*')/g, '<span class="st">$1</span>')
+         .replace(/\b(import|from|def|return|if|__name__|sys|True|False|None)\b/g, '<span class="kw">$1</span>')
+         .replace(/\b(to_[A-Za-z_]+)\b/g, '<span class="fn">$1</span>');
+  } else if (lang === "tex") {
+    s = s.replace(/(%[^\n]*)/g, '<span class="cm">$1</span>')
+         .replace(/(\\[A-Za-z]+)/g, '<span class="kw">$1</span>')
+         .replace(/\b(name|caption|xlabel|zlabel|fill|bandfill|opacity|height|width|depth|radius|logo)(=)/g, '<span class="fn">$1</span>$2');
+  }
+  return s;
+}
+function renderCode() {
+  const body = $("#dbody");
+  if (!drawerOpen) { body.classList.add("hide"); return; }
+  body.classList.remove("hide");
+  if (tab === "json") {
+    body.innerHTML = `<textarea class="io" id="jsonio" spellcheck="false"></textarea>`;
+    $("#jsonio").value = JSON.stringify(doc, null, 2);
+  } else {
+    const src = tab === "py" ? genPython() : genTex();
+    body.innerHTML = `<pre class="code">${hl(src, tab)}</pre>`;
+  }
+  $("#copycode").textContent = tab === "json" ? "Importa" : "Copia";
+  $("#codehint").textContent = tab === "py" ? "pyexamples/arch.py" : tab === "tex" ? "arch.tex — compilabile con pdflatex" : "incolla e premi Importa";
+}
+function renderAll(o) {
+  o = o || {};
+  if (!o.keepInsp) renderInsp();
+  renderRail(); renderSVG(o.refit); renderCode(); save();
+  $("#stat").textContent = doc.title || "";
+}
+
+/* ---------- 7. Mutazioni ------------------------------------------------ */
+function change(o) { renderAll(o); pushHist(); }
+function addLayer(kind) {
+  const last = doc.layers[doc.layers.length - 1];
+  const L = mk(kind);
+  if (last) { L.h = last.h; L.dp = last.dp; L.s = last.s; }
+  L.ox = (kind === "Pool" || kind === "UnPool") ? 0.2
+    : +(1 + 0.385 * (L.dp || 40) * num(doc.scale, .2)).toFixed(1);
+  L.name = "";
+  doc.layers.push(L);
+  if (last) doc.conns.push({from: last.id, to: L.id, kind: "arrow"});
+  sel = L.id; change({refit: !last});
+}
+function delLayer(id) {
+  doc.layers = doc.layers.filter(L => L.id !== id);
+  doc.conns = (doc.conns || []).filter(c => c.from !== id && c.to !== id);
+  doc.layers.forEach(L => { if (L.to === id) L.to = "auto"; });
+  if (sel === id) sel = null;
+  change();
+}
+function dupLayer(id) {
+  const i = doc.layers.findIndex(L => L.id === id); if (i < 0) return;
+  const c = JSON.parse(JSON.stringify(doc.layers[i]));
+  c.id = nid(); c.name = ""; c.to = "auto";
+  doc.layers.splice(i + 1, 0, c);
+  doc.conns.push({from: id, to: c.id, kind: "arrow"});
+  sel = c.id; change();
+}
+function move(id, d) {
+  const i = doc.layers.findIndex(L => L.id === id), j = i + d;
+  if (i < 0 || j < 0 || j >= doc.layers.length) return;
+  const [x] = doc.layers.splice(i, 1); doc.layers.splice(j, 0, x); change();
+}
+function autolink() {
+  const skips = (doc.conns || []).filter(c => c.kind === "skip");
+  const arrows = [];
+  for (let i = 1; i < doc.layers.length; i++) arrows.push({from: doc.layers[i-1].id, to: doc.layers[i].id, kind: "arrow"});
+  doc.conns = arrows.concat(skips); change(); toast("Frecce ricreate in sequenza");
+}
+
+/* ---------- 8. Eventi --------------------------------------------------- */
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-add],[data-del],[data-dup],[data-up],[data-dn],[data-cd],[data-ck],.lay,.tab");
+  if (!t) return;
+  if (t.dataset.add) return addLayer(t.dataset.add);
+  if (t.dataset.del) { e.stopPropagation(); return delLayer(t.dataset.del); }
+  if (t.dataset.dup) { e.stopPropagation(); return dupLayer(t.dataset.dup); }
+  if (t.dataset.up)  { e.stopPropagation(); return move(t.dataset.up, -1); }
+  if (t.dataset.dn)  { e.stopPropagation(); return move(t.dataset.dn, 1); }
+  if (t.dataset.cd)  { doc.conns.splice(+t.dataset.cd, 1); return change(); }
+  if (t.dataset.ck)  { const c = doc.conns[+t.dataset.ck]; c.kind = c.kind === "skip" ? "arrow" : "skip"; return change(); }
+  if (t.classList.contains("tab")) { tab = t.dataset.tab;
+    document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x === t)); return renderCode(); }
+  if (t.classList.contains("lay")) { sel = t.dataset.id; renderAll(); }
+});
+document.addEventListener("change", (e) => {
+  const el = e.target;
+  if (el.dataset.cf != null) { doc.conns[+el.dataset.cf].from = el.value; return change(); }
+  if (el.dataset.ct != null) { doc.conns[+el.dataset.ct].to = el.value; return change(); }
+});
+document.addEventListener("input", (e) => {
+  const el = e.target, f = el.dataset.f, g = el.dataset.g;
+  if (g) { doc[g] = g === "scale" ? Math.max(.02, num(el.value, .2)) : el.value; return change({keepInsp: true}); }
+  if (!f) return;
+  const L = doc.layers.find(x => x.id === sel); if (!L) return;
+  if (f === "kind") { const k = KINDS[el.value], d = k.def;
+    L.kind = el.value; L.op = k.op; L.fill = null;
+    if (d.w) { L.w = d.w.slice(); L.h = d.h; L.dp = d.d; } else L.radius = d.radius;
+    return change(); }
+  if (f === "name" || f === "caption") L[f] = el.value;
+  else if (f === "s") L.s = el.value;
+  else if (f === "n0") L.n[0] = el.value;
+  else if (f === "n1") L.n[1] = el.value;
+  else if (f === "w0") L.w[0] = num(el.value, 1);
+  else if (f === "w1") L.w[1] = num(el.value, 1);
+  else if (f === "fill") L.fill = el.value;
+  else if (f === "to" || f === "anchor") { L[f] = el.value; return change(); }
+  else L[f] = num(el.value, 0);
+  change({keepInsp: true});
+});
+
+/* --- drag & drop nello stack --- */
+let dragId = null;
+stackEl.addEventListener("dragstart", (e) => { const li = e.target.closest(".lay"); if (!li) return;
+  dragId = li.dataset.id; e.dataTransfer.effectAllowed = "move"; try { e.dataTransfer.setData("text/plain", dragId); } catch (_) {} });
+stackEl.addEventListener("dragover", (e) => { const li = e.target.closest(".lay"); if (!li || !dragId) return;
+  e.preventDefault(); document.querySelectorAll(".lay.drop").forEach(x => x.classList.remove("drop")); li.classList.add("drop"); });
+stackEl.addEventListener("dragleave", (e) => { const li = e.target.closest(".lay"); if (li) li.classList.remove("drop"); });
+stackEl.addEventListener("drop", (e) => { const li = e.target.closest(".lay"); if (!li || !dragId) return;
+  e.preventDefault();
+  const from = doc.layers.findIndex(L => L.id === dragId), to = doc.layers.findIndex(L => L.id === li.dataset.id);
+  if (from >= 0 && to >= 0 && from !== to) { const [x] = doc.layers.splice(from, 1); doc.layers.splice(to, 0, x); change(); }
+  dragId = null; });
+stackEl.addEventListener("dragend", () => { dragId = null; document.querySelectorAll(".lay.drop").forEach(x => x.classList.remove("drop")); });
+
+/* --- pan / zoom / drag nel foglio --- */
+function svgPt(ev) { const m = paper.getScreenCTM().inverse();
+  const p = paper.createSVGPoint(); p.x = ev.clientX; p.y = ev.clientY; const q = p.matrixTransform(m); return [q.x, q.y]; }
+let mode = null, startC = null, startVB = null, dragL = null, startOff = null;
+const vbScale = () => vb.w / Math.max(1, paper.getBoundingClientRect().width);
+paper.addEventListener("pointerdown", (e) => {
+  const gEl = e.target.closest(".lbox");
+  try { paper.setPointerCapture(e.pointerId); } catch (_) {}
+  startC = [e.clientX, e.clientY];
+  if (gEl) {
+    sel = gEl.dataset.id; dragL = doc.layers.find(L => L.id === sel);
+    startOff = [num(dragL.ox, 0), num(dragL.oy, 0)]; mode = "layer"; renderAll();
+  } else { mode = "pan"; startVB = {x: vb.x, y: vb.y}; sel = null; paper.classList.add("panning"); renderAll(); }
+});
+paper.addEventListener("pointermove", (e) => {
+  if (!mode) return;
+  const k = vbScale(), dx = (e.clientX - startC[0]) * k, dy = (e.clientY - startC[1]) * k;
+  if (mode === "pan") { vb.x = startVB.x - dx; vb.y = startVB.y - dy; applyVB(); }
+  else if (dragL) {
+    dragL.ox = +(startOff[0] + dx / PX).toFixed(2);
+    dragL.oy = +(startOff[1] - dy / PX).toFixed(2);
+    renderAll({keepInsp: true});
+  }
+});
+function endDrag(e) { if (mode === "layer") pushHist(true);
+  mode = null; dragL = null; paper.classList.remove("panning");
+  if (e && e.pointerId != null) { try { paper.releasePointerCapture(e.pointerId); } catch (_) {} }
+  renderInsp(); }
+paper.addEventListener("pointerup", endDrag);
+paper.addEventListener("pointercancel", endDrag);
+paper.addEventListener("wheel", (e) => { e.preventDefault();
+  const p = svgPt(e), f = e.deltaY > 0 ? 1.12 : 1 / 1.12;
+  const nw = Math.min(9000, Math.max(80, vb.w * f)), k = nw / vb.w;
+  vb.x = p[0] - (p[0] - vb.x) * k; vb.y = p[1] - (p[1] - vb.y) * k; vb.w = nw; vb.h *= k; applyVB(); }, {passive: false});
+function zoom(f) { const cx = vb.x + vb.w / 2, cy = vb.y + vb.h / 2;
+  vb.w = Math.min(9000, Math.max(80, vb.w * f)); vb.h = Math.min(9000, Math.max(60, vb.h * f));
+  vb.x = cx - vb.w / 2; vb.y = cy - vb.h / 2; applyVB(); }
+$("#zin").onclick = () => zoom(1 / 1.2);
+$("#zout").onclick = () => zoom(1.2);
+$("#fit").onclick = () => renderSVG(true);
+$("#copysvg").onclick = () => copy(new XMLSerializer().serializeToString(paper), "SVG");
+$("#copypy").onclick = () => copy(genPython(), "Script Python");
+$("#copycode").onclick = () => {
+  if (tab === "json") { try { const d = JSON.parse($("#jsonio").value); doc = d; sel = null; renderAll({refit: true}); pushHist(true); toast("JSON importato"); }
+    catch (err) { toast("JSON non valido: " + err.message); } return; }
+  copy(tab === "py" ? genPython() : genTex(), tab === "py" ? "Script Python" : "Sorgente LaTeX");
+};
+$("#autolink").onclick = autolink;
+$("#undo").onclick = undo;
+$("#redo").onclick = redo;
+$("#addskip").onclick = () => {
+  const i = Math.max(0, doc.layers.findIndex(L => L.id === sel));
+  const a = doc.layers[i], b = doc.layers[Math.min(doc.layers.length - 1, i + 2)];
+  if (!a || !b || a === b) return toast("Servono almeno due livelli distinti");
+  doc.conns.push({from: a.id, to: b.id, kind: "skip"}); change();
+};
+$("#toggledrawer").onclick = (e) => { drawerOpen = !drawerOpen;
+  e.target.textContent = drawerOpen ? "Nascondi" : "Mostra"; renderCode(); setTimeout(() => renderSVG(false), 0); };
+$("#preset").onchange = (e) => { const p = PRESETS[e.target.value]; if (!p) return;
+  doc = p[1](); sel = null; e.target.value = ""; renderAll({refit: true}); pushHist(true); toast("Preset caricato: " + p[0]); };
+document.addEventListener("keydown", (e) => {
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); return e.shiftKey ? redo() : undo(); }
+  if (typing) return;
+  if ((e.key === "Delete" || e.key === "Backspace") && sel) { e.preventDefault(); delLayer(sel); }
+  if (e.key === "Escape") { sel = null; renderAll(); }
+});
+let rz = null;
+window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => applyVB(), 120); });
+document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.dataset.tab === tab));
+renderAll({refit: true});
+pushHist(true);
+</script>
